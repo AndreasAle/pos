@@ -97,13 +97,17 @@
             <x-nav-item route="settings.receipt" icon="receipt-percent">Pengaturan Struk</x-nav-item>
             @endif
 
-            @if(in_array($role, ['owner','admin']))
+            @if(config('pos.features.audit_log') && in_array($role, ['owner','admin']))
             <x-nav-item route="audit.index" icon="clipboard-list">Audit Log</x-nav-item>
             @endif
             @if($role === 'owner')
-            <x-nav-item route="saas.plans" icon="credit-card">Paket Langganan</x-nav-item>
-            <x-nav-item route="balance.index" icon="banknotes">Saldo & Penarikan</x-nav-item>
-            <x-nav-item route="admin.withdrawals.index" icon="queue-list">Kelola WD</x-nav-item>
+                @if(config('pos.features.subscription'))
+                <x-nav-item route="saas.plans" icon="credit-card">Paket Langganan</x-nav-item>
+                @endif
+                @if(config('pos.features.balance'))
+                <x-nav-item route="balance.index" icon="banknotes">Saldo & Penarikan</x-nav-item>
+                <x-nav-item route="admin.withdrawals.index" icon="queue-list">Kelola WD</x-nav-item>
+                @endif
             @endif
         </nav>
 

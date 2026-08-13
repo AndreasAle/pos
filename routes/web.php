@@ -46,7 +46,9 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->midd
 // ── Authenticated + Business ──────────────────────────────────────────────────
 Route::middleware(['auth', 'business'])->group(function () {
 
-    Route::get('/subscription/expired', [SubscriptionController::class, 'expired'])->name('subscription.expired');
+    if (config('pos.features.subscription')) {
+        Route::get('/subscription/expired', [SubscriptionController::class, 'expired'])->name('subscription.expired');
+    }
 
 });
 
@@ -160,8 +162,10 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
     });
 
     // Audit Log
-    Route::get('audit-log', [ActivityLogController::class, 'index'])->name('audit.index')
-        ->middleware('role:owner,admin');
+    if (config('pos.features.audit_log')) {
+        Route::get('audit-log', [ActivityLogController::class, 'index'])->name('audit.index')
+            ->middleware('role:owner,admin');
+    }
 
     // Settings
     Route::prefix('settings')->name('settings.')->group(function () {
@@ -176,11 +180,13 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
     });
 
     // SaaS
-    Route::prefix('saas')->name('saas.')->middleware('role:owner')->group(function () {
-        Route::get('plans',                [SubscriptionController::class, 'plans'])->name('plans');
-        Route::get('subscription',         [SubscriptionController::class, 'current'])->name('current');
-        Route::post('subscription/{plan}', [SubscriptionController::class, 'subscribe'])->name('subscribe');
-    });
+    if (config('pos.features.subscription')) {
+        Route::prefix('saas')->name('saas.')->middleware('role:owner')->group(function () {
+            Route::get('plans',                [SubscriptionController::class, 'plans'])->name('plans');
+            Route::get('subscription',         [SubscriptionController::class, 'current'])->name('current');
+            Route::post('subscription/{plan}', [SubscriptionController::class, 'subscribe'])->name('subscribe');
+        });
+    }
 
     // Midtrans — QRIS dynamic
     Route::prefix('midtrans')->name('midtrans.')->group(function () {
@@ -197,19 +203,21 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
     });
 
     // Merchant Balance & Withdrawal
-    Route::prefix('balance')->name('balance.')->middleware('role:owner')->group(function () {
-        Route::get('/',                          [BalanceController::class, 'index'])->name('index');
-        Route::post('withdraw',                  [BalanceController::class, 'requestWithdrawal'])->name('withdraw');
-        Route::delete('withdraw/{wd}',           [BalanceController::class, 'cancelWithdrawal'])->name('cancel-withdrawal');
-    });
+    if (config('pos.features.balance')) {
+        Route::prefix('balance')->name('balance.')->middleware('role:owner')->group(function () {
+            Route::get('/',                          [BalanceController::class, 'index'])->name('index');
+            Route::post('withdraw',                  [BalanceController::class, 'requestWithdrawal'])->name('withdraw');
+            Route::delete('withdraw/{wd}',           [BalanceController::class, 'cancelWithdrawal'])->name('cancel-withdrawal');
+        });
 
-    // Admin: Withdrawal Management
-    Route::prefix('admin/withdrawals')->name('admin.withdrawals.')->middleware('role:owner')->group(function () {
-        Route::get('/',                          [WithdrawalAdminController::class, 'index'])->name('index');
-        Route::patch('{wd}/approve',             [WithdrawalAdminController::class, 'approve'])->name('approve');
-        Route::patch('{wd}/complete',            [WithdrawalAdminController::class, 'complete'])->name('complete');
-        Route::patch('{wd}/reject',              [WithdrawalAdminController::class, 'reject'])->name('reject');
-    });
+        // Admin: Withdrawal Management
+        Route::prefix('admin/withdrawals')->name('admin.withdrawals.')->middleware('role:owner')->group(function () {
+            Route::get('/',                          [WithdrawalAdminController::class, 'index'])->name('index');
+            Route::patch('{wd}/approve',             [WithdrawalAdminController::class, 'approve'])->name('approve');
+            Route::patch('{wd}/complete',            [WithdrawalAdminController::class, 'complete'])->name('complete');
+            Route::patch('{wd}/reject',              [WithdrawalAdminController::class, 'reject'])->name('reject');
+        });
+    }
 });
 
 // Midtrans webhook — no auth, no CSRF (called by Midtrans server)

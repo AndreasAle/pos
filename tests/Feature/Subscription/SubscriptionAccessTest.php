@@ -162,6 +162,24 @@ class SubscriptionAccessTest extends TestCase
             ->assertRedirect(route('subscription.expired'));
     }
 
+    // ── Module switch ────────────────────────────────────────────────────────
+
+    public function test_the_paywall_stands_down_when_the_subscription_module_is_off(): void
+    {
+        $this->setUpPos();
+        $owner = $this->owner();
+        $this->setSubscription('active', now()->subDay()->toDateString());
+
+        // Sanity: the gate is doing its job while the module is on.
+        $this->actingAs($owner)->get(route('dashboard'))->assertRedirect(route('subscription.expired'));
+
+        // With the module off there is no plans page to send anyone to, so an
+        // expired tenant must keep working rather than be stranded.
+        config(['pos.features.subscription' => false]);
+
+        $this->actingAs($owner->fresh())->get(route('dashboard'))->assertOk();
+    }
+
     // ── Role gate ────────────────────────────────────────────────────────────
 
     public function test_only_an_owner_can_reach_the_billing_pages(): void

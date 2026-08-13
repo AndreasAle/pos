@@ -24,6 +24,12 @@ class EnsureSubscriptionActive
 
     public function handle(Request $request, Closure $next): Response
     {
+        // With the subscription module switched off there is no plans page to
+        // send anyone to, so the paywall has to stand down with it.
+        if (!config('pos.features.subscription')) {
+            return $next($request);
+        }
+
         $business = $request->user()?->business;
         $sub      = $business?->activeSubscription;
 

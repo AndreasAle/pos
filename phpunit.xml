@@ -36,6 +36,11 @@
         <env name="MIDTRANS_IS_PRODUCTION" value="false"/>
         <env name="FONNTE_TOKEN" value=""/>
         <env name="PLATFORM_FEE_PERCENT" value="0"/>
+        <!-- Optional modules ship disabled, but their behaviour still has to be
+             covered: turn them on for the suite so the routes exist here. -->
+        <env name="FEATURE_AUDIT_LOG" value="true"/>
+        <env name="FEATURE_SUBSCRIPTION" value="true"/>
+        <env name="FEATURE_BALANCE" value="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
