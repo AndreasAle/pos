@@ -129,6 +129,11 @@ rm -f $WEBROOT/default.php
 cp -r ~/pos_app/public/. $WEBROOT/
 ```
 
+> Perintah `cp` utuh ini **hanya untuk pemasangan pertama**, karena `index.php`
+> di web root belum disesuaikan. Setelah langkah 8, jangan pernah mengulanginya —
+> `index.php` hasil edit akan tertimpa dan seluruh situs mati dengan HTTP 500.
+> Lihat bagian "Update kode berikutnya" untuk perintah salin yang aman.
+
 ## 8. Arahkan index.php ke aplikasi
 
 Jangan edit manual di nano — salah satu kurung tertinggal saja, seluruh situs
@@ -233,13 +238,23 @@ git pull
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 cp -r ~/pos_app/public/build/. ~/domains/conweb.id/public_html/pos/build/
+cp -r ~/pos_app/public/images/. ~/domains/conweb.id/public_html/pos/images/
 php artisan config:cache && php artisan route:cache && php artisan view:cache
 php artisan queue:restart
 php artisan up
 ```
 
-Baris `cp` diperlukan karena aset hasil build ada di `pos_app/public`, sementara
-yang dilayani browser ada di web root.
+Kedua baris `cp` diperlukan karena aset build dan foto menu berada di
+`pos_app/public`, sementara yang dilayani browser ada di web root.
+
+> ⚠️ **Salin `build/` dan `images/` saja — jangan `public/.` seluruhnya.**
+> Menyalin seluruh isi `public/` menimpa `index.php` di web root dengan versi
+> bawaan repo, yang mencari `vendor/autoload.php` di folder yang salah. PHP mati
+> sebelum Laravel sempat jalan, dan seluruh situs balas HTTP 500 polos tanpa
+> pesan apa pun serta tanpa jejak di `laravel.log`. Kalau terlanjur, tulis ulang
+> `index.php` dengan perintah di langkah 8.
+>
+> `npm` tidak perlu dijalankan di server — aset sudah dalam bentuk jadi di repo.
 
 ---
 
