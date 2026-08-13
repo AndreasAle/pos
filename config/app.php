@@ -69,6 +69,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Platform Fee
+    |--------------------------------------------------------------------------
+    |
+    | Percentage withheld by the platform from every QRIS transaction before the
+    | merchant balance is credited. 0 disables the fee entirely.
+    |
+    */
+
+    'platform_fee_percent' => (float) env('PLATFORM_FEE_PERCENT', 0),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

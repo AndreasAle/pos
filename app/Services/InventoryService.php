@@ -2,31 +2,37 @@
 
 namespace App\Services;
 
+use App\Exceptions\PosTransactionException;
 use App\Models\Ingredient;
 use App\Models\Order;
-use App\Models\ProductBundle;
 use App\Models\Recipe;
 use App\Models\StockMovement;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 class InventoryService
 {
+    /**
+     * @throws PosTransactionException when stock is short and negatives are disallowed.
+     */
     public function deductFromRecipe(Recipe $recipe, float $qty, Order $order, User $user, bool $allowNegative = false): void
     {
         foreach ($recipe->items as $item) {
             $deduct     = $item->qty * $qty;
             $ingredient = $item->ingredient;
+            $before     = (float) $ingredient->current_stock;
 
-            if (!$allowNegative && $ingredient->current_stock < $deduct) {
-                continue;
+            if (!$allowNegative && $before < $deduct) {
+                throw new PosTransactionException(sprintf(
+                    'Stok %s tidak cukup. Butuh %s %s, tersedia %s %s.',
+                    $ingredient->name,
+                    rtrim(rtrim(number_format($deduct, 3, ',', '.'), '0'), ','),
+                    $ingredient->unit,
+                    rtrim(rtrim(number_format($before, 3, ',', '.'), '0'), ','),
+                    $ingredient->unit
+                ));
             }
 
-            $before = (float) $ingredient->current_stock;
-            $after  = max(0, $before - $deduct);
-            if ($allowNegative) {
-                $after = $before - $deduct;
-            }
+            $after = $before - $deduct;
 
             $ingredient->update(['current_stock' => $after]);
 
@@ -47,43 +53,43 @@ class InventoryService
         }
     }
 
+    /**
+     * Give back exactly what this order took.
+     *
+     * Driven by the recorded 'sale' movements rather than by recomputing the
+     * recipes: recipes can be edited after the sale, and a deduction that never
+     * happened must never be credited back. Bundles need no special case here —
+     * their component deductions were already written as movements.
+     */
     public function restoreFromOrder(Order $order, User $user): void
     {
-        $order->loadMissing('items.product.recipe.items.ingredient');
+        // Never credit the same order twice.
+        $alreadyReturned = StockMovement::where('order_id', $order->id)
+            ->where('type', 'return')
+            ->exists();
 
-        foreach ($order->items as $item) {
-            $qty = (float) $item->qty;
-
-            if ($item->product_id && $item->product) {
-                $product = $item->product;
-                if ($product->is_stock_tracked && $product->recipe) {
-                    $this->restoreFromRecipe($product->recipe, $qty, $order, $user);
-                }
-            } elseif ($item->product_bundle_id) {
-                $bundle = ProductBundle::with('items.product.recipe.items.ingredient')
-                    ->find($item->product_bundle_id);
-                if ($bundle) {
-                    foreach ($bundle->items as $bundleItem) {
-                        $prod = $bundleItem->product;
-                        if ($prod && $prod->is_stock_tracked && $prod->recipe) {
-                            $this->restoreFromRecipe(
-                                $prod->recipe,
-                                (float) $bundleItem->qty * $qty,
-                                $order,
-                                $user
-                            );
-                        }
-                    }
-                }
-            }
+        if ($alreadyReturned) {
+            return;
         }
-    }
 
-    private function restoreFromRecipe(Recipe $recipe, float $qty, Order $order, User $user): void
-    {
-        foreach ($recipe->items as $item) {
-            $restore    = (float) $item->qty * $qty;
-            $ingredient = $item->ingredient;
+        $soldPerIngredient = StockMovement::where('order_id', $order->id)
+            ->where('type', 'sale')
+            ->selectRaw('ingredient_id, SUM(qty) as total_qty')
+            ->groupBy('ingredient_id')
+            ->pluck('total_qty', 'ingredient_id');
+
+        foreach ($soldPerIngredient as $ingredientId => $totalQty) {
+            $restore = abs((float) $totalQty);
+
+            if ($restore <= 0) {
+                continue;
+            }
+
+            $ingredient = Ingredient::find($ingredientId);
+
+            if (!$ingredient) {
+                continue;
+            }
 
             $before = (float) $ingredient->current_stock;
             $after  = $before + $restore;

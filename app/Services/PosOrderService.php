@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\PosTransactionException;
 use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\CustomerPoint;
@@ -12,6 +13,7 @@ use App\Models\OrderItemAddon;
 use App\Models\OrderPayment;
 use App\Models\Product;
 use App\Models\ProductBundle;
+use App\Models\ProductVariant;
 use App\Models\Promotion;
 use Illuminate\Support\Facades\DB;
 
@@ -36,7 +38,7 @@ class PosOrderService
                     $bundle    = ProductBundle::forBusiness($business->id)
                         ->with('items.product.recipe.items.ingredient')
                         ->findOrFail($raw['bundle_id']);
-                    $qty       = (float) ($raw['qty'] ?? 1);
+                    $qty       = $this->resolveQty($raw['qty'] ?? 1, $bundle->name);
                     $price     = (float) $bundle->price;
                     $lineTotal = $price * $qty;
                     $subtotal += $lineTotal;
@@ -54,18 +56,19 @@ class PosOrderService
                         'variant_name' => null,
                     ];
                 } else {
-                    $product    = Product::forBusiness($business->id)
-                        ->with('recipe.items.ingredient')
+                    $product = Product::forBusiness($business->id)
+                        ->with('recipe.items.ingredient', 'variants', 'addons')
                         ->findOrFail($raw['product_id']);
-                    $qty        = (float) $raw['qty'];
-                    $price      = (float) $raw['price'];
-                    $addonTotal = 0;
-                    $addons     = [];
 
-                    foreach ($raw['addons'] ?? [] as $addonData) {
-                        $addonTotal += (float) $addonData['price'];
-                        $addons[]    = $addonData;
-                    }
+                    $qty = $this->resolveQty($raw['qty'] ?? null, $product->name);
+
+                    // Price comes from the database, never from the request. A
+                    // tampered payload must not be able to sell a Rp 100.000 item
+                    // for Rp 1, or attach a negative-priced "add-on" as a discount.
+                    $variant     = $this->resolveVariant($product, $raw['variant_id'] ?? null);
+                    $price       = (float) $product->price + (float) ($variant->price_adjustment ?? 0);
+                    $addons      = $this->resolveAddons($product, $raw['addons'] ?? []);
+                    $addonTotal  = array_sum(array_column($addons, 'price'));
 
                     $lineTotal  = ($price + $addonTotal) * $qty;
                     $subtotal  += $lineTotal;
@@ -80,8 +83,8 @@ class PosOrderService
                         'subtotal'     => $lineTotal,
                         'addons'       => $addons,
                         'notes'        => $raw['notes'] ?? null,
-                        'variant_id'   => $raw['variant_id'] ?? null,
-                        'variant_name' => $raw['variant_name'] ?? null,
+                        'variant_id'   => $variant?->id,
+                        'variant_name' => $variant?->name,
                     ];
                 }
             }
@@ -101,10 +104,41 @@ class PosOrderService
                 $discountAmount = max($discountAmount, (float) $data['manual_discount']);
             }
 
-            $redeemPoints   = (int) ($data['redeem_points'] ?? 0);
-            $pointsDiscount = 0;
-            if ($redeemPoints > 0 && !empty($data['customer_id'])) {
-                $pointValue     = (float) ($settings['point_value_rupiah'] ?? 1);
+            $discountAmount = min($subtotal, $discountAmount);
+
+            $requestedPoints = (int) ($data['redeem_points'] ?? 0);
+            $redeemPoints    = 0;
+            $pointsDiscount  = 0;
+            $redeemCustomer  = null;
+
+            if ($requestedPoints > 0 && !empty($data['customer_id'])) {
+                // Lock the row so two concurrent sales cannot spend the same points.
+                $redeemCustomer = Customer::forBusiness($business->id)
+                    ->lockForUpdate()
+                    ->find($data['customer_id']);
+
+                if (!$redeemCustomer) {
+                    throw new PosTransactionException('Pelanggan tidak ditemukan.');
+                }
+
+                if ($redeemCustomer->loyalty_points < $requestedPoints) {
+                    throw new PosTransactionException(sprintf(
+                        'Poin tidak cukup. Diminta %s poin, saldo pelanggan %s poin.',
+                        number_format($requestedPoints, 0, ',', '.'),
+                        number_format($redeemCustomer->loyalty_points, 0, ',', '.')
+                    ));
+                }
+
+                $pointValue = (float) ($settings['point_value_rupiah'] ?? 1);
+
+                // Only spend the points the bill can actually absorb. Redeeming
+                // 500 points against a Rp 10.000 bill must not burn all 500 —
+                // the customer keeps the remainder for the next visit.
+                if ($pointValue > 0) {
+                    $room         = max(0, $subtotal - $discountAmount);
+                    $redeemPoints = min($requestedPoints, (int) floor($room / $pointValue));
+                }
+
                 $pointsDiscount = $redeemPoints * $pointValue;
             }
 
@@ -247,12 +281,13 @@ class PosOrderService
 
             // ── Customer stats + loyalty (skip if payment pending) ───────────
             if (!$paymentPending && $order->customer_id) {
-                $customer = Customer::find($order->customer_id);
+                $customer = $redeemCustomer ?? Customer::find($order->customer_id);
                 if ($customer) {
                     $customer->increment('total_transactions');
                     $customer->increment('total_spending', $grandTotal);
 
-                    if ($redeemPoints > 0 && $customer->loyalty_points >= $redeemPoints) {
+                    // Balance was already verified (and the row locked) above.
+                    if ($redeemPoints > 0) {
                         $customer->decrement('loyalty_points', $redeemPoints);
                         $customer->points()->create([
                             'order_id'    => $order->id,
@@ -305,9 +340,14 @@ class PosOrderService
             ]);
 
             foreach ($data['items'] as $item) {
-                $product = Product::forBusiness($business->id)->findOrFail($item['product_id']);
-                $qty     = (float) $item['qty'];
-                $price   = (float) ($item['price'] ?? $product->price);
+                $product = Product::forBusiness($business->id)
+                    ->with('variants')
+                    ->findOrFail($item['product_id']);
+
+                $qty     = $this->resolveQty($item['qty'] ?? null, $product->name);
+                $variant = $this->resolveVariant($product, $item['variant_id'] ?? null);
+                // Server-side price here too — a held order gets recalled and paid.
+                $price   = (float) $product->price + (float) ($variant->price_adjustment ?? 0);
                 $sub     = $price * $qty;
                 $subtotal += $sub;
 
@@ -327,6 +367,79 @@ class PosOrderService
 
             return $order;
         });
+    }
+
+    /**
+     * Quantity must be a positive number. A negative qty produced a Rp 0 order
+     * and credited ingredient stock that was never sold.
+     */
+    private function resolveQty(mixed $raw, string $label): float
+    {
+        $qty = (float) $raw;
+
+        if ($qty <= 0) {
+            throw new PosTransactionException("Jumlah untuk {$label} harus lebih dari 0.");
+        }
+
+        return $qty;
+    }
+
+    /**
+     * A variant is only valid if it belongs to this product and is still active.
+     */
+    private function resolveVariant(Product $product, mixed $variantId): ?ProductVariant
+    {
+        if (empty($variantId)) {
+            return null;
+        }
+
+        $variant = $product->variants->firstWhere('id', (int) $variantId);
+
+        if (!$variant || !$variant->is_active) {
+            throw new PosTransactionException(
+                "Varian yang dipilih tidak tersedia untuk produk {$product->name}."
+            );
+        }
+
+        return $variant;
+    }
+
+    /**
+     * Add-ons must be picked by id from the product's own list. Free-text add-ons
+     * are rejected: they were the loophole that let a negative price through.
+     *
+     * @param  array<int, array<string, mixed>>  $raw
+     * @return array<int, array{addon_id: int, name: string, price: float}>
+     */
+    private function resolveAddons(Product $product, array $raw): array
+    {
+        $addons = [];
+
+        foreach ($raw as $item) {
+            $addonId = $item['addon_id'] ?? null;
+
+            if (empty($addonId)) {
+                throw new PosTransactionException(
+                    "Add-on untuk produk {$product->name} tidak dikenali."
+                );
+            }
+
+            $addon = $product->addons->firstWhere('id', (int) $addonId);
+
+            if (!$addon || !$addon->is_active) {
+                throw new PosTransactionException(
+                    "Add-on yang dipilih tidak tersedia untuk produk {$product->name}."
+                );
+            }
+
+            $addons[] = [
+                'addon_id' => $addon->id,
+                'name'     => $addon->name,
+                'price'    => (float) $addon->price,
+            ];
+        }
+
+        return $addons;
     }
 
     private function generateOrderNumber(int $businessId): string

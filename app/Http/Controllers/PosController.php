@@ -3,18 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\CustomerPoint;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductBundle;
 use App\Models\ProductCategory;
 use App\Models\Promotion;
+use App\Services\BalanceService;
 use App\Services\PosOrderService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PosController extends Controller
 {
-    public function __construct(protected PosOrderService $posService) {}
+    public function __construct(
+        protected PosOrderService $posService,
+        protected BalanceService $balance,
+    ) {}
 
     public function index()
     {
@@ -105,12 +111,35 @@ class PosController extends Controller
         ));
     }
 
+    /**
+     * Shape rules for a cart line. Prices are deliberately absent — the service
+     * reads them from the database, so anything sent here would be ignored.
+     *
+     * @return array<string, mixed>
+     */
+    private function cartRules(): array
+    {
+        return [
+            'items'                    => 'required|array|min:1',
+            'items.*.product_id'       => 'required_without:items.*.bundle_id|nullable|integer|exists:products,id',
+            'items.*.bundle_id'        => 'required_without:items.*.product_id|nullable|integer|exists:product_bundles,id',
+            'items.*.qty'              => 'required|numeric|min:0.001',
+            'items.*.variant_id'       => 'nullable|integer|exists:product_variants,id',
+            'items.*.notes'            => 'nullable|string|max:255',
+            'items.*.addons'           => 'nullable|array',
+            'items.*.addons.*.addon_id' => 'required|integer|exists:product_addons,id',
+            'order_type'               => 'nullable|in:dine_in,takeaway,delivery',
+            'customer_id'              => 'nullable|integer|exists:customers,id',
+            'promotion_id'             => 'nullable|integer|exists:promotions,id',
+            'manual_discount'          => 'nullable|numeric|min:0',
+            'redeem_points'            => 'nullable|integer|min:0',
+            'delivery_fee'             => 'nullable|numeric|min:0',
+        ];
+    }
+
     public function store(Request $request)
     {
-        $request->validate([
-            'items'      => 'required|array|min:1',
-            'order_type' => 'nullable|in:dine_in,takeaway,delivery',
-        ]);
+        $request->validate($this->cartRules());
 
         // Validate payment: either split_payments array OR single payment_method+paid_amount
         if ($request->has('split_payments')) {
@@ -136,6 +165,15 @@ class PosController extends Controller
             'order_id'     => $order->id,
             'order_number' => $order->order_number,
             'receipt_url'  => route('receipt.show', $order),
+            // Authoritative totals. The cart on screen is only a preview — prices
+            // are resolved server-side, so these are the numbers that count.
+            'grand_total'  => (float) $order->grand_total,
+            'change'       => (float) $order->change_amount,
+            // Can be lower than what the cashier typed: points are only spent up
+            // to what the bill can absorb.
+            'points_redeemed' => (int) abs(
+                CustomerPoint::where('order_id', $order->id)->where('type', 'redeem')->sum('points')
+            ),
         ]);
     }
 
@@ -145,10 +183,7 @@ class PosController extends Controller
      */
     public function createQrisDraft(Request $request)
     {
-        $request->validate([
-            'items'      => 'required|array|min:1',
-            'order_type' => 'nullable|in:dine_in,takeaway,delivery',
-        ]);
+        $request->validate($this->cartRules());
 
         $data = array_merge($request->all(), [
             'payment_method' => 'qris',
@@ -178,6 +213,18 @@ class PosController extends Controller
             'status'         => 'paid',
             'paid_amount'    => $order->grand_total,
         ]);
+
+        // Credit the merchant now. Without this the balance was lost for good:
+        // the webhook that arrives later skips crediting because the order is
+        // already marked paid. Idempotent, so the later webhook is harmless.
+        try {
+            $this->balance->creditFromQris($order->load('business'));
+        } catch (\Throwable $e) {
+            Log::error('Balance credit failed on manual QRIS confirm', [
+                'order' => $order->order_number,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Handle loyalty points now (deferred from QRIS draft creation)
         $settings = $order->business->settings ?? [];
@@ -217,8 +264,9 @@ class PosController extends Controller
     {
         $request->validate([
             'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.product_id' => 'required|integer|exists:products,id',
             'items.*.qty'        => 'required|numeric|min:0.001',
+            'items.*.variant_id' => 'nullable|integer|exists:product_variants,id',
         ]);
 
         $order = $this->posService->holdOrder(auth()->user(), $request->all());

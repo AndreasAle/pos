@@ -8,6 +8,10 @@ class BusinessSubscription extends Model
 {
     protected $fillable = [
         'business_id', 'subscription_plan_id', 'starts_at', 'ends_at', 'status', 'notes',
+        // Without these three the Midtrans columns were silently dropped on create():
+        // the payment token never persisted, so the webhook could not find the
+        // subscription it had just been paid for.
+        'payment_token', 'payment_url', 'paid_at',
     ];
 
     protected function casts(): array
@@ -15,6 +19,7 @@ class BusinessSubscription extends Model
         return [
             'starts_at' => 'date',
             'ends_at'   => 'date',
+            'paid_at'   => 'datetime',
         ];
     }
 

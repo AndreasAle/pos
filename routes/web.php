@@ -35,7 +35,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/login',     [LoginController::class, 'showLogin'])->name('login');
     Route::post('/login',    [LoginController::class, 'login'])->name('login.post');
     Route::get('/register',  [RegisterController::class, 'showRegister'])->name('register');
-    Route::post('/register', [RegisterController::class, 'register'])->name('register.post');
+    // Cap signups per IP so nobody can script thousands of throwaway tenants.
+    Route::post('/register', [RegisterController::class, 'register'])
+        ->middleware('throttle:10,1')
+        ->name('register.post');
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');

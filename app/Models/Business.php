@@ -71,7 +71,9 @@ class Business extends Model
     {
         return $this->hasOne(BusinessSubscription::class)
             ->whereIn('status', ['trial', 'active'])
-            ->latest();
+            // Ordered by id, not created_at: two subscriptions written in the same
+            // second would otherwise tie and the winner would be arbitrary.
+            ->latest('id');
     }
 
     public function getSetting(string $key, mixed $default = null): mixed

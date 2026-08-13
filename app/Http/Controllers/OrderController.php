@@ -4,13 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\Order;
+use App\Services\BalanceService;
 use App\Services\InventoryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
-    public function __construct(protected InventoryService $inventory) {}
+    public function __construct(
+        protected InventoryService $inventory,
+        protected BalanceService $balance,
+    ) {}
 
     public function index(Request $request)
     {
@@ -52,6 +56,7 @@ class OrderController extends Controller
 
             $this->inventory->restoreFromOrder($order, $user);
             $this->reverseCustomerLoyalty($order, 'Poin dibatalkan karena void order', 'Poin dikembalikan karena void order');
+            $this->balance->reverseFromRefund($order);
         });
 
         return back()->with('success', 'Order berhasil dibatalkan dan stok dikembalikan.');
@@ -79,6 +84,10 @@ class OrderController extends Controller
 
             // Reverse loyalty points
             $this->reverseCustomerLoyalty($order, 'Poin dibatalkan karena refund order', 'Poin dikembalikan karena refund order');
+
+            // Take back the QRIS credit. No-op for cash orders and for QRIS orders
+            // that were never actually credited.
+            $this->balance->reverseFromRefund($order);
         });
 
         return back()->with('success', 'Refund berhasil. Stok dan poin sudah dikembalikan.');

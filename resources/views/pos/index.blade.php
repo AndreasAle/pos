@@ -1336,8 +1336,12 @@ function posApp() {
                 if (data.success) {
                     this.lastOrderNo         = data.order_number;
                     this.lastReceiptUrl      = data.receipt_url;
-                    this.lastChange          = this.change;
-                    this.lastPointsRedeemed  = (this.redeemActive && this.customerId) ? (parseInt(this.redeemPoints) || 0) : 0;
+                    // Server-side total wins: the cart preview can be stale if a
+                    // price changed after this page was loaded.
+                    this.lastChange          = data.change ?? this.change;
+                    // Server decides how many points were actually spent — it caps
+                    // them at what the bill could absorb.
+                    this.lastPointsRedeemed  = data.points_redeemed ?? 0;
                     this.payModal       = false;
                     this.showQrisScreen = false;
                     this.successModal   = true;

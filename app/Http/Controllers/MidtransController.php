@@ -209,12 +209,16 @@ class MidtransController extends Controller
             if ($order && in_array($txStatus, ['capture', 'settlement'])) {
                 if ($order->payment_status !== 'paid') {
                     $order->update(['payment_status' => 'paid', 'status' => 'paid']);
-                    // Credit merchant balance
-                    try {
-                        $this->balanceService->creditFromQris($order);
-                    } catch (\Exception $e) {
-                        Log::error('Balance credit failed for QRIS', ['order' => $orderNumber, 'error' => $e->getMessage()]);
-                    }
+                }
+
+                // Always attempt the credit, even when the cashier already confirmed
+                // the order manually — creditFromQris() is idempotent, so a retried
+                // webhook cannot double-credit, and a manually confirmed order does
+                // not silently lose its balance.
+                try {
+                    $this->balanceService->creditFromQris($order);
+                } catch (\Exception $e) {
+                    Log::error('Balance credit failed for QRIS', ['order' => $orderNumber, 'error' => $e->getMessage()]);
                 }
             }
         }

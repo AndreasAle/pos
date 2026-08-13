@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CashierShift;
+use App\Models\OrderPayment;
 use App\Models\User;
 
 class ShiftService
@@ -21,12 +22,7 @@ class ShiftService
 
     public function closeShift(CashierShift $shift, float $actualCash, ?string $notes): CashierShift
     {
-        $cashSales = (float) $shift->orders()
-            ->where('status', 'paid')
-            ->where('payment_method', 'cash')
-            ->sum('grand_total');
-
-        $expected   = (float) $shift->opening_cash + $cashSales;
+        $expected   = (float) $shift->opening_cash + $this->cashTakings($shift);
         $difference = $actualCash - $expected;
 
         $shift->update([
@@ -39,5 +35,31 @@ class ShiftService
         ]);
 
         return $shift->fresh();
+    }
+
+    /**
+     * Cash that should physically be in the drawer for this shift.
+     *
+     * Split orders are the reason this is not a single sum: their
+     * `payment_method` only records the first method used, while `grand_total`
+     * is the whole bill. Counting those as cash made the drawer look short by
+     * the non-cash portion on every split sale. The real split is in
+     * `order_payments`, so that is what gets summed.
+     */
+    public function cashTakings(CashierShift $shift): float
+    {
+        $paidOrders = $shift->orders()->where('status', 'paid');
+
+        $singleMethodCash = (float) (clone $paidOrders)
+            ->where('is_split_payment', false)
+            ->where('payment_method', 'cash')
+            ->sum('grand_total');
+
+        $splitCash = (float) OrderPayment::whereIn(
+            'order_id',
+            (clone $paidOrders)->where('is_split_payment', true)->select('id')
+        )->where('payment_method', 'cash')->sum('amount');
+
+        return $singleMethodCash + $splitCash;
     }
 }
