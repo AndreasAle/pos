@@ -11,6 +11,7 @@ use App\Models\ProductCategory;
 use App\Models\Promotion;
 use App\Services\BalanceService;
 use App\Services\PosOrderService;
+use App\Services\QrisService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,34 @@ class PosController extends Controller
     public function __construct(
         protected PosOrderService $posService,
         protected BalanceService $balance,
+        protected QrisService $qris,
     ) {}
+
+    /**
+     * Build a dynamic QRIS for the amount on screen.
+     *
+     * The customer scans and their banking app shows the exact total, so the
+     * cashier never has to read it out. Payment lands straight in the merchant
+     * account; the cashier confirms receipt to close the sale.
+     */
+    public function dynamicQris(Request $request)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+        ]);
+
+        $settings = auth()->user()->business->settings ?? [];
+        $amount   = (int) round($validated['amount']);
+
+        $payload = $this->qris->toDynamic($settings['qris_payload'] ?? '', $amount);
+
+        return response()->json([
+            'success'       => true,
+            'amount'        => $amount,
+            'svg'           => $this->qris->svg($payload),
+            'merchant_name' => $this->qris->merchantName($payload),
+        ]);
+    }
 
     public function index()
     {
@@ -58,7 +86,7 @@ class PosController extends Controller
             'sku'        => $p->sku,
             'price'      => (float) $p->price,
             'cost_price' => (float) $p->cost_price,
-            'image'      => $p->image ? asset('storage/' . $p->image) : null,
+            'image'      => $p->image_url,
             'variants'   => $p->variants->map(fn($v) => [
                 'id'               => $v->id,
                 'name'             => $v->name,
@@ -90,18 +118,25 @@ class PosController extends Controller
         $promotions = Promotion::forBusiness($business->id)->active()->get();
         $settings   = $business->settings ?? [];
 
-        $midtransEnabled   = config('midtrans.server_key') !== '';
+        // A stored QRIS payload lets us build a dynamic QR ourselves — no gateway,
+        // no webhook — so it takes priority over Midtrans when both are present.
+        $qrisPayload   = trim($settings['qris_payload'] ?? '');
+        $qrisDynamic   = $qrisPayload !== '' && $this->qris->isValid($qrisPayload);
+
+        $midtransEnabled   = !$qrisDynamic && config('midtrans.server_key') !== '';
         $midtransClientKey = config('midtrans.client_key');
 
         $qrisData = [
             'image'         => $business->qris_image
                                 ? asset('storage/' . $business->qris_image)
                                 : null,
-            'merchant_name' => $business->qris_merchant_name ?? $business->name,
+            'merchant_name' => $business->qris_merchant_name
+                                ?: ($qrisDynamic ? $this->qris->merchantName($qrisPayload) : null)
+                                ?: $business->name,
             'nmid'          => $business->qris_nmid ?? '',
-            // QRIS is "set" if static image exists OR Midtrans dynamic QRIS is configured
-            'is_set'        => (bool) $business->qris_image || $midtransEnabled,
+            'is_set'        => (bool) $business->qris_image || $midtransEnabled || $qrisDynamic,
             'use_midtrans'  => $midtransEnabled,
+            'use_dynamic'   => $qrisDynamic,
         ];
 
         return view('pos.index', compact(

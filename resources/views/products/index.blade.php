@@ -47,7 +47,7 @@
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
         <div class="aspect-square bg-gray-100 relative overflow-hidden">
             @if($product->image)
-            <img src="{{ asset('storage/' . $product->image) }}"
+            <img src="{{ $product->image_url }}"
                  alt="{{ $product->name }}"
                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
             @else

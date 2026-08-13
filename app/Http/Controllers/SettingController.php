@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\QrisService;
+
 use App\Models\Outlet;
 use Illuminate\Http\Request;
 
@@ -101,10 +103,28 @@ class SettingController extends Controller
             'qris_image'         => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
             'qris_merchant_name' => 'nullable|string|max:255',
             'qris_nmid'          => 'nullable|string|max:50',
+            'qris_payload'       => [
+                'nullable',
+                'string',
+                'max:1000',
+                // Reject a mistyped code here rather than letting a cashier show
+                // a customer a QR their banking app will refuse.
+                function ($attribute, $value, $fail) {
+                    if (trim((string) $value) !== '' && !app(QrisService::class)->isValid(trim($value))) {
+                        $fail('Kode QRIS tidak valid — CRC tidak cocok. Salin ulang seluruh kode dari QR statis Anda.');
+                    }
+                },
+            ],
         ]);
 
         $business = auth()->user()->business;
         $data     = $request->only('qris_merchant_name', 'qris_nmid');
+
+        // Stored in settings JSON: this is the source for generating a dynamic
+        // QR with the exact amount at checkout.
+        $settings                  = $business->settings ?? [];
+        $settings['qris_payload']  = trim((string) $request->input('qris_payload'));
+        $data['settings']          = $settings;
 
         if ($request->hasFile('qris_image')) {
             if ($business->qris_image) {

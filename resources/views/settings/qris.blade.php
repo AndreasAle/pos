@@ -67,6 +67,34 @@
                 <p class="text-xs text-gray-400 mt-1">Opsional. Tampil di struk sebagai referensi pembayaran</p>
             </div>
 
+            <div class="border-t border-gray-200 pt-5">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Kode QRIS Statis
+                    <span class="ml-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">QRIS Dinamis</span>
+                </label>
+                <textarea name="qris_payload" rows="4"
+                          class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                          placeholder="00020101021126570011ID.DANA.WWW...">{{ old('qris_payload', $business->settings['qris_payload'] ?? '') }}</textarea>
+
+                @error('qris_payload')
+                    <p class="text-xs text-red-600 mt-1 font-medium">{{ $message }}</p>
+                @enderror
+
+                <div class="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-800 leading-relaxed">
+                    <p class="font-semibold mb-1">Kalau diisi, kasir tidak perlu QR gambar lagi.</p>
+                    <p>
+                        Sistem membuat QR baru tiap transaksi dengan <strong>nominal sudah terkunci</strong>,
+                        sehingga pelanggan tidak bisa salah ketik jumlah. Uang tetap masuk langsung
+                        ke rekening merchant Anda — tanpa payment gateway dan tanpa potongan tambahan.
+                    </p>
+                    <p class="mt-2 text-emerald-700">
+                        Cara mendapatkannya: scan QR statis Anda pakai aplikasi pembaca QR biasa,
+                        lalu salin <em>seluruh</em> teks hasilnya ke sini. Kode akan diperiksa otomatis
+                        saat disimpan.
+                    </p>
+                </div>
+            </div>
+
             <button type="submit"
                     class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
                 Simpan Pengaturan QRIS

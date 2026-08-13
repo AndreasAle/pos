@@ -66,7 +66,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Foto Produk</label>
                     @if($product->image)
                     <div class="flex items-center gap-3 mb-2">
-                        <img src="{{ asset('storage/' . $product->image) }}" class="w-16 h-16 rounded-xl object-cover">
+                        <img src="{{ $product->image_url }}" class="w-16 h-16 rounded-xl object-cover">
                         <span class="text-xs text-gray-500">Upload baru untuk mengganti</span>
                     </div>
                     @endif

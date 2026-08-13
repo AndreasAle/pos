@@ -90,6 +90,7 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
     // POS
     Route::get('pos',                               [PosController::class, 'index'])->name('pos.index');
     Route::post('pos/order',                        [PosController::class, 'store'])->name('pos.store');
+    Route::post('pos/qris/dynamic',                 [PosController::class, 'dynamicQris'])->name('pos.qris.dynamic');
     Route::post('pos/qris-draft',                   [PosController::class, 'createQrisDraft'])->name('pos.qris-draft');
     Route::post('pos/qris-confirm/{order}',         [PosController::class, 'confirmQrisManual'])->name('pos.qris-confirm');
     Route::post('pos/hold',                         [PosController::class, 'hold'])->name('pos.hold');

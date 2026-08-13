@@ -27,7 +27,7 @@
             <div class="flex gap-5">
                 <div class="w-28 h-28 rounded-2xl bg-gray-100 flex-shrink-0 overflow-hidden">
                     @if($product->image)
-                    <img src="{{ asset('storage/' . $product->image) }}" class="w-full h-full object-cover">
+                    <img src="{{ $product->image_url }}" class="w-full h-full object-cover">
                     @else
                     <div class="w-full h-full flex items-center justify-center">
                         <svg class="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

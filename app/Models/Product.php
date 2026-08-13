@@ -41,6 +41,30 @@ class Product extends Model
         return $this->belongsTo(ProductCategory::class, 'product_category_id');
     }
 
+    /**
+     * Public URL for the product photo.
+     *
+     * Three shapes are supported: a full URL, a path under public/ (seeded demo
+     * photos live in public/images/menu so they travel with the repo), and an
+     * uploaded file on the public disk.
+     */
+    public function getImageUrlAttribute(): string
+    {
+        if (!$this->image) {
+            return asset('images/default-product.png');
+        }
+
+        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+            return $this->image;
+        }
+
+        if (str_starts_with($this->image, 'images/')) {
+            return asset($this->image);
+        }
+
+        return asset('storage/' . $this->image);
+    }
+
     public function variants()
     {
         return $this->hasMany(ProductVariant::class)->orderBy('sort_order');
@@ -56,12 +80,6 @@ class Product extends Model
         return $this->hasOne(Recipe::class);
     }
 
-    public function getImageUrlAttribute(): string
-    {
-        return $this->image
-            ? asset('storage/' . $this->image)
-            : asset('images/default-product.png');
-    }
 
     public function scopeForBusiness($query, $businessId)
     {

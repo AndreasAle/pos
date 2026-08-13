@@ -581,7 +581,15 @@
 
                 {{-- QRIS hint --}}
                 <div x-show="payMethod === 'qris' && !isSplit" class="mb-4">
-                    @if($midtransEnabled)
+                    @if($qrisData['use_dynamic'])
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3">
+                        <span class="text-2xl">⚡</span>
+                        <div>
+                            <p class="text-sm font-semibold text-emerald-800">QRIS Dinamis — nominal terkunci</p>
+                            <p class="text-xs text-emerald-600">QR dibuat otomatis sesuai total belanja</p>
+                        </div>
+                    </div>
+                    @elseif($midtransEnabled)
                     <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3">
                         <span class="text-2xl">⚡</span>
                         <div>
@@ -668,10 +676,13 @@
                     <div x-show="!qrisLoading && midtransEnabled && !midtransQrUrl && !qrisExpired" class="w-52 h-52 bg-gray-50 flex items-center justify-center rounded-xl">
                         <p class="text-gray-400 text-sm">QR gagal dibuat</p>
                     </div>
+                    {{-- Locally generated dynamic QRIS --}}
+                    <div x-show="!qrisLoading && qrisUseDynamic && qrisSvg" x-html="qrisSvg" class="w-52 h-52 [&>svg]:w-full [&>svg]:h-full"></div>
+
                     {{-- Static QRIS image --}}
                     @if($qrisData['image'])
                     <div x-show="!midtransEnabled">
-                        <img src="{{ $qrisData['image'] }}" alt="QR QRIS" class="w-52 h-52 object-contain">
+                        <img x-show="!qrisUseDynamic" src="{{ $qrisData['image'] }}" alt="QR QRIS" class="w-52 h-52 object-contain">
                     </div>
                     @else
                     <div x-show="!midtransEnabled" class="w-52 h-52 bg-gray-50 flex items-center justify-center rounded-xl">
@@ -860,6 +871,8 @@ function posApp() {
         settings:      {!! json_encode($settings ?? new stdClass) !!},
         promotionData: {!! json_encode($promotions->map(fn($p) => ['id'=>$p->id,'type'=>$p->type,'value'=>(float)$p->value,'min_order'=>(float)$p->min_order])->values()) !!},
         qrisIsSet:       {!! $qrisData['is_set'] ? 'true' : 'false' !!},
+        qrisUseDynamic:  {!! $qrisData['use_dynamic'] ? 'true' : 'false' !!},
+        qrisSvg:         '',
         midtransEnabled: {!! $midtransEnabled ? 'true' : 'false' !!},
         staticQrisSet:   {!! $qrisData['qris_image'] ?? false ? 'true' : 'false' !!},
 
@@ -1178,6 +1191,28 @@ function posApp() {
             if (!this.qrisIsSet) return;
             this.showQrisScreen = true;
 
+            // Locally generated dynamic QRIS: no gateway, the QR just carries the
+            // exact amount. The cashier confirms once the customer has paid.
+            if (this.qrisUseDynamic) {
+                this.qrisLoading = true;
+                this.qrisSvg     = '';
+                try {
+                    const r = await fetch('/pos/qris/dynamic', {
+                        method:  'POST',
+                        headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                        body:    JSON.stringify({ amount: this.grandTotal }),
+                    });
+                    const data = await r.json();
+                    if (!data.success) throw new Error(data.message || 'Gagal membuat QRIS');
+                    this.qrisSvg = data.svg;
+                } catch (e) {
+                    alert('Gagal membuat QRIS: ' + e.message);
+                    this.showQrisScreen = false;
+                }
+                this.qrisLoading = false;
+                return;
+            }
+
             // Dynamic Midtrans QRIS flow
             if (this.midtransEnabled) {
                 this.qrisLoading    = true;
@@ -1247,6 +1282,7 @@ function posApp() {
                 this.midtransPolling = null;
             }
             this.showQrisScreen  = false;
+            this.qrisSvg         = '';
             this.midtransQrUrl   = null;
             this.midtransOrderId = null;
             this.qrisLoading     = false;
