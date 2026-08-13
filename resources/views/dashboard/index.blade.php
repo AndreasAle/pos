@@ -12,7 +12,9 @@
 @php
     $sub = $currentBusiness->activeSubscription;
 @endphp
-@if($sub && $sub->status === 'trial' && $sub->ends_at)
+{{-- Trial banner belongs to the subscription module; with it off there is no
+     upgrade page to link to and route() would throw. --}}
+@if(config('pos.features.subscription') && $sub && $sub->status === 'trial' && $sub->ends_at)
     <div x-data="{
             endsAt: new Date('{{ $sub->ends_at->copy()->endOfDay()->toIso8601String() }}').getTime(),
             remaining: '',
