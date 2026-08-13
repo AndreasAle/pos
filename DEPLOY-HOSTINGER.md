@@ -231,6 +231,23 @@ proses pendaftaran.
 
 ## Update kode berikutnya
 
+Pakai skrip, jangan ketik manual:
+
+```bash
+cd ~/pos_app && ./deploy.sh
+```
+
+Skrip itu menjalankan seluruh langkah dalam urutan yang benar — pull, composer,
+migrate, salin aset, bangun ulang cache — lalu **memverifikasi** bahwa berkas CSS
+yang ditunjuk manifest benar-benar ada di web root, dan berhenti dengan pesan
+jelas kalau tidak.
+
+Pemeriksaan terakhir itu ada karena gejalanya sangat membingungkan: nama berkas
+CSS berubah setiap kali tampilan diubah, dan kalau lupa menyalinnya, situs
+tampil tanpa CSS sama sekali tanpa satu pun pesan error.
+
+Kalau tetap ingin manual, ini urutannya:
+
 ```bash
 cd ~/pos_app
 php artisan down
@@ -243,9 +260,6 @@ php artisan config:cache && php artisan route:cache && php artisan view:cache
 php artisan queue:restart
 php artisan up
 ```
-
-Kedua baris `cp` diperlukan karena aset build dan foto menu berada di
-`pos_app/public`, sementara yang dilayani browser ada di web root.
 
 > ⚠️ **Salin `build/` dan `images/` saja — jangan `public/.` seluruhnya.**
 > Menyalin seluruh isi `public/` menimpa `index.php` di web root dengan versi
