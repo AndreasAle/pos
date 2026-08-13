@@ -94,7 +94,11 @@ class PinLoginTest extends TestCase
         $this->paired()->get(route('pin.show'))
             ->assertOk()
             ->assertSee($cashier->name)
-            ->assertSee('Masukkan PIN');
+            ->assertSee('Masukkan PIN')
+            // The keypad has to be in the markup, not conjured by a framework
+            // that may never load on a tablet with a flaky connection.
+            ->assertSee('data-digit="7"', false)
+            ->assertSee('Buka Kasir');
     }
 
     // ── Signing in ───────────────────────────────────────────────────────────

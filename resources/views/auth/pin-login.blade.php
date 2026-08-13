@@ -6,11 +6,16 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Masuk Kasir — {{ $outlet->name }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>[x-cloak]{display:none!important}</style>
 </head>
+{{--
+    Deliberately no Alpine here. Every other page pulls it from a CDN, but this
+    is the register's front door: if the cafe's connection hiccups or the CDN is
+    blocked, a framework-driven keypad leaves the cashier staring at a blank
+    screen. Plain JS keeps the pad working as long as the page itself loaded.
+--}}
 <body class="bg-gradient-to-br from-emerald-700 to-emerald-900 min-h-screen flex items-center justify-center p-4 select-none">
 
-<div x-data="pinPad()" x-cloak class="w-full max-w-lg">
+<div class="w-full max-w-lg">
 
     <div class="text-center mb-5">
         <h1 class="text-xl font-bold text-white">{{ $outlet->name }}</h1>
@@ -29,7 +34,7 @@
                 </p>
             </div>
         @else
-            {{-- Who can sign in here. Names only — the PIN is the secret. --}}
+            {{-- Names only. The PIN is the secret, not who works here. --}}
             <div class="flex flex-wrap justify-center gap-2 mb-6">
                 @foreach($staff as $person)
                     <span class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full">
@@ -41,52 +46,44 @@
                 @endforeach
             </div>
 
-            {{-- PIN dots --}}
-            <div class="flex justify-center gap-3 mb-2">
-                <template x-for="i in 8" :key="i">
-                    <span x-show="i <= Math.max(pin.length, 4)"
-                          class="w-3.5 h-3.5 rounded-full transition-colors"
-                          :class="i <= pin.length ? 'bg-emerald-600' : 'bg-gray-200'"></span>
-                </template>
-            </div>
+            <div id="dots" class="flex justify-center gap-3 mb-2"></div>
 
-            <p class="text-center text-sm h-6 mb-3 font-medium"
-               :class="error ? 'text-red-600' : 'text-transparent'"
-               x-text="error || '.'"></p>
+            <p id="error" class="text-center text-sm h-6 mb-3 font-medium text-red-600">
+                {{ $errors->first('pin') }}
+            </p>
 
-            <form method="POST" action="{{ route('pin.login') }}" x-ref="form">
+            <form method="POST" action="{{ route('pin.login') }}" id="pinForm">
                 @csrf
-                <input type="hidden" name="pin" :value="pin">
+                <input type="hidden" name="pin" id="pinField">
             </form>
 
-            {{-- Keypad --}}
             <div class="grid grid-cols-3 gap-3">
-                <template x-for="n in [1,2,3,4,5,6,7,8,9]" :key="n">
-                    <button type="button" @click="push(n)"
-                            class="h-16 rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-emerald-600 active:text-white text-2xl font-bold text-gray-800 transition-colors"
-                            x-text="n"></button>
-                </template>
+                @foreach([1,2,3,4,5,6,7,8,9] as $n)
+                    <button type="button" data-digit="{{ $n }}"
+                            class="h-16 rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-emerald-600 active:text-white text-2xl font-bold text-gray-800 transition-colors">
+                        {{ $n }}
+                    </button>
+                @endforeach
 
-                <button type="button" @click="clearAll()"
+                <button type="button" id="clearBtn"
                         class="h-16 rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-sm font-semibold text-gray-500">
                     Hapus
                 </button>
 
-                <button type="button" @click="push(0)"
+                <button type="button" data-digit="0"
                         class="h-16 rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-emerald-600 active:text-white text-2xl font-bold text-gray-800 transition-colors">
                     0
                 </button>
 
-                <button type="button" @click="back()"
+                <button type="button" id="backBtn"
                         class="h-16 rounded-2xl bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-xl text-gray-500">
-                    ⌫
+                    &#9003;
                 </button>
             </div>
 
-            <button type="button" @click="submit()" :disabled="pin.length < 4 || busy"
+            <button type="button" id="submitBtn" disabled
                     class="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-4 rounded-2xl text-lg transition-colors">
-                <span x-show="!busy">Buka Kasir</span>
-                <span x-show="busy">Memeriksa…</span>
+                Buka Kasir
             </button>
         @endif
 
@@ -102,43 +99,77 @@
     </div>
 </div>
 
+@if(!$staff->isEmpty())
 <script>
-function pinPad() {
-    return {
-        pin:   '',
-        busy:  false,
-        error: @json($errors->first('pin')),
+(function () {
+    var MAX = 8, AUTO_AT = 6;
 
-        push(n) {
-            if (this.pin.length >= 8) return;
-            this.error = '';
-            this.pin += n;
-            // Most PINs are the same length; submit as soon as a full-length one
-            // is entered so the cashier never reaches for a second button.
-            if (this.pin.length === 6) this.submit();
-        },
+    var pin       = '';
+    var busy      = false;
+    var dots      = document.getElementById('dots');
+    var errorEl   = document.getElementById('error');
+    var field     = document.getElementById('pinField');
+    var form      = document.getElementById('pinForm');
+    var submitBtn = document.getElementById('submitBtn');
 
-        back()     { this.pin = this.pin.slice(0, -1); this.error = ''; },
-        clearAll() { this.pin = ''; this.error = ''; },
+    function render() {
+        var shown = Math.max(pin.length, 4);
+        var html  = '';
 
-        submit() {
-            if (this.pin.length < 4 || this.busy) return;
-            this.busy = true;
-            this.$refs.form.submit();
-        },
-    };
-}
+        for (var i = 0; i < shown; i++) {
+            html += '<span class="w-3.5 h-3.5 rounded-full ' +
+                    (i < pin.length ? 'bg-emerald-600' : 'bg-gray-200') + '"></span>';
+        }
 
-// Hardware numeric keypads are common at a register.
-document.addEventListener('keydown', (e) => {
-    const el = document.querySelector('[x-data]');
-    if (!el || !el._x_dataStack) return;
-    const c = el._x_dataStack[0];
-    if (e.key >= '0' && e.key <= '9') c.push(parseInt(e.key));
-    else if (e.key === 'Backspace')   c.back();
-    else if (e.key === 'Enter')       c.submit();
-});
+        dots.innerHTML = html;
+        submitBtn.disabled = pin.length < 4 || busy;
+    }
+
+    function clearError() {
+        if (errorEl.textContent) errorEl.textContent = '';
+    }
+
+    function push(d) {
+        if (busy || pin.length >= MAX) return;
+        clearError();
+        pin += d;
+        render();
+        // Most PINs are six digits — submit on the last one so the cashier
+        // never has to reach for a second button.
+        if (pin.length === AUTO_AT) submit();
+    }
+
+    function back()  { if (busy) return; pin = pin.slice(0, -1); clearError(); render(); }
+    function reset() { if (busy) return; pin = ''; clearError(); render(); }
+
+    function submit() {
+        if (busy || pin.length < 4) return;
+        busy = true;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Memeriksa…';
+        field.value = pin;
+        form.submit();
+    }
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-digit]'), function (btn) {
+        btn.addEventListener('click', function () { push(btn.getAttribute('data-digit')); });
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', reset);
+    document.getElementById('backBtn').addEventListener('click', back);
+    submitBtn.addEventListener('click', submit);
+
+    // Hardware numeric keypads are common at a register.
+    document.addEventListener('keydown', function (e) {
+        if (e.key >= '0' && e.key <= '9') { push(e.key); }
+        else if (e.key === 'Backspace')   { e.preventDefault(); back(); }
+        else if (e.key === 'Enter')       { e.preventDefault(); submit(); }
+    });
+
+    render();
+})();
 </script>
+@endif
 
 </body>
 </html>
