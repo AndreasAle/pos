@@ -681,11 +681,12 @@
 
                     {{-- Static QRIS image --}}
                     @if($qrisData['image'])
-                    <div x-show="!midtransEnabled">
-                        <img x-show="!qrisUseDynamic" src="{{ $qrisData['image'] }}" alt="QR QRIS" class="w-52 h-52 object-contain">
+                    <div x-show="!midtransEnabled && !qrisUseDynamic">
+                        <img src="{{ $qrisData['image'] }}" alt="QR QRIS" class="w-52 h-52 object-contain">
                     </div>
                     @else
-                    <div x-show="!midtransEnabled" class="w-52 h-52 bg-gray-50 flex items-center justify-center rounded-xl">
+                    {{-- Only a real fallback: with dynamic QRIS on, the QR above is the one to scan. --}}
+                    <div x-show="!midtransEnabled && !qrisUseDynamic" class="w-52 h-52 bg-gray-50 flex items-center justify-center rounded-xl">
                         <p class="text-gray-400 text-sm">QR tidak tersedia</p>
                     </div>
                     @endif
