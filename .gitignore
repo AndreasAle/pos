@@ -1,6 +1,9 @@
 /.phpunit.cache
 /node_modules
-/public/build
+# Compiled assets are committed on purpose: the shared hosting this deploys to
+# has no Node, so `npm run build` cannot run there. Rebuild locally and commit
+# the result whenever CSS or JS changes.
+!/public/build
 /public/hot
 /public/storage
 /storage/*.key
