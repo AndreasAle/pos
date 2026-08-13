@@ -82,6 +82,11 @@ class VarilRestoSeeder extends Seeder
         $this->command?->info('  Login  : owner@varilresto.com');
         $this->command?->info('  Sandi  : ' . $this->password());
         $this->command?->info('');
+        $this->command?->info('  Tablet kasir — buka /kasir, kode outlet VR01');
+        $this->command?->info('  PIN Dewi Kasir : 234523');
+        $this->command?->info('  PIN Rina Admin : 220022');
+        $this->command?->info('  PIN Varil (owner) : 110011');
+        $this->command?->info('');
     }
 
     private function business(): Business
@@ -146,21 +151,23 @@ class VarilRestoSeeder extends Seeder
     /** @return array<string, User> */
     private function users(Business $business, Outlet $outlet): array
     {
-        $make = fn (string $name, string $email, string $role) => User::create([
+        $make = fn (string $name, string $email, string $role, ?string $pin = null) => User::create([
             'business_id'       => $business->id,
             'outlet_id'         => $outlet->id,
             'name'              => $name,
             'email'             => $email,
             'email_verified_at' => now(),
             'password'          => Hash::make($this->password()),
+            // Short PIN for the tablet register; hashed like the password.
+            'pin'               => $pin ? Hash::make($pin) : null,
             'role'              => $role,
             'is_active'         => true,
         ]);
 
         return [
-            'owner'   => $make('Varil Wijaya', 'owner@varilresto.com', 'owner'),
-            'admin'   => $make('Rina Admin', 'admin@varilresto.com', 'admin'),
-            'cashier' => $make('Dewi Kasir', 'kasir@varilresto.com', 'cashier'),
+            'owner'   => $make('Varil Wijaya', 'owner@varilresto.com', 'owner', '110011'),
+            'admin'   => $make('Rina Admin', 'admin@varilresto.com', 'admin', '220022'),
+            'cashier' => $make('Dewi Kasir', 'kasir@varilresto.com', 'cashier', '234523'),
             'kitchen' => $make('Agus Dapur', 'dapur@varilresto.com', 'kitchen'),
         ];
     }

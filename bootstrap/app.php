@@ -23,6 +23,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EnsureUserIsActive::class,
         ]);
 
+        // The tablet pairing cookie carries its own HMAC, so it is readable
+        // without Laravel's cookie encryption while still being tamper-evident.
+        $middleware->encryptCookies(except: [
+            \App\Http\Controllers\Auth\PinLoginController::OUTLET_COOKIE,
+        ]);
+
         $middleware->alias([
             'business'     => \App\Http\Middleware\EnsureBusinessIsSet::class,
             'role'         => \App\Http\Middleware\RoleMiddleware::class,

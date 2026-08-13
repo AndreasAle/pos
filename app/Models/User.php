@@ -11,11 +11,11 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        'business_id', 'outlet_id', 'name', 'email', 'password',
+        'business_id', 'outlet_id', 'name', 'email', 'password', 'pin',
         'role', 'is_active', 'phone', 'avatar',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'pin', 'remember_token'];
 
     protected function casts(): array
     {

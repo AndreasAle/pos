@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PinLoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BarcodeController;
@@ -42,6 +43,14 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+// ── Kasir: masuk dengan PIN (tablet) ─────────────────────────────────────────
+// Sengaja di luar grup 'business': perangkat belum punya sesi sampai PIN benar.
+Route::get('/kasir',          [PinLoginController::class, 'show'])->name('pin.show');
+Route::post('/kasir/pair',    [PinLoginController::class, 'pair'])->name('pin.pair')->middleware('throttle:20,1');
+Route::post('/kasir/unpair',  [PinLoginController::class, 'unpair'])->name('pin.unpair');
+Route::post('/kasir/login',   [PinLoginController::class, 'login'])->name('pin.login')->middleware('throttle:30,1');
+Route::post('/kasir/logout',  [PinLoginController::class, 'logout'])->name('pin.logout');
 
 // ── Authenticated + Business ──────────────────────────────────────────────────
 Route::middleware(['auth', 'business'])->group(function () {

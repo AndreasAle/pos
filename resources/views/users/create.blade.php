@@ -54,6 +54,23 @@
                 <input type="password" name="password_confirmation" required
                        class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
+
+            <div class="border-t border-gray-200 pt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    PIN Kasir
+                    <span class="ml-1 text-xs font-normal text-gray-400">(opsional, 4–8 angka)</span>
+                </label>
+                <input type="text" name="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8"
+                       autocomplete="off"
+                       class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                       placeholder="misal 234523">
+                @error('pin')<p class="text-xs text-red-600 mt-1">{{ $message }}</p>@enderror
+                <p class="text-xs text-gray-400 mt-1 leading-relaxed">
+                    Dipakai untuk masuk cepat lewat tablet kasir di halaman
+                    <span class="font-mono">/kasir</span> — tanpa email dan password.
+                    Pastikan berbeda dari PIN staf lain di outlet yang sama.
+                </p>
+            </div>
             <div class="flex items-center gap-3 pt-2">
                 <button type="submit"
                         class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">

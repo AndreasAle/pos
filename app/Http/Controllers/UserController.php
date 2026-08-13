@@ -39,6 +39,7 @@ class UserController extends Controller
             'role'      => ['required', Rule::in(['admin', 'cashier', 'kitchen', 'warehouse'])],
             'outlet_id' => 'nullable|exists:outlets,id',
             'phone'     => 'nullable|string|max:20',
+            'pin'       => 'nullable|digits_between:4,8',
         ]);
 
         if ($request->outlet_id) {
@@ -58,6 +59,8 @@ class UserController extends Controller
             'password'    => $request->password,
             'role'        => $request->role,
             'phone'       => $request->phone,
+            // Hashed like the password: a database dump must not reveal working PINs.
+            'pin'         => $request->filled('pin') ? Hash::make($request->pin) : null,
             'is_active'   => true,
         ]);
 
@@ -88,12 +91,20 @@ class UserController extends Controller
             'outlet_id' => 'nullable|exists:outlets,id',
             'phone'     => 'nullable|string|max:20',
             'is_active' => 'boolean',
+            'pin'       => 'nullable|digits_between:4,8',
         ]);
 
         $data = $request->only('name', 'email', 'role', 'outlet_id', 'phone', 'is_active');
 
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
+        }
+
+        // Blank means "leave as is"; clearing a PIN is an explicit action.
+        if ($request->filled('pin')) {
+            $data['pin'] = Hash::make($request->pin);
+        } elseif ($request->boolean('remove_pin')) {
+            $data['pin'] = null;
         }
 
         // Prevent owner from deactivating themselves
