@@ -131,27 +131,44 @@ cp -r ~/pos_app/public/. $WEBROOT/
 
 ## 8. Arahkan index.php ke aplikasi
 
+Jangan edit manual di nano — salah satu kurung tertinggal saja, seluruh situs
+mati dengan parse error. Tulis ulang file-nya utuh dengan satu perintah:
+
 ```bash
-nano ~/domains/conweb.id/public_html/pos/index.php
-```
+cat > ~/domains/conweb.id/public_html/pos/index.php <<'EOF'
+<?php
 
-Ubah **dua baris** ini — ganti `__DIR__.'/../'` menjadi path absolut ke `pos_app`:
+use Illuminate\Foundation\Application;
+use Illuminate\Http\Request;
 
-```php
-// sebelum
-require __DIR__.'/../vendor/autoload.php';
-$app = require_once __DIR__.'/../bootstrap/app.php';
+define('LARAVEL_START', microtime(true));
 
-// sesudah
-require '/home/u598194357/pos_app/vendor/autoload.php';
-$app = require_once '/home/u598194357/pos_app/bootstrap/app.php';
-```
-
-Baris `maintenance.php` di atasnya juga sebaiknya disesuaikan:
-
-```php
+// Determine if the application is in maintenance mode...
 if (file_exists($maintenance = '/home/u598194357/pos_app/storage/framework/maintenance.php')) {
+    require $maintenance;
+}
+
+// Register the Composer autoloader...
+require '/home/u598194357/pos_app/vendor/autoload.php';
+
+// Bootstrap Laravel and handle the request...
+/** @var Application $app */
+$app = require_once '/home/u598194357/pos_app/bootstrap/app.php';
+
+$app->handleRequest(Request::capture());
+EOF
 ```
+
+Tanda kutip pada `<<'EOF'` wajib ada — tanpa itu shell akan mengganti
+`$maintenance` dan `$app` menjadi string kosong.
+
+Verifikasi:
+
+```bash
+php -l ~/domains/conweb.id/public_html/pos/index.php
+```
+
+Harus muncul `No syntax errors detected`.
 
 ## 9. Symlink storage (untuk gambar produk & logo)
 
@@ -226,17 +243,28 @@ yang dilayani browser ada di web root.
 
 ---
 
-## Kalau tetap mau subfolder (conweb.id/pos)
+## Kalau pakai subfolder (conweb.id/pos)
 
-Tambahkan di `.env`:
+Wajib tambahkan **dua-duanya** di `.env`:
 
 ```ini
 APP_URL=https://conweb.id/pos
 ASSET_URL=https://conweb.id/pos
 ```
 
-lalu `php artisan config:cache`. Siapkan waktu lebih untuk menyetel ulang
-kalau ada aset atau route yang masih meleset.
+lalu:
+
+```bash
+cd ~/pos_app && php artisan config:cache
+```
+
+Tanpa `ASSET_URL`, halaman tetap terbuka tetapi **tampil tanpa CSS sama
+sekali** — Laravel mencari aset di `conweb.id/build` sementara file-nya ada di
+`conweb.id/pos/build`. Ini penyebab paling sering orang mengira deploy-nya
+gagal, padahal hanya salah path aset.
+
+URL aplikasi jadi `https://conweb.id/pos` (bukan `pos.conweb.id`), dan langkah
+symlink storage tetap sama.
 
 ---
 
