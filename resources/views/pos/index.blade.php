@@ -1200,11 +1200,15 @@ function posApp() {
                 try {
                     const r = await fetch('/pos/qris/dynamic', {
                         method:  'POST',
-                        headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                        headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                         body:    JSON.stringify({ amount: this.grandTotal }),
                     });
-                    const data = await r.json();
-                    if (!data.success) throw new Error(data.message || 'Gagal membuat QRIS');
+                    const data = await this._readJson(r);
+                    if (!data.success) {
+                        throw new Error(data.message
+                            || (data.errors && Object.values(data.errors)[0][0])
+                            || 'Gagal membuat QRIS');
+                    }
                     this.qrisSvg = data.svg;
                 } catch (e) {
                     alert('Gagal membuat QRIS: ' + e.message);
@@ -1226,10 +1230,10 @@ function posApp() {
                     const cartBody = this._buildCartBody();
                     const draftRes = await fetch('/pos/qris-draft', {
                         method:  'POST',
-                        headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                        headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                         body:    JSON.stringify(cartBody),
                     });
-                    const draft = await draftRes.json();
+                    const draft = await this._readJson(draftRes);
                     if (!draft.success) throw new Error(draft.message || 'Gagal membuat order');
 
                     this.midtransOrderId = draft.order_id;
@@ -1238,10 +1242,10 @@ function posApp() {
                     // Step 2: Create Midtrans QRIS QR
                     const qrisRes = await fetch('/midtrans/qris/create', {
                         method:  'POST',
-                        headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                        headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                         body:    JSON.stringify({ order_id: draft.order_id, grand_total: draft.grand_total }),
                     });
-                    const qris = await qrisRes.json();
+                    const qris = await this._readJson(qrisRes);
                     if (qris.error) throw new Error(qris.error);
 
                     this.midtransQrUrl = qris.qr_url;
@@ -1252,7 +1256,7 @@ function posApp() {
                         try {
                             const stRes = await fetch('/midtrans/qris/status', {
                                 method:  'POST',
-                                headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                                headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                                 body:    JSON.stringify({ order_id: this.midtransOrderId }),
                             });
                             const st = await stRes.json();
@@ -1302,10 +1306,10 @@ function posApp() {
                 try {
                     const r = await fetch('/pos/qris-confirm/' + this.midtransOrderId, {
                         method:  'POST',
-                        headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                        headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                         body:    JSON.stringify({}),
                     });
-                    const data = await r.json();
+                    const data = await this._readJson(r);
                     if (data.success) {
                         this.lastOrderNo    = data.order_number;
                         this.lastReceiptUrl = data.receipt_url;
@@ -1323,6 +1327,25 @@ function posApp() {
 
             // Static QRIS flow: use normal processPayment
             await this.processPayment();
+        },
+
+        // Server selalu balas JSON di endpoint POS. Kalau ternyata bukan, itu
+        // pertanda sesi habis, route hilang, atau error server — tampilkan
+        // sesuatu yang bisa ditindaklanjuti, bukan galat parsing JSON.
+        async _readJson(response) {
+            const text = await response.text();
+
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                if (response.status === 419) {
+                    throw new Error('Sesi kasir habis. Muat ulang halaman lalu masuk lagi.');
+                }
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error('Sesi kasir berakhir. Masuk kembali dengan PIN.');
+                }
+                throw new Error('Server membalas tidak semestinya (HTTP ' + response.status + '). Cek koneksi, lalu coba lagi.');
+            }
         },
 
         _buildCartBody() {
@@ -1366,10 +1389,10 @@ function posApp() {
             try {
                 const r = await fetch('/pos/order', {
                     method:  'POST',
-                    headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                    headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                     body:    JSON.stringify(body),
                 });
-                const data = await r.json();
+                const data = await this._readJson(r);
                 if (data.success) {
                     this.lastOrderNo         = data.order_number;
                     this.lastReceiptUrl      = data.receipt_url;
@@ -1412,7 +1435,7 @@ function posApp() {
             if (!holdItems.length) { alert('Bundle tidak bisa di-hold, hanya produk reguler.'); return; }
             await fetch('/pos/hold', {
                 method:  'POST',
-                headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                 body: JSON.stringify({ items: holdItems }),
             });
             this.newTransaction();
@@ -1429,7 +1452,7 @@ function posApp() {
             try {
                 const r = await fetch('/pos/drafts/'+id+'/load', {
                     method: 'POST',
-                    headers: {'Content-Type':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                    headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                     body: '{}',
                 });
                 const order = await r.json();

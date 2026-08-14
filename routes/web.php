@@ -100,14 +100,18 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
 
     // POS
     Route::get('pos',                               [PosController::class, 'index'])->name('pos.index');
-    Route::post('pos/order',                        [PosController::class, 'store'])->name('pos.store');
-    Route::post('pos/qris/dynamic',                 [PosController::class, 'dynamicQris'])->name('pos.qris.dynamic');
-    Route::post('pos/qris-draft',                   [PosController::class, 'createQrisDraft'])->name('pos.qris-draft');
-    Route::post('pos/qris-confirm/{order}',         [PosController::class, 'confirmQrisManual'])->name('pos.qris-confirm');
-    Route::post('pos/hold',                         [PosController::class, 'hold'])->name('pos.hold');
-    Route::get('pos/drafts',                        [PosController::class, 'drafts'])->name('pos.drafts');
-    Route::post('pos/drafts/{order}/load',          [PosController::class, 'loadDraft'])->name('pos.drafts.load');
-    Route::get('pos/customer/{customer}/points',    [PosController::class, 'customerPoints'])->name('pos.customer.points');
+    // Dipanggil lewat fetch() dari layar POS — selalu balas JSON, termasuk saat
+    // validasi gagal, supaya kasir melihat pesan asli bukan galat parsing.
+    Route::middleware('json')->group(function () {
+        Route::post('pos/order',                     [PosController::class, 'store'])->name('pos.store');
+        Route::post('pos/qris/dynamic',              [PosController::class, 'dynamicQris'])->name('pos.qris.dynamic');
+        Route::post('pos/qris-draft',                [PosController::class, 'createQrisDraft'])->name('pos.qris-draft');
+        Route::post('pos/qris-confirm/{order}',      [PosController::class, 'confirmQrisManual'])->name('pos.qris-confirm');
+        Route::post('pos/hold',                      [PosController::class, 'hold'])->name('pos.hold');
+        Route::get('pos/drafts',                     [PosController::class, 'drafts'])->name('pos.drafts');
+        Route::post('pos/drafts/{order}/load',       [PosController::class, 'loadDraft'])->name('pos.drafts.load');
+        Route::get('pos/customer/{customer}/points', [PosController::class, 'customerPoints'])->name('pos.customer.points');
+    });
 
     // Orders
     Route::get('orders',                 [OrderController::class, 'index'])->name('orders.index');

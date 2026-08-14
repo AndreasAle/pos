@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'business'     => \App\Http\Middleware\EnsureBusinessIsSet::class,
             'role'         => \App\Http\Middleware\RoleMiddleware::class,
             'subscription' => \App\Http\Middleware\EnsureSubscriptionActive::class,
+            'json'         => \App\Http\Middleware\ForceJsonResponse::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
