@@ -1,3 +1,10 @@
+@php
+    $settings   = $order->business->settings ?? [];
+    // 58mm printers are the cheap, common ones; the layout has to follow the
+    // setting instead of assuming 80mm, or the receipt prints clipped.
+    $paperWidth = ($settings['receipt_size'] ?? '80mm') === '58mm' ? '58mm' : '80mm';
+    $isNarrow   = $paperWidth === '58mm';
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -5,15 +12,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Struk {{ $order->order_number }}</title>
     <style>
-        @page { margin: 0; }
+        @page { size: {{ $paperWidth }} auto; margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
+            font-size: {{ $isNarrow ? '10px' : '11px' }};
             color: #000;
             background: #fff;
-            width: 80mm;
-            padding: 4mm 4mm;
+            width: {{ $paperWidth }};
+            padding: {{ $isNarrow ? '3mm 3mm' : '4mm 4mm' }};
         }
         .center  { text-align: center; }
         .right   { text-align: right; }
@@ -22,19 +29,17 @@
         .row     { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
         .row .label { flex: 1; }
         .row .value { text-align: right; margin-left: 8px; flex-shrink: 0; }
-        .item-name { font-weight: bold; font-size: 11px; }
-        .item-sub  { font-size: 10px; color: #444; margin-left: 8px; }
-        .total-row { font-weight: bold; font-size: 12px; }
+        .item-name { font-weight: bold; font-size: {{ $isNarrow ? '10px' : '11px' }}; }
+        .item-sub  { font-size: {{ $isNarrow ? '9px' : '10px' }}; color: #444; margin-left: {{ $isNarrow ? '4px' : '8px' }}; }
+        .total-row { font-weight: bold; font-size: {{ $isNarrow ? '11px' : '12px' }}; }
         .logo-area { margin-bottom: 6px; }
         @media print {
-            body { width: 80mm; }
+            body { width: {{ $paperWidth }}; }
             .no-print { display: none; }
         }
     </style>
 </head>
 <body>
-@php $settings = $order->business->settings ?? []; @endphp
-
 {{-- Header --}}
 <div class="center logo-area">
     <p class="bold" style="font-size:13px;">{{ $settings['receipt_header'] ?? $order->business->name }}</p>
