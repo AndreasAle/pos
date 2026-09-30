@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\Business;
 use App\Models\Order;
+use App\Models\OrderItem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -28,8 +29,10 @@ class SalesReportExport implements WithMultipleSheets
     {
         return [
             'Ringkasan'     => new SalesSummarySheet($this->business, $this->filters),
-            'Per Hari'      => new SalesDailySheet($this->business, $this->filters),
-            'Detail Order'  => new SalesOrderSheet($this->business, $this->filters),
+            'Per Hari'       => new SalesDailySheet($this->business, $this->filters),
+            'Produk Terjual' => new SalesProductSheet($this->business, $this->filters),
+            'Detail Order'   => new SalesOrderSheet($this->business, $this->filters),
+            'Detail Item'    => new SalesItemSheet($this->business, $this->filters),
         ];
     }
 }
@@ -165,6 +168,113 @@ class SalesDailySheet implements FromCollection, WithHeadings, WithTitle, WithSt
     }
 }
 
+// ── Sheet: Produk Terjual ─────────────────────────────────────────────────────
+class SalesProductSheet implements FromCollection, WithHeadings, WithTitle, WithStyles, WithColumnWidths
+{
+    public function __construct(private Business $business, private array $f) {}
+
+    public function title(): string { return 'Produk Terjual'; }
+
+    public function columnWidths(): array
+    {
+        return ['A' => 32, 'B' => 18, 'C' => 12, 'D' => 20];
+    }
+
+    public function headings(): array
+    {
+        return ['Produk', 'Varian', 'Qty', 'Penjualan (Rp)'];
+    }
+
+    public function collection(): Collection
+    {
+        $rows = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.business_id', $this->business->id)
+            ->where('orders.status', 'paid')
+            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$this->f['date_from'], $this->f['date_to']])
+            ->when(!empty($this->f['outlet_id']), fn($q) => $q->where('orders.outlet_id', $this->f['outlet_id']))
+            ->select(
+                'order_items.product_name',
+                'order_items.variant_name',
+                DB::raw('SUM(order_items.qty) as qty'),
+                DB::raw('SUM(order_items.subtotal) as total')
+            )
+            ->groupBy('order_items.product_name', 'order_items.variant_name')
+            ->orderByDesc('qty')
+            ->get()
+            ->map(fn($r) => [$r->product_name, $r->variant_name ?? '', (float) $r->qty, (float) $r->total]);
+
+        return $rows->push(['TOTAL', '', $rows->sum(2), $rows->sum(3)]);
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '059669']],
+            ],
+            $sheet->getHighestRow() => ['font' => ['bold' => true]],
+        ];
+    }
+}
+
+// ── Sheet: Detail Item (one row per item sold) ────────────────────────────────
+class SalesItemSheet implements FromCollection, WithHeadings, WithTitle, WithStyles, WithColumnWidths
+{
+    public function __construct(private Business $business, private array $f) {}
+
+    public function title(): string { return 'Detail Item'; }
+
+    public function columnWidths(): array
+    {
+        return ['A' => 20, 'B' => 18, 'C' => 16, 'D' => 30, 'E' => 16, 'F' => 8, 'G' => 16, 'H' => 18];
+    }
+
+    public function headings(): array
+    {
+        return ['No. Order', 'Waktu', 'Kasir', 'Produk', 'Varian', 'Qty', 'Harga (Rp)', 'Subtotal (Rp)'];
+    }
+
+    public function collection(): Collection
+    {
+        return OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->join('users', 'users.id', '=', 'orders.user_id')
+            ->where('orders.business_id', $this->business->id)
+            ->where('orders.status', 'paid')
+            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$this->f['date_from'], $this->f['date_to']])
+            ->when(!empty($this->f['outlet_id']), fn($q) => $q->where('orders.outlet_id', $this->f['outlet_id']))
+            ->select(
+                'orders.order_number',
+                DB::raw('DATE_FORMAT(orders.created_at, "%d/%m/%Y %H:%i") as waktu'),
+                'users.name as kasir',
+                'order_items.product_name',
+                'order_items.variant_name',
+                'order_items.qty',
+                'order_items.price',
+                'order_items.subtotal'
+            )
+            ->orderBy('orders.created_at')
+            ->orderBy('order_items.id')
+            ->get()
+            ->map(fn($r) => [
+                $r->order_number, $r->waktu, $r->kasir, $r->product_name, $r->variant_name ?? '',
+                (float) $r->qty, (float) $r->price, (float) $r->subtotal,
+            ]);
+    }
+
+    public function styles(Worksheet $sheet): array
+    {
+        return [
+            1 => [
+                'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '059669']],
+            ],
+        ];
+    }
+}
+
 // ── Sheet 3: Detail Order ─────────────────────────────────────────────────────
 class SalesOrderSheet implements FromCollection, WithHeadings, WithTitle, WithStyles, WithColumnWidths
 {
@@ -174,12 +284,12 @@ class SalesOrderSheet implements FromCollection, WithHeadings, WithTitle, WithSt
 
     public function columnWidths(): array
     {
-        return ['A' => 20, 'B' => 18, 'C' => 18, 'D' => 15, 'E' => 18, 'F' => 18, 'G' => 15, 'H' => 18, 'I' => 18];
+        return ['A' => 20, 'B' => 18, 'C' => 18, 'D' => 15, 'E' => 45, 'F' => 18, 'G' => 18, 'H' => 15, 'I' => 18, 'J' => 18];
     }
 
     public function headings(): array
     {
-        return ['No. Order', 'Tanggal', 'Kasir', 'Outlet', 'Subtotal (Rp)', 'Diskon (Rp)', 'Pajak (Rp)', 'Total (Rp)', 'Pembayaran'];
+        return ['No. Order', 'Tanggal', 'Kasir', 'Outlet', 'Item', 'Subtotal (Rp)', 'Diskon (Rp)', 'Pajak (Rp)', 'Total (Rp)', 'Pembayaran'];
     }
 
     public function collection(): Collection
@@ -191,6 +301,7 @@ class SalesOrderSheet implements FromCollection, WithHeadings, WithTitle, WithSt
             ->join('users',   'users.id',   '=', 'orders.user_id')
             ->join('outlets', 'outlets.id', '=', 'orders.outlet_id')
             ->select(
+                'orders.id',
                 'orders.order_number',
                 DB::raw('DATE_FORMAT(orders.created_at, "%d/%m/%Y %H:%i") as waktu'),
                 'users.name as kasir',
@@ -203,11 +314,23 @@ class SalesOrderSheet implements FromCollection, WithHeadings, WithTitle, WithSt
             )
             ->orderBy('orders.created_at')
             ->get()
+            ->pipe(function ($orders) {
+                $items = OrderItem::whereIn('order_id', $orders->pluck('id'))
+                    ->orderBy('id')
+                    ->get(['order_id', 'product_name', 'variant_name', 'qty'])
+                    ->groupBy('order_id');
+
+                return $orders->each(fn ($o) => $o->item_list = ($items[$o->id] ?? collect())
+                    ->map(fn ($i) => (float) $i->qty . 'x ' . $i->product_name
+                        . ($i->variant_name ? ' (' . $i->variant_name . ')' : ''))
+                    ->implode(', '));
+            })
             ->map(fn($r) => [
                 $r->order_number,
                 $r->waktu,
                 $r->kasir,
                 $r->outlet,
+                $r->item_list,
                 (float) $r->subtotal,
                 (float) $r->discount_amount,
                 (float) $r->tax_amount,

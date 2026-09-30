@@ -85,6 +85,83 @@
     </table>
 </x-card>
 
+<x-card title="Produk Terjual" :padding="false" class="mt-6">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-gray-50 border-b border-gray-100">
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Produk</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Penjualan</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            @forelse($productsSold as $p)
+            <tr class="hover:bg-gray-50/50">
+                <td class="px-5 py-3 font-medium text-gray-900">
+                    {{ $p->product_name }}
+                    @if($p->variant_name)<span class="text-gray-400 font-normal">· {{ $p->variant_name }}</span>@endif
+                </td>
+                <td class="px-5 py-3 text-right font-semibold text-gray-900">{{ number_format($p->total_qty, 0, ',', '.') }}</td>
+                <td class="px-5 py-3 text-right text-emerald-700 font-semibold">Rp {{ number_format($p->total_revenue,0,',','.') }}</td>
+            </tr>
+            @empty
+            <tr><td colspan="3" class="px-5 py-10 text-center text-sm text-gray-400">Belum ada produk terjual pada periode ini</td></tr>
+            @endforelse
+        </tbody>
+        @if($productsSold->count())
+        <tfoot>
+            <tr class="bg-gray-50 border-t border-gray-200 font-bold">
+                <td class="px-5 py-3 text-gray-900">Total</td>
+                <td class="px-5 py-3 text-right text-gray-900">{{ number_format($productsSold->sum('total_qty'), 0, ',', '.') }}</td>
+                <td class="px-5 py-3 text-right text-emerald-700">Rp {{ number_format($productsSold->sum('total_revenue'),0,',','.') }}</td>
+            </tr>
+        </tfoot>
+        @endif
+    </table>
+    </div>
+</x-card>
+
+<x-card title="Detail Transaksi" :padding="false" class="mt-6">
+    <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="bg-gray-50 border-b border-gray-100">
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Waktu</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">No. Order</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Item</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Kasir</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Bayar</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+            @forelse($orders as $o)
+            <tr class="hover:bg-gray-50/50 align-top">
+                <td class="px-5 py-3 text-gray-500 whitespace-nowrap">{{ $o->created_at->format('d/m H:i') }}</td>
+                <td class="px-5 py-3 whitespace-nowrap">
+                    <a href="{{ route('receipt.show', $o) }}" class="font-mono text-xs text-emerald-700 hover:underline">{{ $o->order_number }}</a>
+                </td>
+                <td class="px-5 py-3 text-gray-900">
+                    @foreach($o->items as $it)
+                    <div><span class="font-semibold">{{ number_format($it->qty, 0, ',', '.') }}×</span> {{ $it->product_name }}@if($it->variant_name) <span class="text-gray-400">({{ $it->variant_name }})</span>@endif</div>
+                    @endforeach
+                </td>
+                <td class="px-5 py-3 text-gray-600 whitespace-nowrap">{{ $o->user?->name }}</td>
+                <td class="px-5 py-3 text-gray-600 uppercase text-xs whitespace-nowrap">{{ $o->payment_method }}</td>
+                <td class="px-5 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">Rp {{ number_format($o->grand_total,0,',','.') }}</td>
+            </tr>
+            @empty
+            <tr><td colspan="6" class="px-5 py-10 text-center text-sm text-gray-400">Tidak ada transaksi pada periode ini</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+    </div>
+    @if($orders->hasPages())
+    <div class="px-5 py-3 border-t border-gray-100">{{ $orders->links() }}</div>
+    @endif
+</x-card>
+
 {{-- JSON data for charts --}}
 <script type="application/json" id="daily-data">{!! json_encode($daily) !!}</script>
 @if(count($paymentBreakdown))

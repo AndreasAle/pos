@@ -69,4 +69,30 @@
     </tfoot>
     @endif
 </table>
+
+{{-- Products sold --}}
+<h3 style="font-size:12px; margin-bottom:6px; color:#374151; margin-top:12px;">Produk Terjual</h3>
+<table>
+    <thead><tr><th>Produk</th><th style="text-align:right;">Qty</th><th style="text-align:right;">Penjualan (Rp)</th></tr></thead>
+    <tbody>
+        @forelse($productsSold as $p)
+        <tr>
+            <td>{{ $p->product_name }}{{ $p->variant_name ? ' ('.$p->variant_name.')' : '' }}</td>
+            <td style="text-align:right;">{{ number_format($p->total_qty,0,',','.') }}</td>
+            <td style="text-align:right;">Rp {{ number_format($p->total_revenue,0,',','.') }}</td>
+        </tr>
+        @empty
+        <tr><td colspan="3" style="text-align:center; color:#9ca3af;">Tidak ada data</td></tr>
+        @endforelse
+    </tbody>
+    @if(count($productsSold))
+    <tfoot>
+        <tr>
+            <td>TOTAL</td>
+            <td style="text-align:right;">{{ number_format($productsSold->sum('total_qty'),0,',','.') }}</td>
+            <td style="text-align:right;">Rp {{ number_format($productsSold->sum('total_revenue'),0,',','.') }}</td>
+        </tr>
+    </tfoot>
+    @endif
+</table>
 @endsection

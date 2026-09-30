@@ -59,7 +59,33 @@ class ReportService
             ->groupBy('payment_method')
             ->get();
 
-        return compact('summary', 'daily', 'paymentBreakdown', 'outlets', 'f');
+        // What was actually sold: a shop owner reads the sales report to see
+        // which items moved, not only the day's total.
+        $productsSold = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.business_id', $business->id)
+            ->where('orders.status', 'paid')
+            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$f['date_from'], $f['date_to']])
+            ->when($f['outlet_id'], fn($q) => $q->where('orders.outlet_id', $f['outlet_id']))
+            ->select(
+                'order_items.product_name',
+                'order_items.variant_name',
+                DB::raw('SUM(order_items.qty) as total_qty'),
+                DB::raw('SUM(order_items.subtotal) as total_revenue')
+            )
+            ->groupBy('order_items.product_name', 'order_items.variant_name')
+            ->orderByDesc('total_qty')
+            ->get();
+
+        $orders = Order::forBusiness($business->id)->paid()
+            ->whereBetween(DB::raw('DATE(created_at)'), [$f['date_from'], $f['date_to']])
+            ->when($f['outlet_id'], fn($q) => $q->where('outlet_id', $f['outlet_id']))
+            ->with(['items:id,order_id,product_name,variant_name,qty,subtotal', 'user:id,name'])
+            ->latest()
+            ->paginate(25, ['*'], 'orders_page')
+            ->withQueryString();
+
+        return compact('summary', 'daily', 'paymentBreakdown', 'productsSold', 'orders', 'outlets', 'f');
     }
 
     public function productReport(Business $business, array $filters): array
