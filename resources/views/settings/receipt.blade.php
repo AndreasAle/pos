@@ -5,8 +5,11 @@
 @include('settings._nav')
 
 <div class="max-w-2xl">
-    @php $s = $business->settings ?? []; @endphp
-    <form method="POST" action="{{ route('settings.receipt.update') }}" class="space-y-5">
+    @php
+        $s      = $business->settings ?? [];
+        $outlet = $business->outlets()->orderBy('id')->first();
+    @endphp
+    <form method="POST" action="{{ route('settings.receipt.update') }}" enctype="multipart/form-data" class="space-y-5">
         @csrf
 
         {{-- Struk --}}
@@ -18,6 +21,55 @@
                            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                            placeholder="Nama bisnis yang tampil di atas struk">
                     <p class="text-xs text-gray-400 mt-0.5">Tampil di baris pertama struk</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Baris di bawah nama <span class="text-gray-400 font-normal">(opsional)</span></label>
+                    <input type="text" name="receipt_subtitle" value="{{ old('receipt_subtitle', $s['receipt_subtitle'] ?? '') }}"
+                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="Contoh: Coffee & Snack · IG @kopi_mertuaku">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Alamat di Struk</label>
+                    <textarea name="receipt_address" rows="2" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              placeholder="{{ $outlet?->address ?: 'Jl. Contoh No. 1, Kota' }}">{{ old('receipt_address', $s['receipt_address'] ?? '') }}</textarea>
+                    <p class="text-xs text-gray-400 mt-0.5">Kosongkan untuk memakai alamat outlet.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">No. Telp di Struk</label>
+                    <input type="text" name="receipt_phone" value="{{ old('receipt_phone', $s['receipt_phone'] ?? '') }}"
+                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="{{ $outlet?->phone ?: '0812-3456-7890' }}">
+                    <p class="text-xs text-gray-400 mt-0.5">Kosongkan untuk memakai nomor outlet.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Logo Struk</label>
+                    <div class="flex items-center gap-3">
+                        @if($business->logo)
+                        <img src="{{ asset('storage/'.$business->logo) }}" alt="" class="w-14 h-14 object-contain rounded-lg border border-gray-200 bg-white" style="filter:grayscale(1)">
+                        @endif
+                        <input type="file" name="receipt_logo" accept="image/png,image/jpeg,image/webp"
+                               class="text-sm text-gray-600 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-gray-100 file:text-sm file:font-medium">
+                    </div>
+                    <p class="text-xs text-gray-400 mt-0.5">Hitam-putih paling bagus di printer thermal. Logo tidak tercetak lewat RawBT.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tampilkan di Struk</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        @foreach([
+                            'receipt_show_logo'       => 'Logo',
+                            'receipt_show_address'    => 'Alamat',
+                            'receipt_show_phone'      => 'No. Telp',
+                            'receipt_show_cashier'    => 'Nama kasir',
+                            'receipt_show_customer'   => 'Nama pelanggan',
+                            'receipt_show_order_type' => 'Dine In / Takeaway',
+                            'receipt_show_total_qty'  => 'Total QTY',
+                        ] as $key => $label)
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="hidden" name="{{ $key }}" value="0">
+                            <input type="checkbox" name="{{ $key }}" value="1" class="h-4 w-4 text-emerald-600 rounded"
+                                   {{ old($key, $s[$key] ?? \App\Support\ReceiptOptions::TOGGLES[$key]) ? 'checked' : '' }}>
+                            <span class="text-sm text-gray-700">{{ $label }}</span>
+                        </label>
+                        @endforeach
+                    </div>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Footer Struk</label>

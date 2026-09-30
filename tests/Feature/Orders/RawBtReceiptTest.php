@@ -55,7 +55,7 @@ class RawBtReceiptTest extends TestCase
         $order = $this->anOrder();
 
         $bytes = app(EscPosReceipt::class)->render($order);
-        $text  = preg_replace('/\x1B\x40|\x1B[aE][\x00-\x02]|\x1D\x56\x41\x00/', '', $bytes);
+        $text  = preg_replace('/\x1B\x40|\x1B[aE][\x00-\x02]|\x1D\x21[\x00-\x11]|\x1D\x56\x41\x00/', '', $bytes);
 
         $this->assertStringContainsString($order->order_number, $text);
         $this->assertStringContainsString('Rp50.000', $text);

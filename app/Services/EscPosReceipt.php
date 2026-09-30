@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Support\ReceiptOptions;
 
 /**
  * Renders a receipt as raw ESC/POS bytes for Bluetooth thermal printers.
@@ -18,6 +19,9 @@ class EscPosReceipt
     private const ALIGN_CENTER = "\x1B\x61\x01";
     private const BOLD_ON     = "\x1B\x45\x01";
     private const BOLD_OFF    = "\x1B\x45\x00";
+    // Double height only: double width would halve the columns.
+    private const TALL_ON     = "\x1D\x21\x01";
+    private const TALL_OFF    = "\x1D\x21\x00";
     private const FEED_CUT    = "\n\n\n\x1D\x56\x41\x00";
 
     private int $cols;
@@ -26,63 +30,79 @@ class EscPosReceipt
     {
         $order->loadMissing('items.addons', 'outlet', 'user', 'customer', 'business');
 
-        $settings   = $order->business->settings ?? [];
-        $this->cols = ($settings['receipt_size'] ?? '80mm') === '58mm' ? 32 : 48;
+        $o          = ReceiptOptions::for($order);
+        $this->cols = $o['narrow'] ? 32 : 48;
 
+        // Logos are skipped here: raster images over RawBT are slow and vary
+        // by printer. The browser print path shows the logo.
         $out = self::INIT . self::ALIGN_CENTER;
-        $out .= self::BOLD_ON . $this->wrap($settings['receipt_header'] ?? $order->business->name) . self::BOLD_OFF;
-
-        if ($order->outlet->name !== $order->business->name) {
-            $out .= $this->wrap($order->outlet->name);
+        $out .= self::BOLD_ON . self::TALL_ON . $this->wrap($o['name']) . self::TALL_OFF . self::BOLD_OFF;
+        if ($o['subtitle']) {
+            $out .= $this->wrap($o['subtitle']);
         }
-        if ($order->outlet->address) {
-            $out .= $this->wrap($order->outlet->address);
+        if ($o['address']) {
+            $out .= $this->wrap($o['address']);
         }
-        if ($order->outlet->phone) {
-            $out .= $this->wrap('Telp: ' . $order->outlet->phone);
+        if ($o['phone']) {
+            $out .= $this->wrap('No. Telp ' . $o['phone']);
         }
 
         $out .= self::ALIGN_LEFT . $this->rule();
-        $out .= $this->row('No', $order->order_number);
-        $out .= $this->row('Tanggal', $order->created_at->format('d/m/Y H:i'));
-        $out .= $this->row('Kasir', $order->user->name);
-        if ($order->customer) {
-            $out .= $this->row('Pelanggan', $order->customer->name);
-        }
+        $out .= $this->row($order->created_at->format('d-m-Y'), $o['cashier'] ? $order->user->name : '');
+        $out .= $this->row(
+            $order->created_at->format('H:i:s'),
+            $o['customer'] && $order->customer ? $order->customer->name : ''
+        );
+        $type = $o['order_type'] ? ReceiptOptions::orderTypeLabel($order->order_type) : null;
+        $out .= self::BOLD_ON . $this->row('No. ' . $order->order_number, $type ?? '') . self::BOLD_OFF;
         $out .= $this->rule();
 
-        foreach ($order->items as $item) {
-            $out .= $this->wrap($item->product_name . ($item->variant_name ? ' (' . $item->variant_name . ')' : ''));
-            $out .= $this->row('  ' . number_format($item->qty, 0) . ' x ' . $this->money($item->price), $this->money($item->subtotal));
+        foreach ($order->items->values() as $i => $item) {
+            $name = ($i + 1) . '. ' . $item->product_name . ($item->variant_name ? ' (' . $item->variant_name . ')' : '');
+            $out .= self::BOLD_ON . $this->wrap($name) . self::BOLD_OFF;
+            $out .= $this->row('   ' . $this->qty($item->qty) . ' x ' . number_format((float) $item->price, 0, ',', '.'), $this->money($item->subtotal));
             foreach ($item->addons as $addon) {
-                $out .= $this->wrap('  + ' . $addon->addon_name . ' ' . $this->money($addon->price));
+                $out .= $this->wrap('   + ' . $addon->addon_name . ' ' . number_format((float) $addon->price, 0, ',', '.'));
             }
             if ($item->notes) {
-                $out .= $this->wrap('  * ' . $item->notes);
+                $out .= $this->wrap('   * ' . $item->notes);
             }
         }
 
         $out .= $this->rule();
-        $out .= $this->row('Subtotal', $this->money($order->subtotal));
+        if ($o['total_qty']) {
+            $out .= 'Total QTY : ' . $this->qty($order->items->sum('qty')) . "\n\n";
+        }
+        $out .= $this->row('Sub Total', $this->money($order->subtotal));
         if ($order->discount_amount > 0) {
             $out .= $this->row('Diskon', '-' . $this->money($order->discount_amount));
         }
         if ($order->tax_amount > 0) {
-            $out .= $this->row('Pajak (' . ($settings['tax_percent'] ?? 10) . '%)', $this->money($order->tax_amount));
+            $out .= $this->row('Pajak (' . $o['tax_percent'] . '%)', $this->money($order->tax_amount));
         }
         if ($order->service_amount > 0) {
             $out .= $this->row('Service', $this->money($order->service_amount));
         }
-        $out .= self::BOLD_ON . $this->row('TOTAL', $this->money($order->grand_total)) . self::BOLD_OFF;
-        $out .= $this->row(strtoupper($order->payment_method), $this->money($order->paid_amount));
+        if (($order->delivery_fee ?? 0) > 0) {
+            $out .= $this->row('Ongkos Kirim', $this->money($order->delivery_fee));
+        }
+        $out .= self::BOLD_ON . $this->row('Total', $this->money($order->grand_total)) . self::BOLD_OFF;
+        $out .= $this->rule();
+
+        $out .= $this->row('Bayar (' . ReceiptOptions::paymentLabel($order->payment_method) . ')', $this->money($order->paid_amount));
         if ($order->change_amount > 0) {
-            $out .= $this->row('Kembalian', $this->money($order->change_amount));
+            $out .= self::BOLD_ON . $this->row('Kembalian', $this->money($order->change_amount)) . self::BOLD_OFF;
         }
         $out .= $this->rule();
 
-        $out .= self::ALIGN_CENTER . $this->wrap($settings['receipt_footer'] ?? 'Terima kasih atas kunjungan Anda!');
+        $out .= self::ALIGN_CENTER . $this->wrap($o['footer']);
 
         return $out . self::FEED_CUT;
+    }
+
+    private function qty($value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 3, ',', '.'), '0'), ',');
     }
 
     private function money($amount): string

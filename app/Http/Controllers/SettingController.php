@@ -67,11 +67,33 @@ class SettingController extends Controller
 
     public function updateReceipt(Request $request)
     {
+        $request->validate([
+            'receipt_subtitle' => 'nullable|string|max:120',
+            'receipt_address'  => 'nullable|string|max:300',
+            'receipt_phone'    => 'nullable|string|max:40',
+            'receipt_logo'     => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+
         $business = auth()->user()->business;
+
+        // The receipt logo is the business logo; uploading it here saves a
+        // trip to the business settings page.
+        if ($request->hasFile('receipt_logo')) {
+            if ($business->logo) \Storage::disk('public')->delete($business->logo);
+            $business->update(['logo' => $request->file('receipt_logo')->store('business', 'public')]);
+        }
+
+        $toggles = [];
+        foreach (array_keys(\App\Support\ReceiptOptions::TOGGLES) as $key) {
+            $toggles[$key] = $request->boolean($key);
+        }
 
         $settings = array_merge($business->settings ?? [], [
             'receipt_header'       => $request->receipt_header,
             'receipt_footer'       => $request->receipt_footer,
+            'receipt_subtitle'     => $request->receipt_subtitle ?? '',
+            'receipt_address'      => $request->receipt_address ?? '',
+            'receipt_phone'        => $request->receipt_phone ?? '',
             'receipt_size'         => $request->receipt_size ?? '80mm',
             'print_method'         => $request->print_method === 'rawbt' ? 'rawbt' : 'browser',
             'enable_tax'           => $request->boolean('enable_tax'),
@@ -84,7 +106,7 @@ class SettingController extends Controller
             'enable_wa_receipt'    => $request->boolean('enable_wa_receipt'),
             'fonnte_token'         => $request->fonnte_token ?? '',
             'wa_default_phone'     => $request->wa_default_phone ?? '',
-        ]);
+        ], $toggles);
 
         $business->update(['settings' => $settings]);
         return back()->with('success', 'Pengaturan struk disimpan.');
