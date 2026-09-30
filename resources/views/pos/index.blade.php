@@ -406,8 +406,8 @@
 
 {{-- Variant/Addon Modal --}}
 <div x-show="variantModal" x-cloak @click.self="variantModal=false"
-     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5" @click.stop>
+     class="fixed inset-0 z-50 flex overflow-y-auto p-3 sm:p-4 bg-black/60">
+    <div class="m-auto bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5" @click.stop>
         <h3 class="font-bold text-gray-900 text-base mb-4" x-text="selProd?.name"></h3>
 
         <template x-if="selProd?.variants?.length">
@@ -465,8 +465,8 @@
 
 {{-- Note Modal --}}
 <div x-show="noteModal" x-cloak @click.self="noteModal=false"
-     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5" @click.stop>
+     class="fixed inset-0 z-50 flex overflow-y-auto p-3 sm:p-4 bg-black/60">
+    <div class="m-auto bg-white rounded-2xl shadow-xl w-full max-w-sm p-5" @click.stop>
         <h3 class="font-bold text-gray-900 mb-3">Catatan untuk Item</h3>
         <textarea x-model="noteText" rows="3" placeholder="Contoh: tanpa bawang, level pedas 2..."
                   class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -480,18 +480,21 @@
 
 {{-- ═══════════════════════════ PAYMENT MODAL ═══════════════════════════ --}}
 <div x-show="payModal" x-cloak @click.self="payModal=false"
-     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+     class="fixed inset-0 z-50 flex overflow-y-auto p-3 sm:p-4 bg-black/60">
+    <div class="m-auto bg-white rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
 
         {{-- STEP 1: Pilih Metode Pembayaran --}}
         <div x-show="!showQrisScreen">
-            <div class="p-5">
-                <h3 class="font-bold text-gray-900 text-lg mb-4">Konfirmasi Pembayaran</h3>
+            <div class="p-4 sm:p-5">
+                <div class="flex items-center justify-between mb-3 sm:mb-4">
+                    <h3 class="font-bold text-gray-900 text-base sm:text-lg">Konfirmasi Pembayaran</h3>
+                    <button @click="payModal=false" class="w-8 h-8 -mr-1 rounded-lg text-gray-400 hover:bg-gray-100 flex items-center justify-center" aria-label="Tutup">✕</button>
+                </div>
 
                 {{-- Total --}}
-                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center mb-4">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 sm:p-4 text-center mb-3 sm:mb-4">
                     <p class="text-xs text-emerald-600 font-medium uppercase tracking-wide mb-1">Total Tagihan</p>
-                    <p class="text-4xl font-bold text-emerald-800" x-text="'Rp '+fmt(grandTotal)"></p>
+                    <p class="text-3xl sm:text-4xl font-bold text-emerald-800" x-text="'Rp '+fmt(grandTotal)"></p>
                     <div x-show="pointsDiscountAmt > 0" class="mt-1 text-xs text-amber-600 font-medium">
                         Termasuk potongan poin Rp <span x-text="fmt(pointsDiscountAmt)"></span>
                     </div>
@@ -506,8 +509,8 @@
                                 :class="payMethod==='{{ $v }}'
                                     ? 'border-emerald-600 shadow-md {{ $v === 'qris' ? 'bg-gradient-to-b from-emerald-500 to-emerald-700' : 'bg-emerald-600' }} text-white'
                                     : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400'"
-                                class="flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-xs font-semibold transition-all">
-                            <span class="text-2xl">{{ $icon }}</span>
+                                class="flex flex-col items-center gap-0.5 sm:gap-1 py-2 sm:py-3 rounded-xl border-2 text-xs font-semibold transition-all">
+                            <span class="text-xl sm:text-2xl">{{ $icon }}</span>
                             <span>{{ $label }}</span>
                         </button>
                         @endforeach
@@ -635,7 +638,7 @@
                 </div>
 
                 {{-- Action buttons --}}
-                <div class="flex gap-3 pt-1">
+                <div class="sticky bottom-0 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 px-4 sm:px-5 py-3 bg-white border-t border-gray-100 rounded-b-2xl flex gap-3">
                     <button @click="payModal=false"
                             class="flex-1 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 py-3 rounded-xl">
                         Batal
@@ -765,7 +768,7 @@
 
 {{-- Draft Modal --}}
 <div x-show="draftModal" x-cloak @click.self="draftModal=false"
-     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+     class="fixed inset-0 z-50 flex overflow-y-auto p-3 sm:p-4 bg-black/60">
     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md" @click.stop>
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h3 class="font-bold text-gray-900">Order Hold / Draft</h3>
