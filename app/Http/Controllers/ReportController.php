@@ -99,7 +99,8 @@ class ReportController extends Controller
     {
         $business = auth()->user()->business;
         $data     = $this->report->salesReport($business, $request->all());
-        $data['business'] = $business;
+        $data['business']  = $business;
+        $data['allOrders'] = $this->report->detailedOrders($business, $data['f'])->get();
 
         $pdf = Pdf::loadView('reports.pdf.sales', $data)
             ->setPaper('a4', 'landscape')

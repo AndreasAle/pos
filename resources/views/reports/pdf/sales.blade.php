@@ -95,4 +95,50 @@
     </tfoot>
     @endif
 </table>
+
+{{-- Detailed orders --}}
+<h3 style="font-size:12px; margin-bottom:6px; color:#374151; margin-top:12px;">Detail Transaksi</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Order</th>
+            <th>Item</th>
+            <th style="text-align:right;">Subtotal</th>
+            <th style="text-align:right;">Diskon</th>
+            <th style="text-align:right;">Total</th>
+            <th>Bayar</th>
+        </tr>
+    </thead>
+    <tbody>
+        @forelse($allOrders as $o)
+        <tr style="vertical-align:top;">
+            <td>
+                <strong>{{ $o->order_number }}</strong><br>
+                {{ $o->created_at->format('d/m/Y H:i') }}<br>
+                {{ $o->user?->name }}@if($o->customer) · {{ $o->customer->name }}@endif
+            </td>
+            <td>
+                @foreach($o->items as $it)
+                {{ number_format($it->qty,0,',','.') }}x {{ $it->product_name }}@if($it->variant_name) ({{ $it->variant_name }})@endif
+                @ {{ number_format($it->price,0,',','.') }} = {{ number_format($it->subtotal,0,',','.') }}<br>
+                @endforeach
+            </td>
+            <td style="text-align:right;">{{ number_format($o->subtotal,0,',','.') }}</td>
+            <td style="text-align:right;">
+                @if($o->discount_amount > 0)
+                -{{ number_format($o->discount_amount,0,',','.') }}<br>
+                <span style="color:#6b7280;">{{ $o->promotion ? $o->promotion->name : 'Manual' }}</span>
+                @else - @endif
+            </td>
+            <td style="text-align:right; font-weight:600;">{{ number_format($o->grand_total,0,',','.') }}</td>
+            <td>
+                {{ strtoupper($o->payment_method) }}<br>
+                {{ number_format($o->paid_amount,0,',','.') }}@if($o->change_amount > 0)<br>kembali {{ number_format($o->change_amount,0,',','.') }}@endif
+            </td>
+        </tr>
+        @empty
+        <tr><td colspan="6" style="text-align:center; color:#9ca3af;">Tidak ada transaksi</td></tr>
+        @endforelse
+    </tbody>
+</table>
 @endsection

@@ -127,29 +127,54 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Waktu</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">No. Order</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Item</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Kasir</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Bayar</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Order</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase min-w-[16rem]">Item</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Subtotal</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Diskon</th>
                 <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Pembayaran</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
+        <tbody class="divide-y divide-gray-100">
             @forelse($orders as $o)
             <tr class="hover:bg-gray-50/50 align-top">
-                <td class="px-5 py-3 text-gray-500 whitespace-nowrap">{{ $o->created_at->format('d/m H:i') }}</td>
                 <td class="px-5 py-3 whitespace-nowrap">
                     <a href="{{ route('receipt.show', $o) }}" class="font-mono text-xs text-emerald-700 hover:underline">{{ $o->order_number }}</a>
+                    <p class="text-xs text-gray-500 mt-0.5">{{ $o->created_at->format('d/m/Y H:i') }}</p>
+                    <p class="text-xs text-gray-500">Kasir: {{ $o->user?->name }}</p>
+                    @if($o->customer)<p class="text-xs text-gray-500">Pelanggan: {{ $o->customer->name }}</p>@endif
                 </td>
-                <td class="px-5 py-3 text-gray-900">
+                <td class="px-5 py-3">
                     @foreach($o->items as $it)
-                    <div><span class="font-semibold">{{ number_format($it->qty, 0, ',', '.') }}×</span> {{ $it->product_name }}@if($it->variant_name) <span class="text-gray-400">({{ $it->variant_name }})</span>@endif</div>
+                    <div class="flex justify-between gap-4 {{ !$loop->first ? 'mt-1' : '' }}">
+                        <div>
+                            <span class="font-medium text-gray-900">{{ number_format($it->qty, 0, ',', '.') }}× {{ $it->product_name }}</span>
+                            @if($it->variant_name)<span class="text-gray-400">({{ $it->variant_name }})</span>@endif
+                            <span class="text-xs text-gray-400">@ {{ number_format($it->price, 0, ',', '.') }}</span>
+                            @foreach($it->addons as $ad)
+                            <p class="text-xs text-gray-500 pl-4">+ {{ $ad->addon_name }} {{ number_format($ad->price, 0, ',', '.') }}</p>
+                            @endforeach
+                        </div>
+                        <span class="text-gray-700 whitespace-nowrap">{{ number_format($it->subtotal, 0, ',', '.') }}</span>
+                    </div>
                     @endforeach
                 </td>
-                <td class="px-5 py-3 text-gray-600 whitespace-nowrap">{{ $o->user?->name }}</td>
-                <td class="px-5 py-3 text-gray-600 uppercase text-xs whitespace-nowrap">{{ $o->payment_method }}</td>
-                <td class="px-5 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">Rp {{ number_format($o->grand_total,0,',','.') }}</td>
+                <td class="px-5 py-3 text-right text-gray-700 whitespace-nowrap">Rp {{ number_format($o->subtotal,0,',','.') }}</td>
+                <td class="px-5 py-3 text-right whitespace-nowrap">
+                    @if($o->discount_amount > 0)
+                    <span class="text-red-600">- Rp {{ number_format($o->discount_amount,0,',','.') }}</span>
+                    <p class="text-xs text-gray-500">{{ $o->promotion ? $o->promotion->name . ' (' . $o->promotion->label() . ')' : 'Diskon manual' }}</p>
+                    @else
+                    <span class="text-gray-300">—</span>
+                    @endif
+                    @if($o->tax_amount > 0)<p class="text-xs text-gray-500">Pajak Rp {{ number_format($o->tax_amount,0,',','.') }}</p>@endif
+                </td>
+                <td class="px-5 py-3 text-right font-bold text-gray-900 whitespace-nowrap">Rp {{ number_format($o->grand_total,0,',','.') }}</td>
+                <td class="px-5 py-3 whitespace-nowrap">
+                    <span class="text-xs font-semibold uppercase text-gray-700">{{ $o->payment_method }}</span>
+                    <p class="text-xs text-gray-500">Bayar Rp {{ number_format($o->paid_amount,0,',','.') }}</p>
+                    @if($o->change_amount > 0)<p class="text-xs text-gray-500">Kembali Rp {{ number_format($o->change_amount,0,',','.') }}</p>@endif
+                </td>
             </tr>
             @empty
             <tr><td colspan="6" class="px-5 py-10 text-center text-sm text-gray-400">Tidak ada transaksi pada periode ini</td></tr>

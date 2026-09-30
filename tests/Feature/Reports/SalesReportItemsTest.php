@@ -29,6 +29,9 @@ class SalesReportItemsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // The sheet classes live in SalesReportExport.php; load it so a test
+        // run on its own can find them.
+        class_exists(SalesReportExport::class);
         $this->setUpPos();
 
         $this->espresso = $this->product(price: 25000);
@@ -110,8 +113,57 @@ class SalesReportItemsTest extends TestCase
 
         // Both orders share a timestamp, so their order in the sheet is not fixed.
         $this->assertEqualsCanonicalizing(
-            ['2x Espresso, 1x Matcha', '3x Espresso'],
+            ["2x Espresso @25.000 = 50.000\n1x Matcha @25.000 = 25.000", '3x Espresso @25.000 = 75.000'],
             $rows->pluck(4)->all()
         );
+    }
+
+    public function test_each_order_row_explains_its_total(): void
+    {
+        $rows = (new SalesOrderSheet($this->business, $this->filters()))->collection();
+        $row  = $rows->firstWhere(4, '3x Espresso @25.000 = 75.000');
+
+        // subtotal, discount, promo, tax, total, method, paid, change
+        $this->assertSame(75000.0, $row[5]);
+        $this->assertSame(75000.0, $row[9]);
+        $this->assertSame('CASH', strtoupper($row[10]));
+        $this->assertCount(13, $row);
+    }
+
+    public function test_the_page_shows_line_prices_and_payment(): void
+    {
+        $owner = User::factory()->create([
+            'business_id' => $this->business->id,
+            'outlet_id'   => $this->outlet->id,
+            'role'        => 'owner',
+            'is_active'   => true,
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('reports.sales'))
+            ->assertOk()
+            ->assertSee('@ 25.000', false)
+            ->assertSee('Bayar Rp', false)
+            ->assertSee('Kasir: ' . $this->cashier->name, false);
+    }
+
+    public function test_the_pdf_lists_every_order_with_its_items(): void
+    {
+        $owner = User::factory()->create([
+            'business_id' => $this->business->id,
+            'outlet_id'   => $this->outlet->id,
+            'role'        => 'owner',
+            'is_active'   => true,
+        ]);
+
+        $html = view('reports.pdf.sales', app(\App\Services\ReportService::class)->salesReport($this->business, []) + [
+            'business'  => $this->business,
+            'allOrders' => app(\App\Services\ReportService::class)->detailedOrders($this->business, $this->filters())->get(),
+        ])->render();
+
+        $this->assertStringContainsString('Detail Transaksi', $html);
+        $this->assertStringContainsString('3x Espresso', $html);
+
+        $this->actingAs($owner)->get(route('reports.sales.pdf'))->assertOk();
     }
 }

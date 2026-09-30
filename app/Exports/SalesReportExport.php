@@ -284,63 +284,50 @@ class SalesOrderSheet implements FromCollection, WithHeadings, WithTitle, WithSt
 
     public function columnWidths(): array
     {
-        return ['A' => 20, 'B' => 18, 'C' => 18, 'D' => 15, 'E' => 45, 'F' => 18, 'G' => 18, 'H' => 15, 'I' => 18, 'J' => 18];
+        return ['A' => 20, 'B' => 18, 'C' => 16, 'D' => 18, 'E' => 55, 'F' => 16, 'G' => 16, 'H' => 28, 'I' => 14, 'J' => 16, 'K' => 14, 'L' => 16, 'M' => 16];
     }
 
     public function headings(): array
     {
-        return ['No. Order', 'Tanggal', 'Kasir', 'Outlet', 'Item', 'Subtotal (Rp)', 'Diskon (Rp)', 'Pajak (Rp)', 'Total (Rp)', 'Pembayaran'];
+        return ['No. Order', 'Tanggal', 'Kasir', 'Pelanggan', 'Item (qty x harga = subtotal)', 'Subtotal (Rp)', 'Diskon (Rp)', 'Promo', 'Pajak (Rp)', 'Total (Rp)', 'Pembayaran', 'Dibayar (Rp)', 'Kembalian (Rp)'];
     }
 
     public function collection(): Collection
     {
-        return Order::where('orders.business_id', $this->business->id)
-            ->where('orders.status', 'paid')
-            ->whereBetween(DB::raw('DATE(orders.created_at)'), [$this->f['date_from'], $this->f['date_to']])
-            ->when(!empty($this->f['outlet_id']), fn($q) => $q->where('orders.outlet_id', $this->f['outlet_id']))
-            ->join('users',   'users.id',   '=', 'orders.user_id')
-            ->join('outlets', 'outlets.id', '=', 'orders.outlet_id')
-            ->select(
-                'orders.id',
-                'orders.order_number',
-                DB::raw('DATE_FORMAT(orders.created_at, "%d/%m/%Y %H:%i") as waktu'),
-                'users.name as kasir',
-                'outlets.name as outlet',
-                'orders.subtotal',
-                'orders.discount_amount',
-                'orders.tax_amount',
-                'orders.grand_total',
-                'orders.payment_method'
-            )
-            ->orderBy('orders.created_at')
-            ->get()
-            ->pipe(function ($orders) {
-                $items = OrderItem::whereIn('order_id', $orders->pluck('id'))
-                    ->orderBy('id')
-                    ->get(['order_id', 'product_name', 'variant_name', 'qty'])
-                    ->groupBy('order_id');
+        $money = fn ($v) => number_format((float) $v, 0, ',', '.');
 
-                return $orders->each(fn ($o) => $o->item_list = ($items[$o->id] ?? collect())
-                    ->map(fn ($i) => (float) $i->qty . 'x ' . $i->product_name
-                        . ($i->variant_name ? ' (' . $i->variant_name . ')' : ''))
-                    ->implode(', '));
-            })
-            ->map(fn($r) => [
-                $r->order_number,
-                $r->waktu,
-                $r->kasir,
-                $r->outlet,
-                $r->item_list,
-                (float) $r->subtotal,
-                (float) $r->discount_amount,
-                (float) $r->tax_amount,
-                (float) $r->grand_total,
-                strtoupper($r->payment_method),
+        return app(\App\Services\ReportService::class)
+            ->detailedOrders($this->business, $this->f)
+            ->reorder('created_at')
+            ->get()
+            ->map(fn ($o) => [
+                $o->order_number,
+                $o->created_at->format('d/m/Y H:i'),
+                $o->user?->name,
+                $o->customer?->name ?? '',
+                $o->items->map(fn ($i) => (float) $i->qty . 'x ' . $i->product_name
+                    . ($i->variant_name ? ' (' . $i->variant_name . ')' : '')
+                    . ' @' . $money($i->price) . ' = ' . $money($i->subtotal))
+                    ->implode("\n"),
+                (float) $o->subtotal,
+                (float) $o->discount_amount,
+                $o->discount_amount > 0
+                    ? ($o->promotion ? $o->promotion->name . ' (' . $o->promotion->label() . ')' : 'Diskon manual')
+                    : '',
+                (float) $o->tax_amount,
+                (float) $o->grand_total,
+                strtoupper($o->payment_method),
+                (float) $o->paid_amount,
+                (float) $o->change_amount,
             ]);
     }
 
     public function styles(Worksheet $sheet): array
     {
+        // Items sit one per line inside the cell.
+        $sheet->getStyle('E:E')->getAlignment()->setWrapText(true);
+        $sheet->getStyle('A:M')->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],

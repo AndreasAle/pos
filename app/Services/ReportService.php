@@ -77,15 +77,30 @@ class ReportService
             ->orderByDesc('total_qty')
             ->get();
 
-        $orders = Order::forBusiness($business->id)->paid()
-            ->whereBetween(DB::raw('DATE(created_at)'), [$f['date_from'], $f['date_to']])
-            ->when($f['outlet_id'], fn($q) => $q->where('outlet_id', $f['outlet_id']))
-            ->with(['items:id,order_id,product_name,variant_name,qty,subtotal', 'user:id,name'])
-            ->latest()
+        $orders = $this->detailedOrders($business, $f)
             ->paginate(25, ['*'], 'orders_page')
             ->withQueryString();
 
         return compact('summary', 'daily', 'paymentBreakdown', 'productsSold', 'orders', 'outlets', 'f');
+    }
+
+    /**
+     * Paid orders with everything needed to explain their total: each line's
+     * price, the promotion behind a discount, what was paid and the change.
+     */
+    public function detailedOrders(Business $business, array $f)
+    {
+        return Order::forBusiness($business->id)->paid()
+            ->whereBetween(DB::raw('DATE(created_at)'), [$f['date_from'], $f['date_to']])
+            ->when($f['outlet_id'] ?? null, fn($q) => $q->where('outlet_id', $f['outlet_id']))
+            ->with([
+                'items:id,order_id,product_name,variant_name,qty,price,subtotal',
+                'items.addons',
+                'user:id,name',
+                'customer:id,name',
+                'promotion:id,name,type,value,buy_qty,get_qty',
+            ])
+            ->latest();
     }
 
     public function productReport(Business $business, array $filters): array
