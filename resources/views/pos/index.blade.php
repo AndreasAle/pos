@@ -10,7 +10,7 @@
 <body class="h-full bg-gray-100 font-sans" x-data="posApp()" x-init="init()">
 
 {{-- Top Bar --}}
-<header class="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-4">
+<header class="bg-white border-b border-gray-200 px-3 md:px-4 py-2.5 flex items-center gap-3 md:gap-4 h-[49px]">
     <a href="{{ route('dashboard') }}" class="text-gray-400 hover:text-gray-600">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
@@ -27,20 +27,20 @@
     </div>
 
     @if($activeShift)
-    <div class="flex items-center gap-1.5 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-3 py-1">
+    <div class="hidden md:flex items-center gap-1.5 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-3 py-1">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
         Shift Aktif &middot; {{ $activeShift->outlet->name }}
     </div>
     @endif
 
-    <div class="ml-auto flex items-center gap-3">
+    <div class="ml-auto flex items-center gap-2 md:gap-3">
         <button @click="loadDrafts()" x-show="draftCount > 0"
                 class="relative text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors">
             Draft
             <span x-text="draftCount" class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"></span>
         </button>
-        <span class="text-sm text-gray-500 font-mono" x-text="currentTime"></span>
-        <span class="text-sm font-medium text-gray-700">{{ auth()->user()->name }}</span>
+        <span class="hidden md:inline text-sm text-gray-500 font-mono" x-text="currentTime"></span>
+        <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ auth()->user()->name }}</span>
         @if($activeShift)
         <a href="{{ route('shifts.close', $activeShift) }}"
            class="text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
@@ -50,14 +50,14 @@
     </div>
 </header>
 
-<div class="flex h-[calc(100vh-49px)]">
+<div class="flex h-[calc(100vh-49px)] h-[calc(100dvh-49px)]">
 
     {{-- LEFT: Products --}}
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
         {{-- Filter Bar --}}
-        <div class="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-3">
+        <div class="bg-white border-b border-gray-200 px-3 md:px-4 py-2.5 flex flex-wrap md:flex-nowrap items-center gap-2 md:gap-3">
             {{-- Barcode Scanner Input --}}
-            <div class="relative shrink-0" style="width:220px">
+            <div class="relative shrink-0 hidden md:block" style="width:220px">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
                 </svg>
@@ -74,14 +74,14 @@
                 </div>
             </div>
             {{-- Text search --}}
-            <div class="relative" style="width:180px">
+            <div class="relative w-full md:w-[180px]">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
                 <input type="text" x-model="search" placeholder="Cari nama produk..."
                        class="pl-9 pr-4 py-2 w-full border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50">
             </div>
-            <div class="flex gap-2 overflow-x-auto flex-1 pb-0.5">
+            <div class="flex gap-2 overflow-x-auto flex-1 min-w-0 pb-0.5">
                 <button @click="activeCategory = null; showBundles = false"
                         :class="activeCategory === null && !showBundles ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200'"
                         class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors">
@@ -107,11 +107,11 @@
         </div>
 
         {{-- Product / Bundle Grid --}}
-        <div class="flex-1 overflow-y-auto p-3">
+        <div class="flex-1 overflow-y-auto p-2 md:p-3 pb-24 md:pb-3">
 
             {{-- Bundle Grid --}}
             <div x-show="showBundles"
-                 class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                 class="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3">
                 <template x-for="bundle in allBundles" :key="'b'+bundle.id">
                 <button type="button"
                         @click="addBundle(bundle)"
@@ -136,7 +136,7 @@
 
             {{-- Product Grid --}}
             <div x-show="!showBundles"
-                 class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
+                 class="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 md:gap-3">
                 <template x-for="product in allProducts" :key="product.id">
                 <button type="button"
                         x-show="matchesFilter(product.cat_id, product.name)"
@@ -154,9 +154,9 @@
                         </div>
                         </template>
                     </div>
-                    <div class="p-2.5">
-                        <p class="text-xs font-semibold text-gray-900 leading-tight line-clamp-2" x-text="product.name"></p>
-                        <p class="text-sm font-bold text-emerald-700 mt-1" x-text="'Rp ' + fmt(product.price)"></p>
+                    <div class="p-1.5 md:p-2.5">
+                        <p class="text-[11px] md:text-xs font-semibold text-gray-900 leading-tight line-clamp-2" x-text="product.name"></p>
+                        <p class="text-xs md:text-sm font-bold text-emerald-700 mt-1" x-text="'Rp ' + fmt(product.price)"></p>
                     </div>
                 </button>
                 </template>
@@ -165,7 +165,14 @@
     </div>
 
     {{-- RIGHT: Cart --}}
-    <div class="w-80 xl:w-96 shrink-0 bg-white border-l border-gray-200 flex flex-col shadow-lg">
+    <div :class="mobileCart ? 'fixed inset-0 z-40 flex' : 'hidden md:flex'"
+         class="md:static md:w-80 xl:w-96 shrink-0 bg-white border-l border-gray-200 flex-col shadow-lg">
+
+        {{-- Phone-only header for the cart sheet --}}
+        <div class="md:hidden flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <p class="font-bold text-gray-900">Pesanan (<span x-text="cartCount()"></span>)</p>
+            <button @click="mobileCart=false" class="text-sm font-semibold text-emerald-700 px-3 py-1.5 rounded-lg bg-emerald-50">+ Tambah menu</button>
+        </div>
 
         {{-- Order Type Selector --}}
         <div class="px-4 pt-3 pb-2 border-b border-gray-100">
@@ -386,6 +393,14 @@
         </div>
     </div>
 </div>
+
+{{-- Phone-only cart bar --}}
+<button x-show="!mobileCart" @click="mobileCart=true"
+        class="md:hidden fixed bottom-3 inset-x-3 z-30 flex items-center justify-between bg-emerald-600 text-white rounded-2xl px-4 py-3.5 shadow-xl active:scale-[0.98] transition-transform">
+    <span class="text-sm font-semibold"><span x-text="cartCount()"></span> item</span>
+    <span class="text-base font-bold" x-text="'Rp ' + fmt(grandTotal)"></span>
+    <span class="text-sm font-semibold">Lihat &rsaquo;</span>
+</button>
 
 {{-- ══════════════════════════════════ MODALS ══════════════════════════════════ --}}
 
@@ -889,6 +904,7 @@ function posApp() {
 
         // Cart
         cart: [],
+        mobileCart: false,
         customerId: '', promoId: '', manualDisc: 0,
         subtotal: 0, promoDiscount: 0, manualDiscActual: 0, pointsDiscountAmt: 0,
         tax: 0, service: 0, grandTotal: 0,
@@ -1093,7 +1109,8 @@ function posApp() {
 
         changeQty(idx, d) { this.cart[idx].qty = Math.max(1, this.cart[idx].qty + d); this.calcTotals(); },
         removeItem(idx)   { this.cart.splice(idx, 1); this.calcTotals(); },
-        clearCart()       { if (confirm('Kosongkan semua item?')) { this.cart = []; this.redeemPoints = 0; this.calcTotals(); } },
+        clearCart()       { if (confirm('Kosongkan semua item?')) { this.cart = []; this.redeemPoints = 0; this.mobileCart = false; this.calcTotals(); } },
+        cartCount()       { return this.cart.reduce((n, i) => n + (Number(i.qty) || 0), 0); },
 
         openNote(idx) {
             this.noteIdx  = idx;
@@ -1414,7 +1431,7 @@ function posApp() {
         },
 
         newTransaction() {
-            this.cart = []; this.customerId = ''; this.promoId = '';
+            this.cart = []; this.mobileCart = false; this.customerId = ''; this.promoId = '';
             this.manualDisc = 0; this.payMethod = 'cash'; this.paidAmt = 0;
             this.redeemActive = false; this.redeemPoints = 0;
             this.customerPoints = null;
