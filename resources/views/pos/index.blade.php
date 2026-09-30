@@ -845,13 +845,13 @@
 
             {{-- Buttons --}}
             <div class="grid grid-cols-2 gap-2 pt-1">
-                <a :href="lastReceiptUrl" target="_blank"
-                   class="flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl transition-colors text-center">
+                <button type="button" @click="printReceipt()" :disabled="printing"
+                   class="flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl transition-colors text-center disabled:opacity-60">
                     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
                     </svg>
-                    Cetak Struk
-                </a>
+                    <span x-text="printing ? 'Menyiapkan…' : 'Cetak Struk'"></span>
+                </button>
                 <button @click="newTransaction()"
                         class="flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 py-3 rounded-xl transition-colors">
                     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -943,7 +943,7 @@ function posApp() {
         // Temp
         selProd: null, selVariant: null, selAddons: [], mQty: 1,
         noteIdx: null, noteText: '',
-        lastOrderNo: '', lastReceiptUrl: '', lastChange: 0,
+        lastOrderNo: '', lastReceiptUrl: '', lastChange: 0, printing: false,
         lastPointsRedeemed: 0,
         activeCategory: null, search: '',
 
@@ -1113,6 +1113,29 @@ function posApp() {
         changeQty(idx, d) { this.cart[idx].qty = Math.max(1, this.cart[idx].qty + d); this.calcTotals(); },
         removeItem(idx)   { this.cart.splice(idx, 1); this.calcTotals(); },
         clearCart()       { if (confirm('Kosongkan semua item?')) { this.cart = []; this.redeemPoints = 0; this.mobileCart = false; this.calcTotals(); } },
+        // Print without leaving the register: the print view calls window.print()
+        // on load, so loading it into a hidden iframe opens the print dialog
+        // (or prints straight away under --kiosk-printing) right here.
+        // RawBT needs a top-level navigation to its rawbt: link, so that mode
+        // still opens the print page.
+        printReceipt() {
+            if (!this.lastReceiptUrl) return;
+            const url = this.lastReceiptUrl.replace(/\/$/, '') + '/print';
+
+            if (@json(($settings['print_method'] ?? 'browser') === 'rawbt')) {
+                window.location.href = url;
+                return;
+            }
+
+            this.printing = true;
+            document.getElementById('receipt-print-frame')?.remove();
+            const frame = document.createElement('iframe');
+            frame.id = 'receipt-print-frame';
+            frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+            frame.onload = () => setTimeout(() => { this.printing = false; }, 800);
+            frame.src = url;
+            document.body.appendChild(frame);
+        },
         cartCount()       { return this.cart.reduce((n, i) => n + (Number(i.qty) || 0), 0); },
 
         openNote(idx) {
