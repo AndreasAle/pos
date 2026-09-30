@@ -37,8 +37,8 @@ class ReceiptPaperSizeTest extends TestCase
         $this->actingAs($this->cashier)
             ->get(route('receipt.print', $order))
             ->assertOk()
-            ->assertSee('width: 80mm', false)
-            ->assertDontSee('width: 58mm', false);
+            ->assertSee('width: 72mm', false)
+            ->assertDontSee('width: 48mm', false);
     }
 
     public function test_the_print_view_narrows_to_58mm_when_configured(): void
@@ -49,8 +49,8 @@ class ReceiptPaperSizeTest extends TestCase
         $this->actingAs($this->cashier)
             ->get(route('receipt.print', $order))
             ->assertOk()
-            ->assertSee('width: 58mm', false)
-            ->assertDontSee('width: 80mm', false);
+            ->assertSee('width: 48mm', false)
+            ->assertDontSee('width: 72mm', false);
     }
 
     public function test_the_page_size_rule_follows_the_setting(): void
