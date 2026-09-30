@@ -351,7 +351,7 @@
                     <option value="">-- Pilih Promo --</option>
                     @foreach($promotions as $promo)
                     <option value="{{ $promo->id }}" data-type="{{ $promo->type }}" data-value="{{ $promo->value }}" data-min="{{ $promo->min_order }}">
-                        {{ $promo->name }} — {{ $promo->type === 'percent' ? $promo->value.'%' : 'Rp '.number_format($promo->value,0,',','.') }}
+                        {{ $promo->name }} — {{ $promo->label() }}
                     </option>
                     @endforeach
                 </select>
@@ -907,7 +907,7 @@ function posApp() {
         allProducts:   {!! json_encode($productsJson, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) !!},
         allBundles:    {!! json_encode($bundlesJson,  JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) !!},
         settings:      {!! json_encode($settings ?? new stdClass) !!},
-        promotionData: {!! json_encode($promotions->map(fn($p) => ['id'=>$p->id,'type'=>$p->type,'value'=>(float)$p->value,'min_order'=>(float)$p->min_order])->values()) !!},
+        promotionData: {!! json_encode($promotions->map(fn($p) => ['id'=>$p->id,'type'=>$p->type,'value'=>(float)$p->value,'min_order'=>(float)$p->min_order,'buy'=>(int)$p->buy_qty,'get'=>(int)$p->get_qty,'cat'=>$p->product_category_id])->values()) !!},
         qrisIsSet:       {!! $qrisData['is_set'] ? 'true' : 'false' !!},
         qrisUseDynamic:  {!! $qrisData['use_dynamic'] ? 'true' : 'false' !!},
         qrisSvg:         '',
@@ -1162,6 +1162,22 @@ function posApp() {
             frame.src = url;
             document.body.appendChild(frame);
         },
+        // Mirrors Promotion::buyGetDiscount on the server, which has the final say.
+        buyGetDiscount(p) {
+            const group = p.buy + p.get;
+            const units = [];
+            this.cart.filter(i => !i.isBundle).forEach(i => {
+                const cat = this.allProducts.find(x => x.id == i.productId)?.cat_id ?? null;
+                if (p.cat && cat != p.cat) return;
+                for (let n = 0; n < Math.floor(i.qty); n++) units.push(i.unitPrice);
+            });
+            units.sort((a, b) => b - a);
+            let free = 0;
+            for (let s = 0; s + group <= units.length; s += group) {
+                free += units.slice(s + p.buy, s + group).reduce((a, b) => a + b, 0);
+            }
+            return free;
+        },
         savePrintVia() {
             try { localStorage.setItem('pos_print_via', this.printVia); } catch (e) {}
         },
@@ -1183,7 +1199,9 @@ function posApp() {
             if (this.promoId) {
                 const p = this.promotionData.find(x => x.id == this.promoId);
                 if (p && this.subtotal >= p.min_order) {
-                    promoDisc = p.type === 'percent' ? this.subtotal * p.value / 100 : p.value;
+                    promoDisc = p.type === 'percent' ? this.subtotal * p.value / 100
+                              : p.type === 'buy_get' ? this.buyGetDiscount(p)
+                              : p.value;
                 }
             }
             this.promoDiscount = promoDisc;

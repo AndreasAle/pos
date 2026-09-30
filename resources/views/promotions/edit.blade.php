@@ -4,7 +4,7 @@
 @section('content')
 <div class="max-w-xl">
     <x-card title="Edit Promo">
-        <form method="POST" action="{{ route('promotions.update', $promotion) }}" class="space-y-4">
+        <form method="POST" action="{{ route('promotions.update', $promotion) }}" class="space-y-4" x-data="{ type: @js(old('type', $promotion->type)) }">
             @csrf @method('PUT')
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Nama Promo <span class="text-red-500">*</span></label>
@@ -19,17 +19,19 @@
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Diskon <span class="text-red-500">*</span></label>
-                    <select name="type" required class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <select name="type" x-model="type" required class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         <option value="percent" {{ old('type',$promotion->type)==='percent'?'selected':'' }}>Persen (%)</option>
                         <option value="nominal" {{ old('type',$promotion->type)==='nominal'?'selected':'' }}>Nominal (Rp)</option>
+                        <option value="buy_get" {{ old('type',$promotion->type)==='buy_get'?'selected':'' }}>Beli X Gratis Y</option>
                     </select>
                 </div>
-                <div>
+                <div x-show="type !== 'buy_get'">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nilai</label>
-                    <input type="number" name="value" value="{{ old('value', $promotion->value) }}" min="0" step="0.01" required
+                    <input type="number" name="value" value="{{ old('value', $promotion->value) }}" min="0" step="0.01" :required="type !== 'buy_get'"
                            class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
             </div>
+            @include('promotions._buy_get', ['promotion' => $promotion])
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Minimum Order</label>
                 <div class="relative">

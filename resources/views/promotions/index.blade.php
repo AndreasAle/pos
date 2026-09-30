@@ -36,9 +36,9 @@
                 </td>
                 <td class="px-3 py-3.5">
                     <span class="inline-flex items-center gap-1 text-sm font-bold {{ $promo->type==='percent' ? 'text-blue-700' : 'text-emerald-700' }}">
-                        {{ $promo->type === 'percent' ? $promo->value.'%' : 'Rp '.number_format($promo->value,0,',','.') }}
+                        {{ $promo->label() }}
                     </span>
-                    <span class="text-xs text-gray-400 ml-1">{{ $promo->type === 'percent' ? 'diskon persen' : 'diskon nominal' }}</span>
+                    <span class="text-xs text-gray-400 ml-1">{{ match($promo->type) { 'percent' => 'diskon persen', 'buy_get' => $promo->category ? 'kategori '.$promo->category->name : 'semua produk', default => 'diskon nominal' } }}</span>
                 </td>
                 <td class="px-3 py-3.5 text-gray-600">
                     {{ $promo->min_order > 0 ? 'Rp '.number_format($promo->min_order,0,',','.') : '—' }}

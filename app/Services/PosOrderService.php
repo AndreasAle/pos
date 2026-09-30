@@ -96,7 +96,15 @@ class PosOrderService
             if (!empty($data['promotion_id'])) {
                 $promo = Promotion::forBusiness($business->id)->active()->find($data['promotion_id']);
                 if ($promo) {
-                    $discountAmount = $promo->calculateDiscount($subtotal);
+                    $lines = collect($items)
+                        ->where('type', 'product')
+                        ->map(fn ($i) => [
+                            'category_id' => $i['product']->product_category_id,
+                            'price'       => (float) $i['price'],
+                            'qty'         => (float) $i['qty'],
+                        ])->values()->all();
+
+                    $discountAmount = $promo->calculateDiscount($subtotal, $lines);
                     $promotionId    = $promo->id;
                 }
             }
