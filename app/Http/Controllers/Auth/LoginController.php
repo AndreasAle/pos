@@ -92,6 +92,12 @@ class LoginController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        // On a register paired to an outlet the next person signs in by PIN.
+        if ($request->cookies->has(PinLoginController::OUTLET_COOKIE)) {
+            return redirect()->route('pin.show');
+        }
+
         return redirect()->route('login');
     }
 }

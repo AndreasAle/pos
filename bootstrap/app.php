@@ -29,6 +29,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Controllers\Auth\PinLoginController::OUTLET_COOKIE,
         ]);
 
+        // A register paired to an outlet has no one who knows an email
+        // password; send its expired sessions back to the PIN pad instead.
+        $middleware->redirectGuestsTo(fn (\Illuminate\Http\Request $request) =>
+            $request->cookies->has(\App\Http\Controllers\Auth\PinLoginController::OUTLET_COOKIE)
+                ? route('pin.show')
+                : route('login'));
+
         $middleware->alias([
             'business'     => \App\Http\Middleware\EnsureBusinessIsSet::class,
             'role'         => \App\Http\Middleware\RoleMiddleware::class,

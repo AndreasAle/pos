@@ -44,6 +44,11 @@
     </button>
 </form>
 
+<a href="{{ route('pin.show') }}"
+   class="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+    🔢 Kasir? Masuk pakai PIN
+</a>
+
 <p class="mt-5 text-center text-sm text-gray-500">
     Belum punya akun?
     <a href="{{ route('register') }}" class="text-emerald-600 font-medium hover:underline">Daftar &amp; coba gratis 7 hari</a>

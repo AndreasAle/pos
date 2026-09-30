@@ -284,4 +284,50 @@ class PinLoginTest extends TestCase
             ->get(route('pin.show'))
             ->assertRedirect(route('pos.index'));
     }
+
+    // ── Keeping a paired register on the PIN pad ────────────────────────────
+
+    public function test_an_expired_session_on_a_paired_register_goes_to_the_pin_pad(): void
+    {
+        $this->setUpPos();
+
+        $this->paired()
+            ->get(route('pos.index'))
+            ->assertRedirect(route('pin.show'));
+    }
+
+    public function test_an_unpaired_browser_still_goes_to_the_email_login(): void
+    {
+        $this->setUpPos();
+
+        $this->get(route('pos.index'))->assertRedirect(route('login'));
+    }
+
+    public function test_the_regular_sign_out_on_a_paired_register_returns_to_the_pin_pad(): void
+    {
+        $this->setUpPos();
+        $cashier = $this->cashierWithPin();
+
+        $this->actingAs($cashier)
+            ->paired()
+            ->post(route('logout'))
+            ->assertRedirect(route('pin.show'));
+    }
+
+    public function test_the_register_offers_a_change_cashier_button(): void
+    {
+        // The scenario's cashier has an open shift, which the register needs.
+        $this->setUpPos();
+
+        $this->actingAs($this->cashier)
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertSee(route('pin.logout'), false)
+            ->assertSee('Ganti Kasir');
+    }
+
+    public function test_the_email_login_links_to_the_pin_pad(): void
+    {
+        $this->get(route('login'))->assertSee(route('pin.show'), false);
+    }
 }

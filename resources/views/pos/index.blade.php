@@ -11,12 +11,14 @@
 
 {{-- Top Bar --}}
 <header class="bg-white border-b border-gray-200 px-3 md:px-4 py-2.5 flex items-center gap-3 md:gap-4 h-[49px]">
+    @if(auth()->user()->role !== 'cashier')
     <a href="{{ route('dashboard') }}" class="text-gray-400 hover:text-gray-600">
         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
         </svg>
     </a>
     <div class="w-px h-5 bg-gray-200"></div>
+    @endif
     <div class="flex items-center gap-2">
         <div class="w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center">
             <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -41,6 +43,15 @@
         </button>
         <span class="hidden md:inline text-sm text-gray-500 font-mono" x-text="currentTime"></span>
         <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ auth()->user()->name }}</span>
+        {{-- Hand the register to the next cashier: back to the PIN pad. --}}
+        <form method="POST" action="{{ route('pin.logout') }}">
+            @csrf
+            <button type="submit" title="Ganti kasir"
+                    class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 px-2.5 md:px-3 py-1.5 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                <span class="hidden sm:inline">Ganti Kasir</span>
+            </button>
+        </form>
         @if($activeShift)
         <a href="{{ route('shifts.close', $activeShift) }}"
            class="text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">
