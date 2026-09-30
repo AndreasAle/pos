@@ -79,8 +79,8 @@ class KopiMertuakuSeeder extends Seeder
                 'receipt_header'       => 'KOPI MERTUAKU',
                 'receipt_footer'       => 'Terima kasih! Follow IG @kopi_mertuaku',
                 'receipt_size'         => '58mm',
-                // Blueprint BP-ECO58D over Bluetooth from an Android tablet.
-                'print_method'         => 'rawbt',
+                // Blueprint BP-ECO58D paired to a Windows laptop, printed from Chrome.
+                'print_method'         => 'browser',
                 // Menu prices are final prices, so no tax or service on top.
                 'enable_tax'           => false,
                 'tax_percent'          => 0,

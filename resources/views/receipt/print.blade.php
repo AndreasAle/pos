@@ -19,8 +19,10 @@
             font-size: {{ $isNarrow ? '10px' : '11px' }};
             color: #000;
             background: #fff;
-            width: {{ $paperWidth }};
-            padding: {{ $isNarrow ? '3mm 3mm' : '4mm 4mm' }};
+            /* A 58mm roll only prints across ~48mm (72mm on 80mm rolls); laying
+               out on the full paper width clips the right edge. */
+            width: {{ $isNarrow ? '48mm' : '72mm' }};
+            padding: {{ $isNarrow ? '2mm 0' : '3mm 0' }};
         }
         .center  { text-align: center; }
         .right   { text-align: right; }
@@ -34,7 +36,7 @@
         .total-row { font-weight: bold; font-size: {{ $isNarrow ? '11px' : '12px' }}; }
         .logo-area { margin-bottom: 6px; }
         @media print {
-            body { width: {{ $paperWidth }}; }
+            body { width: {{ $isNarrow ? '48mm' : '72mm' }}; }
             .no-print { display: none; }
         }
     </style>
