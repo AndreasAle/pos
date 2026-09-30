@@ -39,7 +39,7 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Cara Cetak</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cara Cetak (bawaan)</label>
                     <div class="flex flex-col gap-2">
                         @foreach(['browser'=>'Dialog print browser (printer USB / PC)','rawbt'=>'Bluetooth lewat aplikasi RawBT (tablet Android)'] as $val => $label)
                         <label class="flex items-center gap-2 cursor-pointer">
@@ -50,7 +50,7 @@
                         </label>
                         @endforeach
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">RawBT: pasang dari Play Store, pair printer Bluetooth, lalu pilih printernya di RawBT.</p>
+                    <p class="text-xs text-gray-400 mt-1">Ini hanya bawaan. Tiap laptop/HP bisa memilih sendiri lewat pilihan printer di pojok kanan atas halaman Kasir. RawBT: pasang dari Play Store, pair printer Bluetooth, lalu pilih printernya di RawBT.</p>
                 </div>
             </div>
         </x-card>

@@ -64,4 +64,50 @@ class RawBtReceiptTest extends TestCase
             $this->assertLessThanOrEqual(32, strlen($line), "Too wide: [{$line}]");
         }
     }
+
+    // A laptop and an Android phone at the same shop print differently, so the
+    // register passes the device's own choice to the print page.
+
+    public function test_a_device_can_ask_for_rawbt_when_the_shop_default_is_the_browser(): void
+    {
+        $this->setUpPos(['receipt_size' => '58mm']);
+        $order = $this->anOrder();
+
+        $this->actingAs($this->cashier)
+            ->get(route('receipt.print', $order) . '?via=rawbt')
+            ->assertSee('rawbt:base64,', false)
+            ->assertDontSee('window.print()', false);
+    }
+
+    public function test_a_device_can_ask_for_the_browser_when_the_shop_default_is_rawbt(): void
+    {
+        $this->setUpPos(['print_method' => 'rawbt']);
+        $order = $this->anOrder();
+
+        $this->actingAs($this->cashier)
+            ->get(route('receipt.print', $order) . '?via=browser')
+            ->assertSee('window.print()', false)
+            ->assertDontSee('rawbt:base64', false);
+    }
+
+    public function test_an_unknown_choice_falls_back_to_the_shop_default(): void
+    {
+        $this->setUpPos(['print_method' => 'rawbt']);
+        $order = $this->anOrder();
+
+        $this->actingAs($this->cashier)
+            ->get(route('receipt.print', $order) . '?via=nonsense')
+            ->assertSee('rawbt:base64,', false);
+    }
+
+    public function test_the_register_offers_a_per_device_printer_choice(): void
+    {
+        $this->setUpPos();
+
+        $this->actingAs($this->cashier)
+            ->get(route('pos.index'))
+            ->assertOk()
+            ->assertSee('pos_print_via', false)
+            ->assertSee('Bluetooth (RawBT)');
+    }
 }

@@ -43,6 +43,14 @@
         </button>
         <span class="hidden md:inline text-sm text-gray-500 font-mono" x-text="currentTime"></span>
         <span class="hidden sm:inline text-sm font-medium text-gray-700">{{ auth()->user()->name }}</span>
+        {{-- How THIS device prints. A laptop and an Android phone at the same
+             shop print differently, so the choice lives on the device. --}}
+        <select x-model="printVia" @change="savePrintVia()" title="Cara cetak di perangkat ini"
+                class="text-xs font-semibold text-gray-600 bg-gray-100 border-0 rounded-lg pl-2 pr-7 py-1.5 focus:ring-2 focus:ring-emerald-500 max-w-[8.5rem] sm:max-w-none">
+            <option value="browser">🖨 Printer PC/laptop</option>
+            <option value="rawbt">📱 Bluetooth (RawBT)</option>
+            <option value="none">🚫 Tanpa cetak</option>
+        </select>
         {{-- Hand the register to the next cashier: back to the PIN pad. --}}
         <form method="POST" action="{{ route('pin.logout') }}">
             @csrf
@@ -856,7 +864,7 @@
 
             {{-- Buttons --}}
             <div class="grid grid-cols-2 gap-2 pt-1">
-                <button type="button" @click="printReceipt()" :disabled="printing"
+                <button type="button" x-show="printVia !== 'none'" @click="printReceipt()" :disabled="printing"
                    class="flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 py-3 rounded-xl transition-colors text-center disabled:opacity-60">
                     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
@@ -955,6 +963,7 @@ function posApp() {
         selProd: null, selVariant: null, selAddons: [], mQty: 1,
         noteIdx: null, noteText: '',
         lastOrderNo: '', lastReceiptUrl: '', lastChange: 0, printing: false,
+        printVia: @json(($settings['print_method'] ?? 'browser') === 'rawbt' ? 'rawbt' : 'browser'),
         lastPointsRedeemed: 0,
         activeCategory: null, search: '',
 
@@ -968,6 +977,11 @@ function posApp() {
         },
 
         init() {
+            // The device's own choice wins over the business default.
+            try {
+                const saved = localStorage.getItem('pos_print_via');
+                if (['browser', 'rawbt', 'none'].includes(saved)) this.printVia = saved;
+            } catch (e) {}
             this.tick();
             setInterval(() => this.tick(), 1000);
             this.fetchDrafts();
@@ -1131,9 +1145,10 @@ function posApp() {
         // still opens the print page.
         printReceipt() {
             if (!this.lastReceiptUrl) return;
-            const url = this.lastReceiptUrl.replace(/\/$/, '') + '/print';
+            if (this.printVia === 'none') return;
+            const url = this.lastReceiptUrl.replace(/\/$/, '') + '/print?via=' + this.printVia;
 
-            if (@json(($settings['print_method'] ?? 'browser') === 'rawbt')) {
+            if (this.printVia === 'rawbt') {
                 window.location.href = url;
                 return;
             }
@@ -1146,6 +1161,9 @@ function posApp() {
             frame.onload = () => setTimeout(() => { this.printing = false; }, 800);
             frame.src = url;
             document.body.appendChild(frame);
+        },
+        savePrintVia() {
+            try { localStorage.setItem('pos_print_via', this.printVia); } catch (e) {}
         },
         cartCount()       { return this.cart.reduce((n, i) => n + (Number(i.qty) || 0), 0); },
 

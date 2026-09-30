@@ -104,7 +104,8 @@
 <p class="center" style="font-size:10px;">{{ $settings['receipt_footer'] ?? 'Terima kasih atas kunjungan Anda!' }}</p>
 <p class="center" style="font-size:9px; color:#666; margin-top:4px;">Powered by FNB POS System</p>
 
-@if(($settings['print_method'] ?? 'browser') === 'rawbt')
+@php($via = in_array(request('via'), ['browser', 'rawbt'], true) ? request('via') : ($settings['print_method'] ?? 'browser'))
+@if($via === 'rawbt')
 @php($rawbt = 'rawbt:base64,' . base64_encode(app(\App\Services\EscPosReceipt::class)->render($order)))
 {{-- Bluetooth thermal printer via the RawBT Android app; the browser print
      dialog cannot reach it. --}}
