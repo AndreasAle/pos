@@ -1,0 +1,67 @@
+<?php
+
+namespace Tests\Feature\Orders;
+
+use App\Models\Order;
+use App\Services\EscPosReceipt;
+use App\Services\PosOrderService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\BuildsPosScenario;
+use Tests\TestCase;
+
+/**
+ * Bluetooth thermal printers (e.g. Blueprint BP-ECO58D) on an Android tablet
+ * are unreachable from the browser print dialog, so the register hands raw
+ * ESC/POS bytes to the RawBT app instead.
+ */
+class RawBtReceiptTest extends TestCase
+{
+    use RefreshDatabase, BuildsPosScenario;
+
+    private function anOrder(): Order
+    {
+        $product = $this->product(price: 25000);
+
+        return app(PosOrderService::class)->createOrder($this->cashier, $this->payload([
+            ['product_id' => $product->id, 'qty' => 2],
+        ]));
+    }
+
+    public function test_the_browser_dialog_stays_the_default(): void
+    {
+        $this->setUpPos();
+        $order = $this->anOrder();
+
+        $this->actingAs($this->cashier)
+            ->get(route('receipt.print', $order))
+            ->assertSee('window.print()', false)
+            ->assertDontSee('rawbt:base64', false);
+    }
+
+    public function test_rawbt_mode_hands_the_receipt_to_rawbt(): void
+    {
+        $this->setUpPos(['receipt_size' => '58mm', 'print_method' => 'rawbt']);
+        $order = $this->anOrder();
+
+        $this->actingAs($this->cashier)
+            ->get(route('receipt.print', $order))
+            ->assertSee('rawbt:base64,', false)
+            ->assertDontSee('window.print()', false);
+    }
+
+    public function test_58mm_lines_fit_32_columns(): void
+    {
+        $this->setUpPos(['receipt_size' => '58mm', 'print_method' => 'rawbt']);
+        $order = $this->anOrder();
+
+        $bytes = app(EscPosReceipt::class)->render($order);
+        $text  = preg_replace('/\x1B\x40|\x1B[aE][\x00-\x02]|\x1D\x56\x41\x00/', '', $bytes);
+
+        $this->assertStringContainsString($order->order_number, $text);
+        $this->assertStringContainsString('Rp50.000', $text);
+
+        foreach (explode("\n", $text) as $line) {
+            $this->assertLessThanOrEqual(32, strlen($line), "Too wide: [{$line}]");
+        }
+    }
+}

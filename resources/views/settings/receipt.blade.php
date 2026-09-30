@@ -38,6 +38,20 @@
                         @endforeach
                     </div>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cara Cetak</label>
+                    <div class="flex flex-col gap-2">
+                        @foreach(['browser'=>'Dialog print browser (printer USB / PC)','rawbt'=>'Bluetooth lewat aplikasi RawBT (tablet Android)'] as $val => $label)
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="print_method" value="{{ $val }}"
+                                   class="text-emerald-600"
+                                   {{ old('print_method', $s['print_method'] ?? 'browser') === $val ? 'checked' : '' }}>
+                            <span class="text-sm text-gray-700">{{ $label }}</span>
+                        </label>
+                        @endforeach
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">RawBT: pasang dari Play Store, pair printer Bluetooth, lalu pilih printernya di RawBT.</p>
+                </div>
             </div>
         </x-card>
 

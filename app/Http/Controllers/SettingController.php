@@ -73,6 +73,7 @@ class SettingController extends Controller
             'receipt_header'       => $request->receipt_header,
             'receipt_footer'       => $request->receipt_footer,
             'receipt_size'         => $request->receipt_size ?? '80mm',
+            'print_method'         => $request->print_method === 'rawbt' ? 'rawbt' : 'browser',
             'enable_tax'           => $request->boolean('enable_tax'),
             'tax_percent'          => (float) ($request->tax_percent ?? 10),
             'enable_service'       => $request->boolean('enable_service'),
