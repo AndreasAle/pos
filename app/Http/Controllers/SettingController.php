@@ -23,10 +23,17 @@ class SettingController extends Controller
             'email'   => 'nullable|email',
             'address' => 'nullable|string|max:500',
             'logo'    => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'business_type' => 'nullable|in:fnb,retail',
         ]);
 
         $business = auth()->user()->business;
         $data     = $request->only('name', 'phone', 'email', 'address');
+
+        if ($request->filled('business_type')) {
+            $data['settings'] = array_merge($business->settings ?? [], [
+                'business_type' => $request->business_type,
+            ]);
+        }
 
         if ($request->hasFile('logo')) {
             if ($business->logo) \Storage::disk('public')->delete($business->logo);

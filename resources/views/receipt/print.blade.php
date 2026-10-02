@@ -70,7 +70,7 @@
 </div>
 <div class="row">
     <span class="b">No. {{ $order->order_number }}</span>
-    @if($o['order_type'] && ($type = \App\Support\ReceiptOptions::orderTypeLabel($order->order_type)))<span>{{ $type }}</span>@endif
+    @if($o['order_type'] && ($type = \App\Support\ReceiptOptions::orderTypeLabel($order->order_type, $o['retail'])))<span>{{ $type }}</span>@endif
 </div>
 
 <div class="rule"></div>

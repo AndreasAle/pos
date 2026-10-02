@@ -50,6 +50,14 @@
                 <textarea name="address" rows="3"
                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">{{ old('address', $business->address) }}</textarea>
             </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Bisnis</label>
+                <select name="business_type" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                    <option value="fnb" {{ !$business->isRetail() ? 'selected' : '' }}>Makanan & Minuman (cafe, resto)</option>
+                    <option value="retail" {{ $business->isRetail() ? 'selected' : '' }}>Toko / Retail (baju, tas, aksesoris)</option>
+                </select>
+                <p class="text-xs text-gray-400 mt-0.5">Retail menyembunyikan Dine In, Dapur (KDS), Resep dan Bahan Baku.</p>
+            </div>
             <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
                 <button type="submit"
                         class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">

@@ -44,14 +44,22 @@ class ReceiptOptions
             'cashier'    => $flag('receipt_show_cashier'),
             'customer'   => $flag('receipt_show_customer'),
             'order_type' => $flag('receipt_show_order_type'),
+            'retail'     => $business->isRetail(),
             'total_qty'  => $flag('receipt_show_total_qty'),
             'narrow'     => ($s['receipt_size'] ?? '80mm') === '58mm',
             'tax_percent'=> $s['tax_percent'] ?? 10,
         ];
     }
 
-    public static function orderTypeLabel(?string $type): ?string
+    public static function orderTypeLabel(?string $type, bool $retail = false): ?string
     {
+        if ($retail) {
+            return match ($type) {
+                'delivery' => 'Kirim',
+                default    => null,
+            };
+        }
+
         return match ($type) {
             'dine_in'  => 'Dine In',
             'takeaway' => 'Takeaway',

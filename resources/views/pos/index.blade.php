@@ -195,21 +195,23 @@
 
         {{-- Order Type Selector --}}
         <div class="px-4 pt-3 pb-2 border-b border-gray-100">
-            <div class="grid grid-cols-3 gap-1.5">
+            <div class="grid {{ $business->isRetail() ? 'grid-cols-2' : 'grid-cols-3' }} gap-1.5">
+                @unless($business->isRetail())
                 <button @click="setOrderType('dine_in')"
                         :class="orderType==='dine_in' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200'"
                         class="text-xs font-semibold py-1.5 rounded-xl border transition-colors">
                     🍽 Dine In
                 </button>
+                @endunless
                 <button @click="setOrderType('takeaway')"
                         :class="orderType==='takeaway' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'"
                         class="text-xs font-semibold py-1.5 rounded-xl border transition-colors">
-                    🛍 Takeaway
+                    {{ $business->isRetail() ? '🛍 Beli di Toko' : '🛍 Takeaway' }}
                 </button>
                 <button @click="setOrderType('delivery')"
                         :class="orderType==='delivery' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200'"
                         class="text-xs font-semibold py-1.5 rounded-xl border transition-colors">
-                    🛵 Delivery
+                    {{ $business->isRetail() ? '📦 Kirim / Online' : '🛵 Delivery' }}
                 </button>
             </div>
 
@@ -294,7 +296,7 @@
                     <svg class="w-14 h-14 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
-                    <p class="text-sm">Pilih menu untuk mulai</p>
+                    <p class="text-sm">{{ $business->isRetail() ? 'Pilih produk untuk mulai' : 'Pilih menu untuk mulai' }}</p>
                 </div>
             </template>
 
@@ -936,7 +938,9 @@ function posApp() {
         showBundles: false,
 
         // Order type + Delivery
-        orderType: 'dine_in',
+        // Retail shops have no dine-in; a counter sale is the starting point.
+        defaultOrderType: @json($business->isRetail() ? 'takeaway' : 'dine_in'),
+        orderType: @json($business->isRetail() ? 'takeaway' : 'dine_in'),
         deliveryPlatform: '',
         deliveryFee: 0,
         deliveryAddress: '',
@@ -1508,7 +1512,7 @@ function posApp() {
             this.manualDisc = 0; this.payMethod = 'cash'; this.paidAmt = 0;
             this.redeemActive = false; this.redeemPoints = 0;
             this.customerPoints = null;
-            this.orderType = 'dine_in'; this.deliveryPlatform = '';
+            this.orderType = this.defaultOrderType; this.deliveryPlatform = '';
             this.deliveryFee = 0; this.deliveryAddress = ''; this.platformOrderNo = '';
             this.isSplit = false; this.splitPayments = [{ method: 'cash', amount: 0 }];
             this.successModal = false; this.showQrisScreen = false;

@@ -53,7 +53,7 @@ class EscPosReceipt
             $order->created_at->format('H:i:s'),
             $o['customer'] && $order->customer ? $order->customer->name : ''
         );
-        $type = $o['order_type'] ? ReceiptOptions::orderTypeLabel($order->order_type) : null;
+        $type = $o['order_type'] ? ReceiptOptions::orderTypeLabel($order->order_type, $o['retail']) : null;
         $out .= self::BOLD_ON . $this->row('No. ' . $order->order_number, $type ?? '') . self::BOLD_OFF;
         $out .= $this->rule();
 

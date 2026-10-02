@@ -35,7 +35,10 @@
 
         {{-- Navigation --}}
         <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-            @php $role = auth()->user()->role; @endphp
+            @php
+                $role     = auth()->user()->role;
+                $isRetail = (bool) auth()->user()->business?->isRetail();
+            @endphp
 
             {{-- Dashboard --}}
             <x-nav-item route="dashboard" icon="home">Dashboard</x-nav-item>
@@ -52,14 +55,14 @@
             <div class="pt-3">
                 <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Master Data</p>
             </div>
-            <x-nav-item route="products.index" icon="cube">Produk / Menu</x-nav-item>
+            <x-nav-item route="products.index" icon="cube">{{ $isRetail ? 'Produk' : 'Produk / Menu' }}</x-nav-item>
             <x-nav-item route="bundles.index" icon="squares-plus">Bundling Produk</x-nav-item>
             <x-nav-item route="categories.index" icon="tag">Kategori</x-nav-item>
             <x-nav-item route="customers.index" icon="users">Pelanggan</x-nav-item>
             <x-nav-item route="promotions.index" icon="badge-percent">Promo & Diskon</x-nav-item>
             @endif
 
-            @if(in_array($role, ['owner','admin','kitchen']))
+            @if(!$isRetail && in_array($role, ['owner','admin','kitchen']))
             {{-- Operations --}}
             <div class="pt-3">
                 <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operasional</p>
@@ -67,7 +70,7 @@
             <x-nav-item route="kitchen.index" icon="fire">Dapur (KDS)</x-nav-item>
             @endif
 
-            @if(in_array($role, ['owner','admin','warehouse']))
+            @if(!$isRetail && in_array($role, ['owner','admin','warehouse']))
             <x-nav-item route="ingredients.index" icon="beaker">Bahan Baku</x-nav-item>
             <x-nav-item route="recipes.index" icon="book-open">Resep</x-nav-item>
             <x-nav-item route="inventory.movements" icon="arrows-right-left">Pergerakan Stok</x-nav-item>

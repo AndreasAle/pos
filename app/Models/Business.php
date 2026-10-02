@@ -76,6 +76,15 @@ class Business extends Model
             ->latest('id');
     }
 
+    /**
+     * A shop that sells goods off the shelf (clothing, bags) rather than food.
+     * It has no kitchen, recipes or dine-in, so those parts of the app hide.
+     */
+    public function isRetail(): bool
+    {
+        return ($this->settings['business_type'] ?? 'fnb') === 'retail';
+    }
+
     public function getSetting(string $key, mixed $default = null): mixed
     {
         return data_get($this->settings, $key, $default);
