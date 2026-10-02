@@ -46,7 +46,7 @@ php artisan queue:restart
 echo "==> Memeriksa aset"
 CSS_FILE=$(php -r '$m = json_decode(file_get_contents("public/build/manifest.json"), true); echo $m["resources/css/app.css"]["file"];')
 
-if [ -f "$WEB_ROOT/$CSS_FILE" ]; then
+if [ -f "$WEB_ROOT/build/$CSS_FILE" ]; then
     echo "    OK: $CSS_FILE ada di web root"
 else
     echo "    GAGAL: $CSS_FILE tidak ditemukan di web root — situs akan tampil tanpa CSS" >&2
