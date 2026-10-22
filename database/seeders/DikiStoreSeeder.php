@@ -121,12 +121,6 @@ class DikiStoreSeeder extends Seeder
      */
     private function users(Business $business, Outlet $outlet): void
     {
-        foreach (['DK_PASSWORD', 'DK_PIN'] as $key) {
-            if ((string) env($key, '') === '') {
-                throw new \RuntimeException("{$key} belum diisi di .env — seeder dibatalkan.");
-            }
-        }
-
         User::create([
             'business_id'       => $business->id,
             'outlet_id'         => $outlet->id,
