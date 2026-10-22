@@ -252,14 +252,20 @@ class DikiStoreCatalogueSeeder extends Seeder
                 ['Monte-monte (1 gram)', 2000, 0],
             ],
             'Minuman & Snack' => [
-                ['Minuman Es / Hot', 20000, [
-                    'Taro'        => 49,
-                    'Coklat'      => 28,
-                    'Dark Coklat' => 4,
-                    'Thai Tea'    => 40,
-                    'Green Tea'   => 19,
+                ['Minuman Rasa-rasa 25g (Es / Hot)', 20000, [
+                    'Taro'       => 25,
+                    'Coklat'     => 20,
+                    'Thai Tea'   => 20,
+                    'Green Tea'  => 19,
+                    'Red Velvet' => 20,
+                ]],
+                ['Minuman Rasa-rasa 50g (Es / Hot)', 20000, [
+                    'Taro'        => 24,
+                    'Thai Tea'    => 20,
                     'Matcha'      => 15,
-                    'Red Velvet'  => 31,
+                    'Red Velvet'  => 11,
+                    'Coklat'      => 8,
+                    'Dark Coklat' => 4,
                     'Kopi'        => 4,
                     'Gula Aren'   => 34,
                 ]],
