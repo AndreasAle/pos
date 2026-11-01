@@ -103,7 +103,7 @@
                 </div>
                 <div class="w-36">
                     <label class="block text-xs font-medium text-gray-600 mb-1">Selisih Harga</label>
-                    <input type="number" name="price_adjustment" value="0" step="500"
+                    <input type="number" name="price_adjustment" value="0" step="1"
                            class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                 </div>
                 <button type="submit"
@@ -143,7 +143,7 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Harga</label>
                     <div class="relative">
                         <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">Rp</span>
-                        <input type="number" name="price" value="0" min="0" step="500"
+                        <input type="number" name="price" value="0" min="0" step="1"
                                class="pl-7 w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
                 </div>

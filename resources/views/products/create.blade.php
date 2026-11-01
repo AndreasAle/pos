@@ -33,7 +33,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Harga Jual <span class="text-red-500">*</span></label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
-                        <input type="number" name="price" value="{{ old('price', 0) }}" min="0" step="500" required
+                        <input type="number" name="price" value="{{ old('price', 0) }}" min="0" step="1" required
                                class="pl-10 w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
                 </div>
@@ -41,7 +41,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Harga Modal</label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">Rp</span>
-                        <input type="number" name="cost_price" value="{{ old('cost_price', 0) }}" min="0" step="500"
+                        <input type="number" name="cost_price" value="{{ old('cost_price', 0) }}" min="0" step="1"
                                class="pl-10 w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
                 </div>

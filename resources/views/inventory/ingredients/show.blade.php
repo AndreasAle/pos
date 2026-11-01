@@ -31,7 +31,7 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Harga per {{ $ingredient->unit }}</label>
                     <div class="relative">
                         <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">Rp</span>
-                        <input type="number" name="unit_cost" min="0" step="100" value="{{ $ingredient->average_cost }}"
+                        <input type="number" name="unit_cost" min="0" step="any" value="{{ $ingredient->average_cost }}"
                                class="pl-7 w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
                 </div>

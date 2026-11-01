@@ -36,7 +36,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Harga Rata-rata</label>
                     <div class="relative">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">Rp</span>
-                        <input type="number" name="average_cost" value="{{ old('average_cost',0) }}" min="0" step="100"
+                        <input type="number" name="average_cost" value="{{ old('average_cost',0) }}" min="0" step="any"
                                class="pl-9 w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
                     </div>
                 </div>
