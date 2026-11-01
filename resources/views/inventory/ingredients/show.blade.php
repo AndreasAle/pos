@@ -3,7 +3,7 @@
 @section('page-title', $ingredient->name)
 
 @section('content')
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <a href="{{ route('ingredients.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← Bahan Baku</a>
     <a href="{{ route('ingredients.edit', $ingredient) }}"
        class="text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl">Edit</a>

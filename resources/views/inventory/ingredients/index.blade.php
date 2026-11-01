@@ -3,7 +3,7 @@
 @section('page-title','Bahan Baku / Inventory')
 
 @section('content')
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <div class="flex gap-2">
         <a href="{{ route('ingredients.index') }}" class="text-sm font-semibold bg-emerald-600 text-white px-4 py-2 rounded-xl">Bahan Baku</a>
         <a href="{{ route('inventory.movements') }}" class="text-sm font-medium bg-white text-gray-600 border border-gray-300 hover:border-emerald-400 px-4 py-2 rounded-xl">Pergerakan Stok</a>

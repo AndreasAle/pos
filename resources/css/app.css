@@ -15,6 +15,13 @@
 
 [x-cloak] { display: none !important; }
 
+/* Dashboard di layar HP: tabel yang lebih lebar dari layar digulir di dalam
+   kotaknya sendiri, bukan membuat seluruh halaman bisa digeser ke samping. */
+main div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+@media (max-width: 639px) {
+    main table th, main table td { white-space: nowrap; }
+}
+
 /* Receipt thermal print styles */
 @media print {
     body * { visibility: hidden; }

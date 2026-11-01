@@ -2,7 +2,7 @@
 @section('title','Status Langganan')
 @section('page-title','Status Langganan')
 @section('content')
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <a href="{{ route('saas.plans') }}" class="text-sm font-medium text-emerald-600 border border-emerald-200 hover:bg-emerald-50 px-4 py-2 rounded-xl">
         Lihat Semua Paket →
     </a>

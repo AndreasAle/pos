@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="max-w-sm mx-auto">
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <a href="{{ route('orders.show', $order) }}" class="text-sm text-gray-500 hover:text-gray-700">← Detail Order</a>
         <div class="flex gap-2">
             <a href="{{ route('receipt.print', $order) }}" target="_blank"

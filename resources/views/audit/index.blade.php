@@ -4,20 +4,20 @@
 
 @section('content')
 {{-- Filter --}}
-<form method="GET" class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-5 flex flex-wrap items-end gap-3">
+<form method="GET" class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-5 grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3">
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Dari</label>
-        <input type="date" name="date_from" value="{{ request('date_from', today()->format('Y-m-d')) }}"
-               class="px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <input type="date" name="date_from" value="{{ request('date_from') }}"
+               class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
     </div>
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Sampai</label>
-        <input type="date" name="date_to" value="{{ request('date_to', today()->format('Y-m-d')) }}"
-               class="px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <input type="date" name="date_to" value="{{ request('date_to') }}"
+               class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
     </div>
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">User</label>
-        <select name="user_id" class="px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <select name="user_id" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="">Semua User</option>
             @foreach($users as $u)
             <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
@@ -28,14 +28,14 @@
     </div>
     <div>
         <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Aksi</label>
-        <select name="action" class="px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <select name="action" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="">Semua Aksi</option>
             @foreach($actions as $a)
             <option value="{{ $a }}" {{ request('action') === $a ? 'selected' : '' }}>{{ ucfirst($a) }}</option>
             @endforeach
         </select>
     </div>
-    <div class="flex-1 min-w-48">
+    <div class="col-span-2 sm:flex-1 sm:min-w-48">
         <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Pencarian</label>
         <div class="relative">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -49,11 +49,11 @@
             class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors">
         Cari
     </button>
-    <a href="{{ route('audit.index') }}" class="text-sm text-gray-500 hover:text-gray-700 py-2.5 px-3 rounded-xl hover:bg-gray-100">Reset</a>
+    <a href="{{ route('audit.index') }}" class="text-center text-sm text-gray-500 hover:text-gray-700 py-2.5 px-3 rounded-xl hover:bg-gray-100">Reset</a>
 </form>
 
 <x-card :padding="false">
-    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+    <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-1">
         <h3 class="text-sm font-semibold text-gray-900">{{ $logs->total() }} aktivitas ditemukan</h3>
         <span class="text-xs text-gray-400">Menampilkan 50 per halaman</span>
     </div>

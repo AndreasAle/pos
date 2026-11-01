@@ -2,7 +2,7 @@
 @section('title','Shift Kasir')
 @section('page-title','Shift Kasir')
 @section('content')
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     @if(!$activeShift)
     <a href="{{ route('shifts.open') }}"
        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">

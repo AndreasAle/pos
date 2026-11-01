@@ -138,21 +138,21 @@
     </aside>
 
     {{-- Main content --}}
-    <div class="lg:pl-64 flex flex-col min-h-screen">
+    <div class="lg:pl-64 flex flex-col min-h-screen min-w-0 overflow-x-clip">
 
         {{-- Topbar --}}
-        <header class="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4">
-            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-lg hover:bg-gray-100">
+        <header class="sticky top-0 z-20 bg-white border-b border-gray-200 px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
+            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 shrink-0" aria-label="Menu">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
 
-            <div class="flex-1">
-                <h1 class="text-lg font-semibold text-gray-900">@yield('page-title', 'Dashboard')</h1>
+            <div class="flex-1 min-w-0">
+                <h1 class="text-base sm:text-lg font-semibold text-gray-900 truncate">@yield('page-title', 'Dashboard')</h1>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 shrink-0">
                 {{-- Date --}}
                 <span class="hidden sm:inline text-sm text-gray-500">{{ now()->isoFormat('dddd, D MMMM Y') }}</span>
 
@@ -176,7 +176,7 @@
         </header>
 
         {{-- Flash messages --}}
-        <div class="px-6 pt-4">
+        <div class="px-4 sm:px-6 pt-4">
             @if(session('success'))
             <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
                  class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 mb-4">
@@ -226,7 +226,7 @@
         </div>
 
         {{-- Page content --}}
-        <main class="flex-1 px-6 pb-8">
+        <main class="flex-1 min-w-0 px-4 sm:px-6 pb-8">
             @yield('content')
         </main>
     </div>

@@ -4,22 +4,22 @@
 
 @section('content')
 {{-- Filter --}}
-<form method="GET" class="flex flex-wrap items-center gap-3 mb-5">
-    <select name="status" onchange="this.form.submit()" class="text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+<form method="GET" class="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-3 mb-5">
+    <select name="status" onchange="this.form.submit()" class="col-span-2 sm:col-span-1 text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
         <option value="">Semua Status</option>
         @foreach(['paid'=>'Lunas','draft'=>'Draft','cancelled'=>'Dibatalkan','refunded'=>'Refund'] as $v => $l)
         <option value="{{ $v }}" {{ request('status')===$v?'selected':'' }}>{{ $l }}</option>
         @endforeach
     </select>
-    <input type="date" name="date_from" value="{{ request('date_from', today()->format('Y-m-d')) }}"
+    <input type="date" name="date_from" value="{{ request('date_from') }}"
            onchange="this.form.submit()"
-           class="text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-    <span class="text-gray-400">s/d</span>
-    <input type="date" name="date_to" value="{{ request('date_to', today()->format('Y-m-d')) }}"
+           class="w-full sm:w-auto min-w-0 text-sm border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+    <span class="hidden sm:inline text-gray-400">s/d</span>
+    <input type="date" name="date_to" value="{{ request('date_to') }}"
            onchange="this.form.submit()"
-           class="text-sm border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
-    <a href="{{ route('orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-xl hover:bg-gray-100">Reset</a>
-    <span class="ml-auto text-sm text-gray-500">{{ $orders->total() }} order</span>
+           class="w-full sm:w-auto min-w-0 text-sm border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+    <a href="{{ route('orders.index') }}" class="text-center text-sm text-gray-500 hover:text-gray-700 px-3 py-2 rounded-xl hover:bg-gray-100">Reset</a>
+    <span class="sm:ml-auto text-right text-sm text-gray-500">{{ $orders->total() }} order</span>
 </form>
 
 <x-card :padding="false">

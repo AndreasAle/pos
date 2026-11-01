@@ -3,7 +3,7 @@
 @section('page-title', 'Manajemen User')
 
 @section('content')
-<div class="flex items-center justify-between mb-6">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <p class="text-sm text-gray-500">{{ $users->total() }} user terdaftar</p>
     <a href="{{ route('users.create') }}"
        class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">

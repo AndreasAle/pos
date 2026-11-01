@@ -2,7 +2,7 @@
 @section('title', $customer->name)
 @section('page-title', $customer->name)
 @section('content')
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <a href="{{ route('customers.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← Pelanggan</a>
     <a href="{{ route('customers.edit', $customer) }}"
        class="text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl transition-colors">Edit</a>

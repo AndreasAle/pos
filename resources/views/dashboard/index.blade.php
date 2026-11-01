@@ -102,7 +102,7 @@
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
     {{-- Sales Chart --}}
     <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h3 class="text-sm font-semibold text-gray-900">Grafik Penjualan 7 Hari Terakhir</h3>
             <div class="flex items-center gap-4 text-xs text-gray-400">
                 <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-emerald-400 inline-block"></span>Omzet</span>
@@ -167,7 +167,7 @@
 
     {{-- Recent Orders --}}
     <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2">
             <h3 class="text-sm font-semibold text-gray-900">Transaksi Terbaru</h3>
             <a href="{{ route('orders.index') }}" class="text-xs text-emerald-600 hover:underline">Lihat semua</a>
         </div>

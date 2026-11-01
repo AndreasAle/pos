@@ -4,7 +4,7 @@
 
 @section('content')
 <div x-data="kds()" x-init="init()">
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div class="flex items-center gap-2">
             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span class="text-sm text-gray-500">Auto-refresh setiap 15 detik</span>

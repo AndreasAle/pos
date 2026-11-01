@@ -13,7 +13,7 @@
     @endif
 
     {{-- Stats --}}
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <p class="text-xs text-gray-500">Menunggu Persetujuan</p>
             <p class="text-2xl font-bold text-amber-600">{{ $stats['pending'] }}</p>

@@ -3,7 +3,7 @@
 @section('page-title','Detail Order')
 
 @section('content')
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <a href="{{ route('orders.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← Riwayat Order</a>
     <div class="flex items-center gap-2">
         <a href="{{ route('receipt.show', $order) }}"

@@ -4,7 +4,7 @@
 
 @section('content')
 <form action="{{ route('barcodes.print') }}" method="GET" target="_blank" id="print-form">
-<div class="flex items-center justify-between mb-5">
+<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <p class="text-sm text-gray-500">Pilih produk yang akan dicetak labelnya</p>
     <div class="flex items-center gap-2">
         <button type="button" onclick="toggleAll()" class="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded-xl hover:bg-gray-50">

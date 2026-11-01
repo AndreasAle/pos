@@ -3,7 +3,7 @@
 @section('page-title','Paket Langganan')
 @section('content')
 @if($current)
-<div class="mb-5 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+<div class="mb-5 bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
     <div>
         <p class="text-sm font-semibold text-emerald-800">
             Paket Aktif: <span class="font-bold">{{ $current->plan->name }}</span>

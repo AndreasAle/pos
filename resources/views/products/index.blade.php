@@ -5,44 +5,49 @@
 @section('content')
 {{-- Toolbar --}}
 <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
-    <form method="GET" class="flex flex-1 items-center gap-2">
-        <div class="relative flex-1 max-w-sm">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <form method="GET" class="grid grid-cols-2 sm:flex sm:flex-1 sm:items-center gap-2 min-w-0">
+        <div class="relative col-span-2 sm:flex-1 sm:max-w-sm flex gap-2">
+            <div class="relative flex-1 min-w-0">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
             </svg>
             <input type="text" name="search" value="{{ request('search') }}"
-                   placeholder="Cari produk..."
+                   placeholder="Cari produk / SKU..."
                    class="pl-9 pr-4 py-2.5 w-full border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <button type="submit" class="shrink-0 bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">Cari</button>
         </div>
         <select name="category_id" onchange="this.form.submit()"
-                class="px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                class="w-full sm:w-auto min-w-0 px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="">Semua Kategori</option>
             @foreach($categories as $cat)
             <option value="{{ $cat->id }}" {{ request('category_id')==$cat->id?'selected':'' }}>{{ $cat->name }}</option>
             @endforeach
         </select>
         <select name="status" onchange="this.form.submit()"
-                class="px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                class="w-full sm:w-auto min-w-0 px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
             <option value="">Semua Status</option>
             <option value="1" {{ request('status')==='1'?'selected':'' }}>Aktif</option>
             <option value="0" {{ request('status')==='0'?'selected':'' }}>Nonaktif</option>
         </select>
     </form>
+    <div class="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
     <a href="{{ route('barcodes.select') }}"
-       class="inline-flex items-center gap-2 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
+       class="inline-flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
         🏷 Label Barcode
     </a>
     <a href="{{ route('products.create') }}"
-       class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
+       class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
         Tambah Produk
     </a>
+    </div>
 </div>
 
 {{-- Product Grid --}}
-<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4">
     @forelse($products as $product)
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
         <div class="aspect-square bg-gray-100 relative overflow-hidden">
@@ -71,7 +76,7 @@
             <p class="text-sm font-bold text-emerald-700 mt-1">Rp {{ number_format($product->price, 0, ',', '.') }}</p>
             <div class="flex items-center gap-1 mt-2">
                 <a href="{{ route('products.show', $product) }}"
-                   class="flex-1 text-center text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-1.5 rounded-lg transition-colors">
+                   class="flex-1 text-center text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-2 rounded-lg transition-colors">
                     Detail
                 </a>
                 <form method="POST" action="{{ route('products.toggle', $product) }}">
@@ -85,7 +90,7 @@
         </div>
     </div>
     @empty
-    <div class="col-span-6 text-center py-16 text-gray-400">
+    <div class="col-span-full text-center py-16 text-gray-400">
         <svg class="w-16 h-16 mx-auto mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
         </svg>
