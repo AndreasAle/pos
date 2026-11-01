@@ -18,8 +18,8 @@ class ProductController extends Controller
         $query = Product::forBusiness($businessId)
             ->with('category')
             ->when($request->search, fn($q) =>
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('sku', 'like', '%' . $request->search . '%')
+                $q->where(fn($w) => $w->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('sku', 'like', '%' . $request->search . '%'))
             )
             ->when($request->category_id, fn($q) =>
                 $q->where('product_category_id', $request->category_id)

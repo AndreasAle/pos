@@ -11,8 +11,8 @@ class CustomerController extends Controller
     {
         $customers = Customer::forBusiness(auth()->user()->business_id)
             ->when($request->search, fn($q) =>
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('phone', 'like', '%' . $request->search . '%')
+                $q->where(fn($w) => $w->where('name', 'like', '%' . $request->search . '%')
+                    ->orWhere('phone', 'like', '%' . $request->search . '%'))
             )
             ->latest()
             ->paginate(30)
