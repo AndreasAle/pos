@@ -48,7 +48,7 @@ class EscPosReceipt
         }
 
         $out .= self::ALIGN_LEFT . $this->rule();
-        $out .= $this->row($order->created_at->format('d-m-Y'), $o['cashier'] ? $order->user->name : '');
+        $out .= $this->row($order->created_at->format('d-m-Y'), $o['cashier'] ? ($order->user?->name ?? '') : '');
         $out .= $this->row(
             $order->created_at->format('H:i:s'),
             $o['customer'] && $order->customer ? $order->customer->name : ''
