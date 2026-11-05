@@ -22,8 +22,17 @@ git pull
 echo "==> Dependency PHP"
 composer install --no-dev --optimize-autoloader
 
+# Migrasi membaca config. Cache config lama dari deploy sebelumnya harus
+# dibuang dulu, kalau tidak migrasi melihat setelan lama (mis. zona waktu).
+# Selama migrasi situs ditutup sebentar, supaya tidak ada transaksi yang
+# tercatat di tengah perubahan data. Gagal atau tidak, situs dibuka lagi.
 echo "==> Migrasi database"
+php artisan down --retry=5
+trap 'php artisan up' EXIT
+php artisan config:clear
 php artisan migrate --force
+php artisan up
+trap - EXIT
 
 # Hanya build/ dan images/ — JANGAN salin public/ seluruhnya, karena index.php
 # di web root sudah disesuaikan untuk menunjuk aplikasi di luar public_html.

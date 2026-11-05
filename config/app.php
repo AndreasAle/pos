@@ -65,7 +65,9 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Every shop is in Indonesia. Times are stored and shown in WIB; rows from
+    // before this change were moved over by the shift_timestamps_to_wib migration.
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------
