@@ -22,12 +22,18 @@ use Illuminate\Support\Facades\DB;
  *   php artisan pos:reset-transactions relasi-coffee            (count only)
  *   php artisan pos:reset-transactions relasi-coffee --force
  *   php artisan pos:reset-transactions relasi-coffee --until=2026-11-04 --force
+ *
+ * A few test sales in a shop that is already trading: name them, and only
+ * those go — shifts are left alone, since real sales share them.
+ *
+ *   php artisan pos:reset-transactions relasi-coffee --order=ORD-261105-0010 --order=ORD-261105-0011
  */
 class ResetBusinessTransactions extends Command
 {
     protected $signature = 'pos:reset-transactions
                             {slug : Business slug, e.g. relasi-coffee}
                             {--until= : Only orders up to and including this date (YYYY-MM-DD)}
+                            {--order=* : Only these order numbers (repeatable); shifts are kept}
                             {--force : Actually delete; without it nothing changes}';
 
     protected $description = 'Delete the dummy sales of one business (orders, QRIS balance entries, closed shifts)';
@@ -49,9 +55,23 @@ class ResetBusinessTransactions extends Command
             return self::FAILURE;
         }
 
+        $only = array_values(array_unique(array_filter($this->option('order'))));
+
         $orders = Order::where('business_id', $business->id)
-            ->when($until, fn ($q) => $q->where('created_at', '<', date('Y-m-d', strtotime($until . ' +1 day'))));
+            ->when($until, fn ($q) => $q->where('created_at', '<', date('Y-m-d', strtotime($until . ' +1 day'))))
+            ->when($only, fn ($q) => $q->whereIn('order_number', $only));
         $orderIds = (clone $orders)->pluck('id');
+
+        // A typo must not quietly delete fewer orders than asked for, nor ones
+        // from another shop.
+        if ($only) {
+            $missing = array_diff($only, (clone $orders)->pluck('order_number')->all());
+            if ($missing) {
+                $this->error('Order tidak ditemukan di bisnis ini: ' . implode(', ', $missing));
+
+                return self::FAILURE;
+            }
+        }
 
         $ledger = BalanceTransaction::where('business_id', $business->id)
             ->where('sourceable_type', Order::class)
@@ -74,7 +94,8 @@ class ResetBusinessTransactions extends Command
         }
 
         $shifts = CashierShift::where('business_id', $business->id)->where('status', 'closed')
-            ->when($until, fn ($q) => $q->where('opened_at', '<', date('Y-m-d', strtotime($until . ' +1 day'))));
+            ->when($until, fn ($q) => $q->where('opened_at', '<', date('Y-m-d', strtotime($until . ' +1 day'))))
+            ->when($only, fn ($q) => $q->whereRaw('1 = 0'));
 
         // Net effect of the ledger rows: credits add, debits (refunds) subtract.
         $balanceDelta = (float) (clone $ledger)->get()
