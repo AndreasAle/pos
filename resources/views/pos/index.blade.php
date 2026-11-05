@@ -880,6 +880,10 @@
                     </svg>
                     Transaksi Baru
                 </button>
+                <button type="button" x-show="kitchenEnabled" @click="printKitchen()"
+                        class="col-span-2 flex items-center justify-center gap-1.5 text-sm font-semibold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 py-2.5 rounded-xl transition-colors">
+                    🍳 <span x-text="inApp ? 'Cetak ulang ke Dapur' : 'Cetak ke Dapur'"></span>
+                </button>
             </div>
         </div>
     </div>
@@ -969,6 +973,11 @@ function posApp() {
         lastOrderNo: '', lastReceiptUrl: '', lastChange: 0, printing: false,
         printVia: @json(($settings['print_method'] ?? 'browser') === 'rawbt' ? 'rawbt' : 'browser'),
         lastPointsRedeemed: 0,
+        // Some category is marked "Kirim ke dapur", so there is a kitchen to print for.
+        kitchenEnabled: @json($categories->contains('send_to_kitchen', true)),
+        // Only the tablet app can print to the kitchen printer unattended; a
+        // browser would pop a print dialog after every sale.
+        inApp: /POSKasirApp/.test(navigator.userAgent),
         activeCategory: null, search: '',
 
         get quickAmounts() {
@@ -990,6 +999,11 @@ function posApp() {
             setInterval(() => this.tick(), 1000);
             this.fetchDrafts();
             this.initBarcodeListener();
+            // Every way a sale can succeed (cash, manual QRIS, Midtrans) ends by
+            // opening the success screen, so the kitchen ticket hangs off that.
+            this.$watch('successModal', open => {
+                if (open && this.kitchenEnabled && this.inApp) this.printKitchen();
+            });
         },
 
         tick() { this.currentTime = new Date().toLocaleTimeString('id-ID'); },
@@ -1147,6 +1161,19 @@ function posApp() {
         // (or prints straight away under --kiosk-printing) right here.
         // RawBT needs a top-level navigation to its rawbt: link, so that mode
         // still opens the print page.
+        // The kitchen ticket: only the order's kitchen items. In the tablet app
+        // the hidden frame is intercepted and printed on the kitchen printer
+        // (nothing at all if the order has no kitchen items); in a browser it
+        // opens the print dialog.
+        printKitchen() {
+            if (!this.lastReceiptUrl) return;
+            document.getElementById('kitchen-print-frame')?.remove();
+            const frame = document.createElement('iframe');
+            frame.id = 'kitchen-print-frame';
+            frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+            frame.src = this.lastReceiptUrl.replace(/\/$/, '') + '/kitchen';
+            document.body.appendChild(frame);
+        },
         printReceipt() {
             if (!this.lastReceiptUrl) return;
             if (this.printVia === 'none') return;

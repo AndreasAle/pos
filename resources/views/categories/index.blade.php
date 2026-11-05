@@ -23,6 +23,14 @@
                         <span class="text-xs text-gray-500">Pilih warna untuk label kategori di POS</span>
                     </div>
                 </div>
+                <label class="flex items-start gap-3 p-3 rounded-xl border border-gray-200 cursor-pointer hover:bg-gray-50">
+                    <input type="checkbox" name="send_to_kitchen" value="1" @checked(old('send_to_kitchen'))
+                           class="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500">
+                    <span>
+                        <span class="block text-sm font-medium text-gray-700">🍳 Kirim ke dapur</span>
+                        <span class="block text-xs text-gray-500">Produk kategori ini ikut dicetak di tiket dapur. Centang untuk makanan, biarkan kosong untuk minuman.</span>
+                    </span>
+                </label>
                 <button type="submit"
                         class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
                     Tambah Kategori
@@ -53,7 +61,15 @@
                         <button type="button" @click="editing = false" class="text-xs text-gray-400 hover:text-gray-600">Batal</button>
                     </form>
                 </div>
-                <div class="flex items-center gap-1 flex-shrink-0" x-show="!editing">
+                <div class="flex flex-wrap items-center justify-end gap-1 flex-shrink-0" x-show="!editing">
+                    <form method="POST" action="{{ route('categories.kitchen', $category) }}">
+                        @csrf @method('PATCH')
+                        <button type="submit"
+                                title="{{ $category->send_to_kitchen ? 'Dicetak ke dapur — ketuk untuk berhenti' : 'Tidak dicetak ke dapur — ketuk untuk mengaktifkan' }}"
+                                class="text-xs font-medium px-2 py-1 rounded-lg transition-colors {{ $category->send_to_kitchen ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-gray-100 text-gray-400 hover:bg-gray-200' }}">
+                            🍳 {{ $category->send_to_kitchen ? 'Dapur' : 'Bukan dapur' }}
+                        </button>
+                    </form>
                     <x-badge :color="$category->is_active ? 'green' : 'gray'">{{ $category->is_active ? 'Aktif' : 'Nonaktif' }}</x-badge>
                     <button @click="editing = true"
                             class="text-xs font-medium text-gray-500 hover:text-gray-700 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors">

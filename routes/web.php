@@ -76,6 +76,8 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
     Route::post('profile', [UserController::class, 'updateProfile'])->name('profile.update');
 
     // Categories
+    Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])
+        ->name('categories.kitchen');
     Route::resource('categories', ProductCategoryController::class);
 
     // Products
@@ -123,6 +125,7 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
     Route::get('receipt/{order}',          [ReceiptController::class, 'show'])->name('receipt.show');
     Route::get('receipt/{order}/print',    [ReceiptController::class, 'print'])->name('receipt.print');
     Route::get('receipt/{order}/pdf',      [ReceiptController::class, 'pdf'])->name('receipt.pdf');
+    Route::get('receipt/{order}/kitchen',  [ReceiptController::class, 'kitchen'])->name('receipt.kitchen');
 
     // Inventory
     Route::resource('inventory/ingredients', IngredientController::class)->names([

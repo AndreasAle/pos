@@ -11,11 +11,12 @@ class ProductCategory extends Model
 
     protected $fillable = [
         'business_id', 'outlet_id', 'name', 'slug', 'color', 'icon', 'sort_order', 'is_active',
+        'send_to_kitchen',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['is_active' => 'boolean', 'send_to_kitchen' => 'boolean'];
     }
 
     public function business()
