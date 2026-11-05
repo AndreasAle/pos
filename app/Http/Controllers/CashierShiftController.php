@@ -74,11 +74,12 @@ class CashierShiftController extends Controller
         abort_if($shift->business_id !== auth()->user()->business_id, 403);
         $shift->load(['user', 'outlet', 'orders.items']);
 
-        $totalSales   = $shift->orders->where('status', 'paid')->sum('grand_total');
-        $totalCash    = $shift->orders->where('status', 'paid')->where('payment_method', 'cash')->sum('grand_total');
+        $byMethod     = $this->shiftService->takingsByMethod($shift);
+        $totalSales   = array_sum($byMethod);
+        $totalCash    = $byMethod['cash'];
         $totalOrders  = $shift->orders->where('status', 'paid')->count();
 
-        return view('shifts.show', compact('shift', 'totalSales', 'totalCash', 'totalOrders'));
+        return view('shifts.show', compact('shift', 'totalSales', 'totalCash', 'totalOrders', 'byMethod'));
     }
 
     public function close(CashierShift $shift)
@@ -87,8 +88,13 @@ class CashierShiftController extends Controller
         abort_if($shift->user_id !== auth()->id(), 403, 'Hanya pemilik shift yang dapat menutup shift.');
         abort_if($shift->status !== 'open', 422, 'Shift sudah ditutup.');
 
-        $expectedCash = $shift->opening_cash + $shift->total_cash_sales;
-        return view('shifts.close', compact('shift', 'expectedCash'));
+        // The same figures closeShift() will store, so what the cashier checks
+        // against is what ends up in the record.
+        $byMethod     = $this->shiftService->takingsByMethod($shift);
+        $expectedCash = (float) $shift->opening_cash + $byMethod['cash'];
+        $totalOrders  = $shift->orders()->where('status', 'paid')->count();
+
+        return view('shifts.close', compact('shift', 'expectedCash', 'byMethod', 'totalOrders'));
     }
 
     public function closeStore(Request $request, CashierShift $shift)

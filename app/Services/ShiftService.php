@@ -48,18 +48,43 @@ class ShiftService
      */
     public function cashTakings(CashierShift $shift): float
     {
+        return $this->takingsByMethod($shift)['cash'] ?? 0.0;
+    }
+
+    /**
+     * What the shift took in, per payment method: ['cash' => 152500, 'qris' => …].
+     *
+     * Same split-payment rule as cashTakings(): a split order contributes each
+     * of its `order_payments` rows to its own method, not its whole total to
+     * the first one. Cash comes first so the drawer count leads the list.
+     *
+     * @return array<string, float>
+     */
+    public function takingsByMethod(CashierShift $shift): array
+    {
         $paidOrders = $shift->orders()->where('status', 'paid');
 
-        $singleMethodCash = (float) (clone $paidOrders)
+        $single = (clone $paidOrders)
             ->where('is_split_payment', false)
-            ->where('payment_method', 'cash')
-            ->sum('grand_total');
+            ->selectRaw('payment_method, SUM(grand_total) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
 
-        $splitCash = (float) OrderPayment::whereIn(
+        $split = OrderPayment::whereIn(
             'order_id',
             (clone $paidOrders)->where('is_split_payment', true)->select('id')
-        )->where('payment_method', 'cash')->sum('amount');
+        )
+            ->selectRaw('payment_method, SUM(amount) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
 
-        return $singleMethodCash + $splitCash;
+        $totals = ['cash' => 0.0];
+        foreach ([$single, $split] as $rows) {
+            foreach ($rows as $method => $amount) {
+                $totals[$method] = ($totals[$method] ?? 0.0) + (float) $amount;
+            }
+        }
+
+        return $totals;
     }
 }

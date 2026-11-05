@@ -19,6 +19,17 @@
     <x-stat-card label="Modal Awal" value="Rp {{ number_format($shift->opening_cash,0,',','.') }}" color="orange"/>
 </div>
 
+<x-card title="Penjualan per Metode Bayar" class="mb-4">
+    <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+        @foreach($byMethod as $method => $amount)
+        <div>
+            <dt class="text-gray-500">{{ \App\Support\ReceiptOptions::paymentLabel($method) }}</dt>
+            <dd class="font-semibold">Rp {{ number_format($amount,0,',','.') }}</dd>
+        </div>
+        @endforeach
+    </dl>
+</x-card>
+
 @if($shift->status === 'closed')
 <x-card title="Rekap Penutupan" class="mb-4">
     <dl class="grid grid-cols-2 gap-3 text-sm">

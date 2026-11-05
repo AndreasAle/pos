@@ -4,19 +4,40 @@
 @section('content')
 <div class="max-w-md mx-auto mt-4">
     <x-card title="Tutup Shift Kasir">
-        <div class="space-y-3 mb-5 bg-gray-50 rounded-xl p-4">
+        {{-- Every method, so QRIS/transfer can be checked against the bank app too. --}}
+        <div class="mb-4 bg-gray-50 rounded-xl p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Penjualan per Metode Bayar · {{ $totalOrders }} transaksi
+            </p>
+            <div class="space-y-2">
+                @foreach($byMethod as $method => $amount)
+                <div class="flex justify-between text-sm">
+                    <span class="text-gray-600">{{ \App\Support\ReceiptOptions::paymentLabel($method) }}</span>
+                    <span class="font-medium {{ $method === 'cash' ? 'text-emerald-700' : 'text-gray-900' }}">Rp {{ number_format($amount,0,',','.') }}</span>
+                </div>
+                @endforeach
+                <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
+                    <span class="font-semibold text-gray-700">Total Penjualan</span>
+                    <span class="font-bold text-gray-900">Rp {{ number_format(array_sum($byMethod),0,',','.') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3 mb-5 bg-emerald-50 rounded-xl p-4">
+            <p class="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Uang di Laci</p>
             <div class="flex justify-between text-sm">
                 <span class="text-gray-500">Modal Awal</span>
                 <span class="font-medium">Rp {{ number_format($shift->opening_cash,0,',','.') }}</span>
             </div>
             <div class="flex justify-between text-sm">
-                <span class="text-gray-500">Total Penjualan Cash</span>
-                <span class="font-medium text-emerald-700">Rp {{ number_format($expectedCash - $shift->opening_cash,0,',','.') }}</span>
+                <span class="text-gray-500">+ Penjualan Tunai</span>
+                <span class="font-medium text-emerald-700">Rp {{ number_format($byMethod['cash'],0,',','.') }}</span>
             </div>
-            <div class="flex justify-between text-sm border-t border-gray-200 pt-2">
-                <span class="font-semibold text-gray-700">Cash Expected</span>
+            <div class="flex justify-between text-sm border-t border-emerald-200 pt-2">
+                <span class="font-semibold text-gray-700">Seharusnya di Laci</span>
                 <span class="font-bold text-gray-900">Rp {{ number_format($expectedCash,0,',','.') }}</span>
             </div>
+            <p class="text-xs text-gray-500">QRIS, transfer, dan metode non-tunai tidak masuk laci.</p>
         </div>
         <form method="POST" action="{{ route('shifts.close.store', $shift) }}" class="space-y-4">
             @csrf

@@ -47,12 +47,10 @@ class CashierShift extends Model
         return $this->hasMany(Order::class);
     }
 
+    /** Cash taken this shift, split payments counted by their cash part only. */
     public function getTotalCashSalesAttribute(): float
     {
-        return (float) $this->orders()
-            ->where('status', 'paid')
-            ->where('payment_method', 'cash')
-            ->sum('grand_total');
+        return app(\App\Services\ShiftService::class)->cashTakings($this);
     }
 
     public function scopeOpen($query)

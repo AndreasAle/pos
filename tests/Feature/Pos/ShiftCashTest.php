@@ -128,6 +128,61 @@ class ShiftCashTest extends TestCase
         $this->assertEquals(0, $closed->cash_difference);
     }
 
+    public function test_takings_are_broken_down_by_payment_method(): void
+    {
+        $this->setUpPos();
+        $this->sell(50000, ['payment_method' => 'cash', 'paid_amount' => 50000]);
+        $this->sell(70000, ['payment_method' => 'qris', 'paid_amount' => 70000]);
+        $this->sell(100000, [
+            'paid_amount'    => 0,
+            'split_payments' => [
+                ['method' => 'cash',     'amount' => 30000],
+                ['method' => 'transfer', 'amount' => 70000],
+            ],
+        ]);
+
+        $byMethod = $this->shifts()->takingsByMethod($this->shift);
+
+        $this->assertEquals(80000, $byMethod['cash']);
+        $this->assertEquals(70000, $byMethod['qris']);
+        $this->assertEquals(70000, $byMethod['transfer']);
+        $this->assertEquals(220000, array_sum($byMethod));
+    }
+
+    public function test_cash_is_listed_even_when_nothing_was_paid_in_cash(): void
+    {
+        $this->setUpPos();
+        $this->sell(70000, ['payment_method' => 'qris', 'paid_amount' => 70000]);
+
+        $byMethod = $this->shifts()->takingsByMethod($this->shift);
+
+        $this->assertSame('cash', array_key_first($byMethod));
+        $this->assertEquals(0, $byMethod['cash']);
+        $this->assertEquals(70000, $byMethod['qris']);
+    }
+
+    public function test_the_close_page_shows_each_method_and_the_stored_expectation(): void
+    {
+        $this->setUpPos();
+        $this->sell(50000, ['payment_method' => 'cash', 'paid_amount' => 50000]);
+        $this->sell(70000, ['payment_method' => 'qris', 'paid_amount' => 70000]);
+        $this->sell(100000, [
+            'paid_amount'    => 0,
+            'split_payments' => [
+                ['method' => 'cash', 'amount' => 30000],
+                ['method' => 'qris', 'amount' => 70000],
+            ],
+        ]);
+
+        $this->actingAs($this->cashier)
+            ->get(route('shifts.close', $this->shift))
+            ->assertOk()
+            ->assertSeeInOrder(['Tunai', 'Rp 80.000', 'QRIS', 'Rp 140.000'])
+            ->assertSee('Rp 220.000')
+            // 100.000 float + 80.000 cash — the split's QRIS half is not in the drawer.
+            ->assertSee('Rp 180.000');
+    }
+
     public function test_a_real_shortfall_is_still_reported(): void
     {
         $this->setUpPos();
