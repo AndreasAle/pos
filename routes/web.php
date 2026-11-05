@@ -112,6 +112,7 @@ Route::middleware(['auth', 'business', 'subscription'])->group(function () {
         Route::post('pos/hold',                      [PosController::class, 'hold'])->name('pos.hold');
         Route::get('pos/drafts',                     [PosController::class, 'drafts'])->name('pos.drafts');
         Route::post('pos/drafts/{order}/load',       [PosController::class, 'loadDraft'])->name('pos.drafts.load');
+        Route::delete('pos/drafts/{order}',          [PosController::class, 'deleteDraft'])->name('pos.drafts.delete');
         Route::get('pos/customer/{customer}/points', [PosController::class, 'customerPoints'])->name('pos.customer.points');
     });
 

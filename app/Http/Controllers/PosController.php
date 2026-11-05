@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\PosTransactionException;
 use App\Models\Customer;
 use App\Models\CustomerPoint;
 use App\Models\Order;
@@ -169,6 +170,10 @@ class PosController extends Controller
             'manual_discount'          => 'nullable|numeric|min:0',
             'redeem_points'            => 'nullable|integer|min:0',
             'delivery_fee'             => 'nullable|numeric|min:0',
+            'table_number'             => 'nullable|string|max:20',
+            'hold_name'                => 'nullable|string|max:60',
+            // The held order this sale came from; it is removed once rung up.
+            'draft_id'                 => 'nullable|integer',
         ];
     }
 
@@ -298,13 +303,26 @@ class PosController extends Controller
     public function hold(Request $request)
     {
         $request->validate([
-            'items'              => 'required|array|min:1',
-            'items.*.product_id' => 'required|integer|exists:products,id',
-            'items.*.qty'        => 'required|numeric|min:0.001',
-            'items.*.variant_id' => 'nullable|integer|exists:product_variants,id',
+            'items'                     => 'required|array|min:1',
+            'items.*.product_id'        => 'required|integer|exists:products,id',
+            'items.*.qty'               => 'required|numeric|min:0.001',
+            'items.*.variant_id'        => 'nullable|integer|exists:product_variants,id',
+            'items.*.notes'             => 'nullable|string|max:255',
+            'items.*.addons'            => 'nullable|array',
+            'items.*.addons.*.addon_id' => 'required|integer|exists:product_addons,id',
+            'hold_name'                 => 'required|string|max:60',
+            'table_number'              => 'nullable|string|max:20',
+            'customer_id'               => 'nullable|integer',
+            'draft_id'                  => 'nullable|integer',
+        ], [
+            'hold_name.required' => 'Isi nama pemesan supaya order mudah dicari lagi.',
         ]);
 
-        $order = $this->posService->holdOrder(auth()->user(), $request->all());
+        try {
+            $order = $this->posService->holdOrder(auth()->user(), $request->all());
+        } catch (PosTransactionException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
 
         return response()->json(['success' => true, 'order_id' => $order->id]);
     }
@@ -313,9 +331,9 @@ class PosController extends Controller
     {
         $drafts = Order::forBusiness(auth()->user()->business_id)
             ->where('status', 'draft')
-            ->with('items')
+            ->with(['items:id,order_id,product_name,variant_name,qty', 'customer:id,name'])
             ->latest()
-            ->get();
+            ->get(['id', 'order_number', 'hold_name', 'table_number', 'customer_id', 'grand_total', 'created_at']);
 
         return response()->json($drafts);
     }
@@ -327,6 +345,17 @@ class PosController extends Controller
 
         $order->load('items.addons', 'items.product', 'items.variant');
         return response()->json($order);
+    }
+
+    /** Throw a held order away — the customer left, or it was held by mistake. */
+    public function deleteDraft(Order $order)
+    {
+        abort_if($order->business_id !== auth()->user()->business_id, 403);
+        abort_if($order->status !== 'draft', 422, 'Hanya order hold yang bisa dihapus.');
+
+        $order->delete();
+
+        return response()->json(['success' => true]);
     }
 
     public function customerPoints(Customer $customer)

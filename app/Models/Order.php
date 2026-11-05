@@ -28,6 +28,7 @@ class Order extends Model
         'payment_method', 'payment_status', 'status', 'kitchen_status',
         'payment_token', 'qris_url', 'is_split_payment',
         'notes', 'cancel_reason', 'refund_reason', 'refunded_at', 'ordered_at',
+        'hold_name', 'table_number',
     ];
 
     protected function casts(): array

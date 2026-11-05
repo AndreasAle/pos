@@ -64,8 +64,15 @@ class KitchenTicket
                 . ($type ? '  ' . $type : ''))
             . "\n" . self::SIZE_OFF . self::BOLD_OFF;
 
+        if ($order->table_number) {
+            $out .= self::BOLD_ON . self::BIG_ON . $this->ascii('MEJA ' . $order->table_number) . "\n"
+                . self::SIZE_OFF . self::BOLD_OFF;
+        }
+
         $out .= self::ALIGN_LEFT;
-        if ($order->customer) {
+        if ($order->hold_name) {
+            $out .= self::BOLD_ON . $this->wrap('Atas nama: ' . $order->hold_name) . self::BOLD_OFF;
+        } elseif ($order->customer) {
             $out .= $this->wrap('Pelanggan: ' . $order->customer->name);
         }
         $out .= $this->wrap('No. ' . $order->order_number);

@@ -33,7 +33,9 @@
 
 <p class="center title">DAPUR</p>
 <p class="center meta">#{{ $short }} &nbsp; {{ $order->created_at->format('H:i') }}@if($type) &nbsp; {{ $type }}@endif</p>
-@if($order->customer)<p>Pelanggan: {{ $order->customer->name }}</p>@endif
+@if($order->table_number)<p class="center title">MEJA {{ $order->table_number }}</p>@endif
+@if($order->hold_name)<p><strong>Atas nama: {{ $order->hold_name }}</strong></p>
+@elseif($order->customer)<p>Pelanggan: {{ $order->customer->name }}</p>@endif
 <p>No. {{ $order->order_number }}</p>
 <div class="rule"></div>
 

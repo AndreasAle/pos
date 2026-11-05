@@ -207,6 +207,8 @@ class PosOrderService
                 'kitchen_status'   => 'pending',
                 'is_split_payment' => $isSplit,
                 'notes'            => $data['notes'] ?? null,
+                'table_number'     => $this->cleanText($data['table_number'] ?? null, 20),
+                'hold_name'        => $this->cleanText($data['hold_name'] ?? null, 60),
                 'ordered_at'       => now(),
             ]);
 
@@ -321,8 +323,35 @@ class PosOrderService
                 }
             }
 
+            // A held order that was resumed and has now been rung up is done;
+            // leaving it would list it as still open next to its own sale.
+            if (!empty($data['draft_id'])) {
+                Order::where('business_id', $business->id)
+                    ->where('status', 'draft')
+                    ->whereKey((int) $data['draft_id'])
+                    ->delete();
+            }
+
             return $order;
         });
+    }
+
+    /** A customer of this business, or null — never another shop's. */
+    private function ownCustomerId(int $businessId, mixed $customerId): ?int
+    {
+        if (empty($customerId)) {
+            return null;
+        }
+
+        return Customer::where('business_id', $businessId)->whereKey((int) $customerId)->value('id');
+    }
+
+    /** Trimmed text cut to the column size, or null when blank. */
+    private function cleanText(mixed $value, int $max): ?string
+    {
+        $text = trim((string) ($value ?? ''));
+
+        return $text === '' ? null : mb_substr($text, 0, $max);
     }
 
     public function holdOrder($user, array $data): Order
@@ -336,7 +365,10 @@ class PosOrderService
                 'outlet_id'       => $user->outlet_id,
                 'user_id'         => $user->id,
                 'cashier_shift_id'=> $user->activeShift()->value('id'),
+                'customer_id'     => $this->ownCustomerId($business->id, $data['customer_id'] ?? null),
                 'order_number'    => $this->generateOrderNumber($business->id),
+                'hold_name'       => $this->cleanText($data['hold_name'] ?? null, 60),
+                'table_number'    => $this->cleanText($data['table_number'] ?? null, 20),
                 'subtotal'        => 0,
                 'grand_total'     => 0,
                 'paid_amount'     => 0,
@@ -349,29 +381,53 @@ class PosOrderService
 
             foreach ($data['items'] as $item) {
                 $product = Product::forBusiness($business->id)
-                    ->with('variants')
+                    ->with('variants', 'addons')
                     ->findOrFail($item['product_id']);
 
                 $qty     = $this->resolveQty($item['qty'] ?? null, $product->name);
                 $variant = $this->resolveVariant($product, $item['variant_id'] ?? null);
                 // Server-side price here too — a held order gets recalled and paid.
+                // Variant, add-ons and notes are kept so the order comes back
+                // exactly as it was rung up, not as the bare product.
                 $price   = (float) $product->price + (float) ($variant->price_adjustment ?? 0);
-                $sub     = $price * $qty;
+                $addons  = $this->resolveAddons($product, $item['addons'] ?? []);
+                $sub     = ($price + array_sum(array_column($addons, 'price'))) * $qty;
                 $subtotal += $sub;
 
-                OrderItem::create([
-                    'order_id'      => $order->id,
-                    'product_id'    => $product->id,
-                    'product_name'  => $product->name,
-                    'price'         => $price,
-                    'cost_price'    => $product->cost_price,
-                    'qty'           => $qty,
-                    'subtotal'      => $sub,
-                    'kitchen_status'=> 'pending',
+                $orderItem = OrderItem::create([
+                    'order_id'           => $order->id,
+                    'product_id'         => $product->id,
+                    'product_variant_id' => $variant?->id,
+                    'product_name'       => $product->name,
+                    'variant_name'       => $variant?->name,
+                    'price'              => $price,
+                    'cost_price'         => $product->cost_price,
+                    'qty'                => $qty,
+                    'subtotal'           => $sub,
+                    'notes'              => $this->cleanText($item['notes'] ?? null, 255),
+                    'kitchen_status'     => 'pending',
                 ]);
+
+                foreach ($addons as $addonData) {
+                    OrderItemAddon::create([
+                        'order_item_id'    => $orderItem->id,
+                        'product_addon_id' => $addonData['addon_id'] ?? null,
+                        'addon_name'       => $addonData['name'],
+                        'price'            => $addonData['price'],
+                    ]);
+                }
             }
 
             $order->update(['subtotal' => $subtotal, 'grand_total' => $subtotal]);
+
+            // Held again after being resumed: the new hold replaces the old one.
+            if (!empty($data['draft_id'])) {
+                Order::where('business_id', $business->id)
+                    ->where('status', 'draft')
+                    ->whereKey((int) $data['draft_id'])
+                    ->whereKeyNot($order->id)
+                    ->delete();
+            }
 
             return $order;
         });

@@ -37,8 +37,8 @@
 
     <div class="ml-auto flex items-center gap-2 md:gap-3">
         <button @click="loadDrafts()" x-show="draftCount > 0"
-                class="relative text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors">
-            Draft
+                class="relative text-xs font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors">
+            📋 Order Hold
             <span x-text="draftCount" class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center"></span>
         </button>
         <span class="hidden md:inline text-sm text-gray-500 font-mono" x-text="currentTime"></span>
@@ -401,8 +401,14 @@
                 </div>
             </div>
 
+            <div x-show="holdName || tableNumber" x-cloak
+                 class="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                <span>📋</span>
+                <span class="truncate" x-text="holdName"></span>
+                <span x-show="tableNumber" class="ml-auto shrink-0 bg-amber-100 px-2 py-0.5 rounded-full" x-text="'Meja ' + tableNumber"></span>
+            </div>
             <div class="grid grid-cols-2 gap-2">
-                <button @click="holdOrder()" :disabled="cart.length===0"
+                <button @click="openHold()" :disabled="cart.length===0"
                         class="text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 py-3 rounded-xl transition-colors disabled:opacity-40">
                     Hold Order
                 </button>
@@ -795,17 +801,34 @@
             <h3 class="font-bold text-gray-900">Order Hold / Draft</h3>
             <button @click="draftModal=false" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">✕</button>
         </div>
-        <div class="p-4 space-y-2 max-h-72 overflow-y-auto">
+        <div class="p-4 space-y-2 max-h-[65vh] overflow-y-auto">
             <template x-for="d in drafts" :key="d.id">
-                <div class="flex items-center justify-between bg-gray-50 rounded-xl p-3 border border-gray-100">
-                    <div>
-                        <p class="text-sm font-bold text-gray-900" x-text="d.order_number"></p>
-                        <p class="text-xs text-gray-500" x-text="(d.items?.length||0)+' item · Rp '+fmt(d.grand_total)"></p>
+                <div class="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <p class="text-sm font-bold text-gray-900 truncate"
+                                   x-text="d.hold_name || d.customer?.name || d.order_number"></p>
+                                <span x-show="d.table_number"
+                                      class="text-xs font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full"
+                                      x-text="'Meja ' + d.table_number"></span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-0.5"
+                               x-text="draftTime(d.created_at) + ' · Rp ' + fmt(d.grand_total)"></p>
+                            <p class="text-xs text-gray-600 mt-1 line-clamp-2"
+                               x-text="(d.items||[]).map(i => fmtQty(i.qty) + 'x ' + i.product_name + (i.variant_name ? ' (' + i.variant_name + ')' : '')).join(', ')"></p>
+                        </div>
+                        <div class="flex flex-col gap-1.5 shrink-0">
+                            <button @click="resumeDraft(d.id)"
+                                    class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-colors">
+                                Lanjut →
+                            </button>
+                            <button @click="deleteDraft(d)"
+                                    class="text-xs font-semibold text-red-600 bg-white hover:bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl transition-colors">
+                                Hapus
+                            </button>
+                        </div>
                     </div>
-                    <button @click="resumeDraft(d.id)"
-                            class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-2 rounded-xl transition-colors">
-                        Lanjut →
-                    </button>
                 </div>
             </template>
             <template x-if="!drafts.length">
@@ -813,6 +836,36 @@
             </template>
         </div>
     </div>
+</div>
+
+{{-- Hold Modal: who the order is for and where they sit, so it is easy to find again --}}
+<div x-show="holdModal" x-cloak @click.self="holdModal=false"
+     class="fixed inset-0 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-3 sm:p-4 bg-black/60">
+    <form class="bg-white rounded-2xl shadow-xl w-full max-w-sm" @click.stop @submit.prevent="holdOrder()">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h3 class="font-bold text-gray-900">Hold Order</h3>
+            <button type="button" @click="holdModal=false" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100">✕</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nama pemesan <span class="text-red-500">*</span></label>
+                <input type="text" x-model="holdName" x-ref="holdNameInput" maxlength="60" required
+                       placeholder="Contoh: Pak Budi"
+                       class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nomor meja</label>
+                <input type="text" x-model="tableNumber" maxlength="20" inputmode="text"
+                       placeholder="Contoh: 5 (kosongkan kalau takeaway)"
+                       class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <p class="text-xs text-gray-500" x-text="cart.length + ' item · Rp ' + fmt(grandTotal)"></p>
+            <p x-show="holdError" class="text-sm text-red-600" x-text="holdError"></p>
+            <button type="submit" :disabled="holding"
+                    class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-3 rounded-xl text-sm transition-colors disabled:opacity-60"
+                    x-text="holding ? 'Menyimpan…' : 'Simpan ke Hold'"></button>
+        </div>
+    </form>
 </div>
 
 {{-- Success Modal --}}
@@ -939,6 +992,10 @@ function posApp() {
         paidAmt: 0, change: 0, payMethod: 'cash',
         processing: false, currentTime: '',
         draftCount: 0, drafts: [],
+        // Hold: who and where. resumedDraftId is the held order now in the
+        // cart, removed by the server once this cart is paid or held again.
+        holdModal: false, holding: false, holdError: '',
+        holdName: '', tableNumber: '', resumedDraftId: null,
         showBundles: false,
 
         // Order type + Delivery
@@ -1002,7 +1059,13 @@ function posApp() {
             // Every way a sale can succeed (cash, manual QRIS, Midtrans) ends by
             // opening the success screen, so the kitchen ticket hangs off that.
             this.$watch('successModal', open => {
-                if (open && this.kitchenEnabled && this.inApp) this.printKitchen();
+                if (!open) return;
+                // Tablet app 2.7+: fetch the receipt now, so the Cetak tap only
+                // has to write to the printer.
+                if (this.printVia !== 'none' && this.lastReceiptUrl && window.PosApp?.prefetchReceipt) {
+                    try { window.PosApp.prefetchReceipt(this.lastReceiptUrl); } catch (e) {}
+                }
+                if (this.kitchenEnabled && this.inApp) this.printKitchen();
             });
         },
 
@@ -1077,6 +1140,11 @@ function posApp() {
         },
 
         fmt(n) { return Math.round(n || 0).toLocaleString('id-ID'); },
+        fmtQty(n) { return parseFloat(n || 0).toLocaleString('id-ID', { maximumFractionDigits: 3 }); },
+        draftTime(iso) {
+            try { return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }); }
+            catch { return ''; }
+        },
 
         matchesFilter(catId, name) {
             const catOk  = this.activeCategory === null || this.activeCategory === catId;
@@ -1481,6 +1549,9 @@ function posApp() {
                 promotion_id:    this.promoId || null,
                 manual_discount: parseFloat(this.manualDisc) || 0,
                 customer_id:     this.customerId || null,
+                draft_id:        this.resumedDraftId,
+                table_number:    this.tableNumber || null,
+                hold_name:       this.holdName || null,
                 redeem_points:   (this.redeemActive && this.customerId) ? (parseInt(this.redeemPoints) || 0) : 0,
                 order_type:      this.orderType,
                 ...(this.orderType === 'delivery' && {
@@ -1536,6 +1607,7 @@ function posApp() {
 
         newTransaction() {
             this.cart = []; this.mobileCart = false; this.customerId = ''; this.promoId = '';
+            this.resumedDraftId = null; this.holdName = ''; this.tableNumber = '';
             this.manualDisc = 0; this.payMethod = 'cash'; this.paidAmt = 0;
             this.redeemActive = false; this.redeemPoints = 0;
             this.customerPoints = null;
@@ -1550,17 +1622,74 @@ function posApp() {
             this.calcTotals();
         },
 
-        async holdOrder() {
+        openHold() {
             if (!this.cart.length) return;
-            const holdItems = this.cart.filter(i => !i.isBundle).map(i => ({product_id: i.productId, qty: i.qty, price: i.unitPrice}));
-            if (!holdItems.length) { alert('Bundle tidak bisa di-hold, hanya produk reguler.'); return; }
-            await fetch('/pos/hold', {
-                method:  'POST',
-                headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
-                body: JSON.stringify({ items: holdItems }),
-            });
-            this.newTransaction();
-            await this.fetchDrafts();
+            if (this.cart.some(i => i.isBundle)) {
+                alert('Paket (bundle) belum bisa di-hold. Hapus paket dari keranjang dulu, atau langsung bayar.');
+                return;
+            }
+            // Re-holding a resumed order keeps its name and table.
+            if (!this.holdName && this.customerId) {
+                const opt = document.querySelector('select[x-model="customerId"] option[value="' + this.customerId + '"]');
+                this.holdName = opt ? opt.textContent.replace(/\s*\(.*\)\s*$/, '').trim() : '';
+            }
+            this.holdError = '';
+            this.holdModal = true;
+            this.$nextTick(() => this.$refs.holdNameInput?.focus());
+        },
+
+        async holdOrder() {
+            if (!this.cart.length || this.holding) return;
+            if (!this.holdName.trim()) { this.holdError = 'Isi nama pemesan dulu.'; return; }
+
+            this.holding = true;
+            this.holdError = '';
+            try {
+                const r = await fetch('/pos/hold', {
+                    method:  'POST',
+                    headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                    body: JSON.stringify({
+                        // Variant, add-ons and notes travel with the item so the
+                        // order comes back exactly as it was rung up.
+                        items: this.cart.map(i => ({
+                            product_id: i.productId, variant_id: i.variantId, qty: i.qty, notes: i.notes || null,
+                            addons: i.selectedAddons.map(a => ({ addon_id: a.id })),
+                        })),
+                        hold_name:    this.holdName.trim(),
+                        table_number: this.tableNumber.trim() || null,
+                        customer_id:  this.customerId || null,
+                        draft_id:     this.resumedDraftId,
+                    }),
+                });
+                const data = await this._readJson(r);
+                if (!data.success) {
+                    this.holdError = data.message || 'Gagal menyimpan hold.';
+                    return;
+                }
+                this.holdModal = false;
+                this.newTransaction();
+                await this.fetchDrafts();
+            } catch (e) {
+                this.holdError = e.message || 'Gagal menyimpan hold. Cek koneksi lalu coba lagi.';
+            } finally {
+                this.holding = false;
+            }
+        },
+
+        async deleteDraft(d) {
+            const label = d.hold_name || d.order_number;
+            if (!confirm('Hapus order hold "' + label + '"? Order ini tidak bisa dikembalikan.')) return;
+            try {
+                const r = await fetch('/pos/drafts/' + d.id, {
+                    method:  'DELETE',
+                    headers: {'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
+                });
+                const data = await this._readJson(r);
+                if (!data.success) { alert(data.message || 'Gagal menghapus.'); return; }
+                if (this.resumedDraftId === d.id) this.resumedDraftId = null;
+                await this.fetchDrafts();
+                if (!this.drafts.length) this.draftModal = false;
+            } catch (e) { alert(e.message || 'Gagal menghapus. Cek koneksi lalu coba lagi.'); }
         },
 
         async fetchDrafts() {
@@ -1576,21 +1705,29 @@ function posApp() {
                     headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                     body: '{}',
                 });
+                if (!r.ok) throw new Error();
                 const order = await r.json();
                 this.newTransaction();
+                this.resumedDraftId = order.id;
+                this.holdName       = order.hold_name || '';
+                this.tableNumber    = order.table_number || '';
+                if (order.customer_id) { this.customerId = String(order.customer_id); this.onCustomerChange?.(); }
                 (order.items || []).forEach(item => {
                     this.cart.push({
                         isBundle:      false,
                         productId:     item.product_id,
-                        name:          item.product_name,
+                        name:          item.product_name + (item.variant_name ? ' — ' + item.variant_name : ''),
                         variantId:     item.product_variant_id,
                         variantName:   item.variant_name,
                         unitPrice:     parseFloat(item.price),
                         costPrice:     parseFloat(item.cost_price),
                         qty:           parseFloat(item.qty),
-                        selectedAddons:[],
+                        selectedAddons:(item.addons || []).map(a => ({ id: a.product_addon_id, name: a.addon_name, price: parseFloat(a.price) })),
                         notes:         item.notes || '',
-                        lineTotal()    { return this.unitPrice * this.qty; }
+                        lineTotal()    {
+                            const addonSum = this.selectedAddons.reduce((s,a) => s + parseFloat(a.price), 0);
+                            return (this.unitPrice + addonSum) * this.qty;
+                        }
                     });
                 });
                 this.calcTotals();
