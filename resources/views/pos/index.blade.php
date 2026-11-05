@@ -1693,19 +1693,51 @@ function posApp() {
         },
 
         async fetchDrafts() {
-            try { const r = await fetch('/pos/drafts'); this.drafts = await r.json(); this.draftCount = this.drafts.length; } catch {}
+            try {
+                const r = await fetch('/pos/drafts', { headers: { 'Accept': 'application/json' } });
+                // An expired session answers with the login page; keep the old
+                // list rather than replacing it with garbage.
+                if (!r.ok) return;
+                const list = await r.json();
+                if (!Array.isArray(list)) return;
+                this.drafts = list;
+                this.draftCount = list.length;
+            } catch {}
         },
 
         async loadDrafts() { await this.fetchDrafts(); this.draftModal = true; },
 
         async resumeDraft(id) {
+            let r;
             try {
-                const r = await fetch('/pos/drafts/'+id+'/load', {
+                r = await fetch('/pos/drafts/'+id+'/load', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},
                     body: '{}',
                 });
-                if (!r.ok) throw new Error();
+            } catch {
+                alert('Gagal memuat order hold: koneksi internet terputus. Cek WiFi lalu coba lagi.');
+                return;
+            }
+
+            // Say why, so the cashier knows what to do next.
+            if (!r.ok) {
+                if (r.status === 401 || r.status === 419) {
+                    alert('Sesi login sudah habis. Halaman akan dimuat ulang — order hold tetap aman tersimpan.');
+                    location.reload();
+                } else if (r.status === 404 || r.status === 422) {
+                    alert('Order hold ini sudah tidak ada — mungkin sudah dibayar, dihapus, atau di-hold ulang dari perangkat lain.');
+                    await this.fetchDrafts();
+                    if (!this.drafts.length) this.draftModal = false;
+                } else if (r.status === 403) {
+                    alert('Order hold ini bukan milik toko Anda.');
+                } else {
+                    alert('Gagal memuat order hold: server error (kode ' + r.status + '). Coba lagi sebentar lagi.');
+                }
+                return;
+            }
+
+            try {
                 const order = await r.json();
                 this.newTransaction();
                 this.resumedDraftId = order.id;
@@ -1732,7 +1764,9 @@ function posApp() {
                 });
                 this.calcTotals();
                 this.draftModal = false;
-            } catch { alert('Gagal memuat draft.'); }
+            } catch {
+                alert('Gagal memuat order hold: data dari server tidak terbaca. Muat ulang halaman lalu coba lagi.');
+            }
         },
     };
 }
