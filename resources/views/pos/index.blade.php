@@ -1187,7 +1187,11 @@ function posApp() {
 
         confirmAdd() {
             if (this.selProd.variants?.length > 0 && !this.selVariant) return;
-            const addons = this.selProd.addons?.filter(a => this.selAddons.includes(a.id)) || [];
+            // A checkbox hands x-model its value as a string ("5") while the
+            // add-on ids are numbers (5); compare as strings or every topping
+            // silently drops out of the cart.
+            const picked = this.selAddons.map(String);
+            const addons = this.selProd.addons?.filter(a => picked.includes(String(a.id))) || [];
             this.pushCart(this.selProd, this.selVariant, addons, this.mQty);
             this.variantModal = false;
         },
