@@ -34,7 +34,7 @@ class RegisterController extends Controller
             'phone'         => 'nullable|string|max:20',
         ]);
 
-        DB::transaction(function () use ($request) {
+        $user = DB::transaction(function () use ($request) {
             // Create business
             $business = Business::create([
                 'name'     => $request->business_name,
@@ -89,9 +89,18 @@ class RegisterController extends Controller
             }
 
             Auth::login($user);
+
+            return $user;
         });
 
-        return redirect()->route('dashboard')
-            ->with('success', 'Bisnis Anda berhasil didaftarkan! Selamat datang di FNB POS System.');
+        // Kirim email konfirmasi. Kegagalan SMTP tidak boleh membatalkan pendaftaran:
+        // pengguna bisa menekan "Kirim ulang" di halaman berikutnya.
+        try {
+            $user->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return redirect()->route('verification.notice');
     }
 }

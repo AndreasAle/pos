@@ -3,6 +3,8 @@
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PinLoginController;
+use App\Http\Controllers\Auth\EmailVerificationController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BarcodeController;
@@ -40,6 +42,25 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'register'])
         ->middleware('throttle:10,1')
         ->name('register.post');
+
+    // Lupa password: kirim tautan ke email, lalu atur password baru.
+    Route::get('/forgot-password',  [PasswordResetController::class, 'showForgot'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])
+        ->middleware('throttle:5,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
+    Route::post('/reset-password',  [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:10,1')->name('password.update');
+});
+
+// ── Konfirmasi email ─────────────────────────────────────────────────────────
+// Tautan di email bertanda tangan dan bisa dibuka dari perangkat lain,
+// jadi route verify tidak mewajibkan sesi login.
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->middleware(['signed', 'throttle:20,1'])->name('verification.verify');
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+    Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
+        ->middleware('throttle:3,1')->name('verification.send');
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
@@ -53,7 +74,7 @@ Route::post('/kasir/login',   [PinLoginController::class, 'login'])->name('pin.l
 Route::post('/kasir/logout',  [PinLoginController::class, 'logout'])->name('pin.logout');
 
 // ── Authenticated + Business ──────────────────────────────────────────────────
-Route::middleware(['auth', 'business'])->group(function () {
+Route::middleware(['auth', 'business', 'owner.verified'])->group(function () {
 
     if (config('pos.features.subscription')) {
         Route::get('/subscription/expired', [SubscriptionController::class, 'expired'])->name('subscription.expired');
@@ -61,7 +82,7 @@ Route::middleware(['auth', 'business'])->group(function () {
 
 });
 
-Route::middleware(['auth', 'business', 'subscription'])->group(function () {
+Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

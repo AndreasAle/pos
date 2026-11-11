@@ -7,6 +7,9 @@
     <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
+    <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
 </head>
 <body class="h-full bg-gray-50 font-sans" x-data="{ sidebarOpen: false }">
 

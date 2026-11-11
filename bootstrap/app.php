@@ -38,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'business'     => \App\Http\Middleware\EnsureBusinessIsSet::class,
+            'owner.verified' => \App\Http\Middleware\EnsureOwnerEmailVerified::class,
             'role'         => \App\Http\Middleware\RoleMiddleware::class,
             'subscription' => \App\Http\Middleware\EnsureSubscriptionActive::class,
             'json'         => \App\Http\Middleware\ForceJsonResponse::class,

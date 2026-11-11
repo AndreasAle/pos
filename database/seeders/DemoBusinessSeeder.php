@@ -102,6 +102,9 @@ class DemoBusinessSeeder extends Seeder
             'is_active'   => true,
         ]);
 
+        // Akun demo dianggap sudah terkonfirmasi emailnya.
+        User::where('business_id', $business->id)->update(['email_verified_at' => now()]);
+
         // ── Subscription ──────────────────────────────────────────────────────
         $freePlan = SubscriptionPlan::where('slug', 'free')->first();
         BusinessSubscription::create([

@@ -1,8 +1,8 @@
 @extends('layouts.auth-split')
 @section('title', 'Masuk')
 
-@section('left-title', 'Selamat Datang Kembali di FNB POS')
-@section('left-subtitle', 'Masuk untuk melanjutkan pengelolaan kasir, stok, shift, dan laporan bisnis F&B Anda.')
+@section('left-title', 'Selamat Datang Kembali')
+@section('left-subtitle', 'Masuk untuk lanjut melayani pelanggan, cek stok, dan lihat laporan penjualan toko Anda.')
 
 @section('content')
 <h3 class="text-xl font-bold text-gray-900 mb-1 text-center lg:text-left">Masuk ke Akun Anda</h3>
@@ -33,20 +33,23 @@
         </div>
     </div>
 
-    <div class="flex items-center">
-        <input type="checkbox" name="remember" id="remember" class="h-4 w-4 text-emerald-600 rounded border-gray-300">
-        <label for="remember" class="ml-2 text-sm text-gray-600">Ingat saya</label>
+    <div class="flex items-center justify-between">
+        <div class="flex items-center">
+            <input type="checkbox" name="remember" id="remember" class="h-4 w-4 text-emerald-600 rounded border-gray-300">
+            <label for="remember" class="ml-2 text-sm text-gray-600">Ingat saya</label>
+        </div>
+        <a href="{{ route('password.request') }}" class="text-sm font-semibold text-emerald-700 hover:underline">Lupa password?</a>
     </div>
 
     <button type="submit"
-            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 shadow-lg shadow-emerald-200">
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-full text-[15px] transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
         Masuk
     </button>
 </form>
 
 <a href="{{ route('pin.show') }}"
-   class="mt-4 flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-    🔢 Kasir? Masuk pakai PIN
+   class="mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-full border border-gray-300 text-[15px] font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+    Kasir? Masuk pakai PIN
 </a>
 
 <p class="mt-5 text-center text-sm text-gray-500">
