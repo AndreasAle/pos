@@ -31,7 +31,7 @@
            :class="[sidebarOpen ? '!translate-x-0' : '', collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]']">
 
         {{-- Logo --}}
-        <div class="flex items-center h-16 px-5 shrink-0" :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
+        <div class="flex items-center h-14 px-5 shrink-0" :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
             <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="Yoka POS" class="h-8 w-auto" :class="collapsed ? 'lg:hidden' : ''">
             <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka" class="hidden w-8 h-8 object-contain" :class="collapsed ? 'lg:block' : ''">
         </div>
@@ -39,7 +39,7 @@
         {{-- Business / outlet --}}
         @php $outletName = auth()->user()->outlet?->name ?? 'Semua Outlet'; @endphp
         <div class="px-3 pb-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
-            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-3 h-14"
+            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-3 h-12"
                  :class="collapsed ? 'lg:justify-center lg:px-0 lg:h-10 lg:border-0' : ''"
                  @mouseenter="tipShow($event, @js(($currentBusiness->name ?? config('app.name')).' · '.$outletName))" @mouseleave="tipHide()">
                 <svg class="w-6 h-6 text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 21v-6h6v6"/></svg>
@@ -51,68 +51,66 @@
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-1" :class="collapsed ? 'lg:px-4' : ''">
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" :class="collapsed ? 'lg:px-4' : ''">
             @php
                 $role     = auth()->user()->role;
                 $isRetail = (bool) auth()->user()->business?->isRetail();
             @endphp
 
-            {{-- Dashboard --}}
+            {{-- Utama --}}
             <x-nav-item route="dashboard" icon="home">Dashboard</x-nav-item>
-
             @if(in_array($role, ['owner','admin','cashier']))
-            {{-- POS --}}
             <x-nav-item route="pos.index" icon="shopping-cart">Kasir / POS</x-nav-item>
             <x-nav-item route="orders.index" icon="clipboard-list">Riwayat Order</x-nav-item>
             <x-nav-item route="shifts.index" icon="clock">Shift Kasir</x-nav-item>
             @endif
 
             @if(in_array($role, ['owner','admin']))
-            {{-- Master Data --}}
-            <x-nav-section title="Master Data"/>
-            <x-nav-item route="products.index" icon="cube">{{ $isRetail ? 'Produk' : 'Produk / Menu' }}</x-nav-item>
-            <x-nav-item route="bundles.index" icon="squares-plus">Bundling Produk</x-nav-item>
-            <x-nav-item route="categories.index" icon="tag">Kategori</x-nav-item>
-            <x-nav-item route="customers.index" icon="users">Pelanggan</x-nav-item>
-            <x-nav-item route="promotions.index" icon="badge-percent">Promo & Diskon</x-nav-item>
+            <x-nav-group title="Master Data" :routes="['products.*','bundles.*','categories.*','customers.*','promotions.*']">
+                <x-nav-item route="products.index" icon="cube">{{ $isRetail ? 'Produk' : 'Produk / Menu' }}</x-nav-item>
+                <x-nav-item route="bundles.index" icon="squares-plus">Bundling Produk</x-nav-item>
+                <x-nav-item route="categories.index" icon="tag">Kategori</x-nav-item>
+                <x-nav-item route="customers.index" icon="users">Pelanggan</x-nav-item>
+                <x-nav-item route="promotions.index" icon="badge-percent">Promo & Diskon</x-nav-item>
+            </x-nav-group>
             @endif
 
-            @if(!$isRetail && in_array($role, ['owner','admin','kitchen']))
-            {{-- Operations --}}
-            <x-nav-section title="Operasional"/>
-            <x-nav-item route="kitchen.index" icon="fire">Dapur (KDS)</x-nav-item>
-            @endif
-
-            @if(!$isRetail && in_array($role, ['owner','admin','warehouse']))
-            <x-nav-item route="ingredients.index" icon="beaker">Bahan Baku</x-nav-item>
-            <x-nav-item route="recipes.index" icon="book-open">Resep</x-nav-item>
-            <x-nav-item route="inventory.movements" icon="arrows-right-left">Pergerakan Stok</x-nav-item>
-            @endif
-
-            @if(in_array($role, ['owner','admin']))
-            {{-- Reports --}}
-            <x-nav-section title="Laporan"/>
-            <x-nav-item route="reports.sales" icon="chart-bar">Laporan Penjualan</x-nav-item>
-            <x-nav-item route="reports.products" icon="chart-pie">Produk Terlaris</x-nav-item>
-            <x-nav-item route="reports.cashier" icon="user-circle">Laporan Kasir</x-nav-item>
-            <x-nav-item route="reports.shift" icon="clock-rotate-left">Laporan Shift</x-nav-item>
-            <x-nav-item route="reports.inventory" icon="archive">Laporan Inventory</x-nav-item>
-            <x-nav-item route="reports.profit" icon="banknotes">Estimasi Profit</x-nav-item>
+            @if(!$isRetail && in_array($role, ['owner','admin','kitchen','warehouse']))
+            <x-nav-group title="Operasional" :routes="['kitchen.*','ingredients.*','recipes.*','inventory.*']">
+                @if(in_array($role, ['owner','admin','kitchen']))
+                <x-nav-item route="kitchen.index" icon="fire">Dapur (KDS)</x-nav-item>
+                @endif
+                @if(in_array($role, ['owner','admin','warehouse']))
+                <x-nav-item route="ingredients.index" icon="beaker">Bahan Baku</x-nav-item>
+                <x-nav-item route="recipes.index" icon="book-open">Resep</x-nav-item>
+                <x-nav-item route="inventory.movements" icon="arrows-right-left">Pergerakan Stok</x-nav-item>
+                @endif
+            </x-nav-group>
             @endif
 
             @if(in_array($role, ['owner','admin']))
-            {{-- Settings --}}
-            <x-nav-section title="Pengaturan"/>
-            <x-nav-item route="outlets.index" icon="building-storefront">Outlet</x-nav-item>
-            <x-nav-item route="users.index" icon="user-group">Manajemen User</x-nav-item>
-            <x-nav-item route="settings.business" icon="building-office">Profil Bisnis</x-nav-item>
-            <x-nav-item route="settings.receipt" icon="receipt-percent">Pengaturan Struk</x-nav-item>
+            <x-nav-group title="Laporan" :routes="['reports.*']">
+                <x-nav-item route="reports.sales" icon="chart-bar">Laporan Penjualan</x-nav-item>
+                <x-nav-item route="reports.products" icon="chart-pie">Produk Terlaris</x-nav-item>
+                <x-nav-item route="reports.cashier" icon="user-circle">Laporan Kasir</x-nav-item>
+                <x-nav-item route="reports.shift" icon="clock-rotate-left">Laporan Shift</x-nav-item>
+                <x-nav-item route="reports.inventory" icon="archive">Laporan Inventory</x-nav-item>
+                <x-nav-item route="reports.profit" icon="banknotes">Estimasi Profit</x-nav-item>
+            </x-nav-group>
+
+            <x-nav-group title="Pengaturan" :routes="['outlets.*','users.*','settings.*','audit.*']">
+                <x-nav-item route="outlets.index" icon="building-storefront">Outlet</x-nav-item>
+                <x-nav-item route="users.index" icon="user-group">Manajemen User</x-nav-item>
+                <x-nav-item route="settings.business" icon="building-office">Profil Bisnis</x-nav-item>
+                <x-nav-item route="settings.receipt" icon="receipt-percent">Pengaturan Struk</x-nav-item>
+                @if(config('pos.features.audit_log'))
+                <x-nav-item route="audit.index" icon="clipboard-list">Audit Log</x-nav-item>
+                @endif
+            </x-nav-group>
             @endif
 
-            @if(config('pos.features.audit_log') && in_array($role, ['owner','admin']))
-            <x-nav-item route="audit.index" icon="clipboard-list">Audit Log</x-nav-item>
-            @endif
-            @if($role === 'owner')
+            @if($role === 'owner' && (config('pos.features.subscription') || config('pos.features.balance')))
+            <x-nav-group title="Langganan & Saldo" :routes="['saas.*','balance.*','admin.withdrawals.*']">
                 @if(config('pos.features.subscription'))
                 <x-nav-item route="saas.plans" icon="credit-card">Paket Langganan</x-nav-item>
                 @endif
@@ -120,6 +118,7 @@
                 <x-nav-item route="balance.index" icon="banknotes">Saldo & Penarikan</x-nav-item>
                 <x-nav-item route="admin.withdrawals.index" icon="queue-list">Kelola WD</x-nav-item>
                 @endif
+            </x-nav-group>
             @endif
         </nav>
 
