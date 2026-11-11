@@ -3,7 +3,6 @@
 @section('page-title', 'Kategori Menu')
 
 @section('content')
-<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     {{-- Form Tambah --}}
     <div>

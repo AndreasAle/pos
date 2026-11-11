@@ -15,7 +15,7 @@
 
 @if(count($lowStock))
 <div class="bg-orange-50 border border-orange-200 rounded-2xl p-4 mb-5">
-    <p class="text-sm font-semibold text-orange-800 mb-2">Bahan Stok Menipis / Habis</p>
+    <p class="text-sm font-semibold text-orange-800 mb-2">⚠ Bahan Stok Menipis / Habis</p>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         @foreach($lowStock as $ing)
         <div class="flex items-center justify-between bg-white rounded-xl border border-orange-200 px-3 py-2">
@@ -33,10 +33,10 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="bg-gray-50 border-b border-gray-100">
-                    <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Bahan</th>
-                    <th class="text-center px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Satuan</th>
-                    <th class="text-right px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Stok</th>
-                    <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Nilai</th>
+                    <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Bahan</th>
+                    <th class="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Satuan</th>
+                    <th class="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Stok</th>
+                    <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Nilai</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -67,10 +67,10 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="bg-gray-50 border-b border-gray-100">
-                    <th class="text-left px-4 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Bahan</th>
-                    <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tipe</th>
-                    <th class="text-right px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
-                    <th class="text-right px-4 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Waktu</th>
+                    <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Bahan</th>
+                    <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Tipe</th>
+                    <th class="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                    <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Waktu</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">

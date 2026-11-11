@@ -8,12 +8,12 @@
     <div class="flex items-center gap-2">
         <a href="{{ route('receipt.show', $order) }}"
            class="text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 px-4 py-2 rounded-xl">
-            Struk
+            🖨 Struk
         </a>
         @if($order->status === 'paid')
         <button onclick="document.getElementById('refund-modal').classList.remove('hidden')"
                 class="text-sm font-medium text-blue-600 border border-blue-200 hover:bg-blue-50 px-4 py-2 rounded-xl">
-            Refund
+            💰 Refund
         </button>
         <button onclick="document.getElementById('void-modal').classList.remove('hidden')"
                 class="text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 px-4 py-2 rounded-xl">
@@ -203,7 +203,7 @@
             <textarea name="reason" rows="3" required placeholder="Alasan refund (wajib)..."
                       class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"></textarea>
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-3 text-xs text-blue-700">
-                Proses refund <strong>tidak dapat diurungkan</strong>. Pastikan uang sudah dikembalikan ke pelanggan sebelum konfirmasi.
+                ⚠️ Proses refund <strong>tidak dapat diurungkan</strong>. Pastikan uang sudah dikembalikan ke pelanggan sebelum konfirmasi.
             </div>
             <div class="flex gap-2">
                 <button type="button" onclick="document.getElementById('refund-modal').classList.add('hidden')"

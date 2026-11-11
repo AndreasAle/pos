@@ -3,7 +3,6 @@
 @section('page-title', 'Produk / Menu')
 
 @section('content')
-<x-page-header eyebrow="Katalog" title="Produk / Menu" subtitle="Kelola menu, harga, dan status ketersediaan produk."/>
 {{-- Toolbar --}}
 <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
     <form method="GET" class="grid grid-cols-2 sm:flex sm:flex-1 sm:items-center gap-2 min-w-0">
@@ -34,11 +33,11 @@
     </form>
     <div class="grid grid-cols-2 sm:flex gap-2 sm:gap-3">
     <a href="{{ route('barcodes.select') }}"
-       class="inline-flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
-        Label Barcode
+       class="inline-flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
+        🏷 Label Barcode
     </a>
     <a href="{{ route('products.create') }}"
-       class="inline-flex items-center justify-center gap-2 bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-colors shrink-0">
+       class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shrink-0">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -84,7 +83,7 @@
                     @csrf @method('PATCH')
                     <button title="{{ $product->is_active ? 'Nonaktifkan' : 'Aktifkan' }}"
                             class="text-xs font-medium {{ $product->is_active ? 'text-orange-500 hover:bg-orange-50' : 'text-emerald-600 hover:bg-emerald-50' }} px-2 py-1.5 rounded-lg transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.636 5.636a9 9 0 1012.728 0M12 3v9"/></svg>
+                        {{ $product->is_active ? '🔴' : '🟢' }}
                     </button>
                 </form>
             </div>

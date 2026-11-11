@@ -7,7 +7,7 @@
 <div class="flex items-center justify-end gap-2 mb-4">
     <a href="{{ route('reports.shift.export', request()->query()) }}"
        class="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-4 py-2 rounded-xl transition-colors">
-        Export Excel
+        📊 Export Excel
     </a>
 </div>
 
@@ -17,14 +17,14 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Kasir</th>
-                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Outlet</th>
-                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Buka</th>
-                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tutup</th>
-                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Modal Awal</th>
-                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Cash Expected</th>
-                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Cash Aktual</th>
-                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Selisih</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Kasir</th>
+                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Outlet</th>
+                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Buka</th>
+                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Tutup</th>
+                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Modal Awal</th>
+                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Cash Expected</th>
+                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Cash Aktual</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Selisih</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

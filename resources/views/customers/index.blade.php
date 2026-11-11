@@ -3,7 +3,6 @@
 @section('page-title','Manajemen Pelanggan')
 
 @section('content')
-<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
     <form method="GET" class="flex-1 sm:max-w-sm flex gap-2">
         <div class="relative flex-1 min-w-0">
@@ -26,12 +25,12 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">No. HP</th>
-                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Transaksi</th>
-                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Belanja</th>
-                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Poin</th>
-                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Nama</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">No. HP</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Total Transaksi</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Total Belanja</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Poin</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

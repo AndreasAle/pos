@@ -6,7 +6,7 @@
     <x-card title="Tutup Shift Kasir">
         {{-- Every method, so QRIS/transfer can be checked against the bank app too. --}}
         <div class="mb-4 bg-gray-50 rounded-xl p-4">
-            <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider tracking-wide mb-2">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                 Penjualan per Metode Bayar · {{ $totalOrders }} transaksi
             </p>
             <div class="space-y-2">

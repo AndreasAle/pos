@@ -49,11 +49,11 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50 border-b border-gray-100">
-                        <th class="text-left px-5 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">No. Order</th>
-                        <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Pembayaran</th>
-                        <th class="text-left px-3 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                        <th class="text-right px-5 py-2.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tanggal</th>
+                        <th class="text-left px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase">No. Order</th>
+                        <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Pembayaran</th>
+                        <th class="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th class="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase">Total</th>
+                        <th class="text-right px-5 py-2.5 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">

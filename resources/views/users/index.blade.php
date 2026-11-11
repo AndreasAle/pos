@@ -3,7 +3,6 @@
 @section('page-title', 'Manajemen User')
 
 @section('content')
-<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <p class="text-sm text-gray-500">{{ $users->total() }} user terdaftar</p>
     <a href="{{ route('users.create') }}"
@@ -19,12 +18,12 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Nama</th>
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Role</th>
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Outlet</th>
-                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Nama</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Email</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Outlet</th>
+                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
+                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
