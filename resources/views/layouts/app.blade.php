@@ -39,19 +39,19 @@
         {{-- Business / outlet --}}
         @php $outletName = auth()->user()->outlet?->name ?? 'Semua Outlet'; @endphp
         <div class="px-3 pb-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
-            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-3 h-12"
+            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-2.5 h-11"
                  :class="collapsed ? 'lg:justify-center lg:px-0 lg:h-10 lg:border-0' : ''"
                  @mouseenter="tipShow($event, @js(($currentBusiness->name ?? config('app.name')).' · '.$outletName))" @mouseleave="tipHide()">
                 <svg class="w-6 h-6 text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 21v-6h6v6"/></svg>
                 <div class="min-w-0 flex-1" :class="collapsed ? 'lg:hidden' : ''">
-                    <p class="text-sm font-bold text-gray-900 leading-tight truncate">{{ $currentBusiness->name ?? config('app.name') }}</p>
+                    <p class="text-[13px] font-bold text-gray-900 leading-tight truncate">{{ $currentBusiness->name ?? config('app.name') }}</p>
                     <p class="text-xs text-gray-500 truncate">{{ $outletName }}</p>
                 </div>
             </div>
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" :class="collapsed ? 'lg:px-4' : ''">
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" :class="collapsed ? 'lg:px-4' : ''">
             @php
                 $role     = auth()->user()->role;
                 $isRetail = (bool) auth()->user()->business?->isRetail();
