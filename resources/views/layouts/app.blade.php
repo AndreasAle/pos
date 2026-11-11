@@ -12,6 +12,7 @@
     <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
 </head>
 <body class="h-full bg-gray-50 font-sans" x-data="{ sidebarOpen: false }">
+    <x-page-loader/>
 
     {{-- Mobile sidebar backdrop --}}
     <div x-show="sidebarOpen" x-cloak

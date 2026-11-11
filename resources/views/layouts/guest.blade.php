@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
 </head>
 <body class="h-full bg-gradient-to-br from-emerald-50 via-white to-emerald-50 font-sans">
+    <x-page-loader/>
     <div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <div class="sm:mx-auto sm:w-full sm:max-w-md">
             <div class="flex justify-center">

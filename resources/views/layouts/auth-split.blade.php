@@ -14,6 +14,7 @@
     </style>
 </head>
 <body class="h-full font-sans bg-white">
+    <x-page-loader/>
     <div class="min-h-screen grid lg:grid-cols-2">
 
         {{-- Left — panel merek --}}
