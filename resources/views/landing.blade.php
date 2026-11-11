@@ -46,33 +46,102 @@
     {{-- ================= NAVBAR ================= --}}
     @php $waLink = 'https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka'; @endphp
     <header
-        x-data="{ scrolled: false }"
+        x-data="{ scrolled: false, featureOpen: false, mobileFeatures: false }"
         x-init="scrolled = window.scrollY > 40; window.addEventListener('scroll', () => scrolled = window.scrollY > 40, { passive: true })"
-        :class="scrolled || mobileOpen ? 'bg-white shadow-[0_2px_16px_rgba(15,23,42,.08)]' : 'bg-transparent'"
+        :class="scrolled || mobileOpen || featureOpen ? 'bg-white shadow-[0_2px_16px_rgba(15,23,42,.08)]' : 'bg-transparent'"
         class="fixed top-0 inset-x-0 z-40 transition-[background-color,box-shadow] duration-300"
     >
         <div class="max-w-[1200px] mx-auto px-6 h-[76px] flex items-center">
             {{-- Logo: putih di atas hero, hijau setelah scroll --}}
             <a href="#" class="flex items-center gap-2 shrink-0" aria-label="Yoka POS">
                 <span class="relative block h-9 w-[100px]">
-                    <img src="{{ asset('images/brand/yoka-logo-white.png') }}" alt="Yoka" class="absolute inset-0 h-full w-full object-contain object-left transition-opacity duration-300" :class="scrolled || mobileOpen ? 'opacity-0' : 'opacity-100'">
-                    <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="" class="absolute inset-0 h-full w-full object-contain object-left transition-opacity duration-300" :class="scrolled || mobileOpen ? 'opacity-100' : 'opacity-0'">
+                    <img src="{{ asset('images/brand/yoka-logo-white.png') }}" alt="Yoka" class="absolute inset-0 h-full w-full object-contain object-left transition-opacity duration-300" :class="scrolled || mobileOpen || featureOpen ? 'opacity-0' : 'opacity-100'">
+                    <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="" class="absolute inset-0 h-full w-full object-contain object-left transition-opacity duration-300" :class="scrolled || mobileOpen || featureOpen ? 'opacity-100' : 'opacity-0'">
                 </span>
-                <span class="text-[22px] leading-none font-bold tracking-tight transition-colors duration-300" :class="scrolled || mobileOpen ? 'text-emerald-700' : 'text-white'">POS</span>
+                <span class="text-[22px] leading-none font-bold tracking-tight transition-colors duration-300" :class="scrolled || mobileOpen || featureOpen ? 'text-emerald-700' : 'text-white'">POS</span>
             </a>
 
-            <nav class="hidden lg:flex items-center gap-9 ml-12 text-[15px] font-bold transition-colors duration-300" :class="scrolled ? 'text-slate-800' : 'text-white'">
-                <a href="#tentang" class="hover:opacity-70 transition-opacity">Tentang</a>
+            <nav class="hidden lg:flex items-center gap-9 ml-12 text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">
+                <div class="relative" @mouseenter="featureOpen = true" @mouseleave="featureOpen = false" @click.outside="featureOpen = false">
+                    <button type="button" @click="featureOpen = !featureOpen"
+                            class="h-[76px] inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+                            :aria-expanded="featureOpen" aria-haspopup="true">
+                        Fitur
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="featureOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+                    </button>
+
+                    <div x-show="featureOpen" x-cloak
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 -translate-y-2"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 -translate-y-2"
+                         class="absolute top-[68px] -left-28 w-[920px] rounded-[26px] border border-slate-200/80 bg-white p-7 text-slate-800 shadow-[0_28px_70px_rgba(15,23,42,.20)]">
+                        <span class="absolute -top-2 left-[132px] w-4 h-4 rotate-45 border-l border-t border-slate-200 bg-white"></span>
+                        <div class="grid grid-cols-[1fr_1fr_1.15fr] gap-7">
+                            <div>
+                                <p class="mb-3 text-[11px] font-extrabold uppercase tracking-[.14em] text-slate-400">Kasir &amp; Pembayaran</p>
+                                <div class="space-y-1">
+                                    @foreach ([
+                                        ['#kasir', 'Transaksi Kasir', 'Proses pesanan lebih cepat'],
+                                        ['#kasir', 'Pembayaran & QRIS', 'Tunai, QRIS, dan split payment'],
+                                        ['#kasir', 'Hold Order', 'Simpan pesanan dan nomor meja'],
+                                        ['#kasir', 'Struk & Printer', 'Browser, PDF, Bluetooth, RawBT'],
+                                    ] as [$href, $title, $desc])
+                                        <a href="{{ $href }}" @click="featureOpen = false" class="group block rounded-xl px-3 py-2.5 hover:bg-emerald-50 transition-colors">
+                                            <span class="block text-sm font-bold text-slate-800 group-hover:text-emerald-700">{{ $title }}</span>
+                                            <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ $desc }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="mb-3 text-[11px] font-extrabold uppercase tracking-[.14em] text-slate-400">Operasional Bisnis</p>
+                                <div class="space-y-1">
+                                    @foreach ([
+                                        ['#keunggulan', 'Stok & Resep', 'Stok bahan berkurang otomatis'],
+                                        ['#keunggulan', 'Kitchen Display', 'Pesanan dapur lebih teratur'],
+                                        ['#keunggulan', 'Shift & Karyawan', 'Rekap kas dan akses setiap role'],
+                                        ['#usaha', 'Pelanggan & Promosi', 'Loyalty point, bundle, dan promo'],
+                                    ] as [$href, $title, $desc])
+                                        <a href="{{ $href }}" @click="featureOpen = false" class="group block rounded-xl px-3 py-2.5 hover:bg-emerald-50 transition-colors">
+                                            <span class="block text-sm font-bold text-slate-800 group-hover:text-emerald-700">{{ $title }}</span>
+                                            <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ $desc }}</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl bg-emerald-700 p-5 text-white">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 3-7.5 18-4.3-7.7L3 9.5 21 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.2 13.3 21 3"/></svg>
+                                    </span>
+                                    <span class="rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-950">Unggulan</span>
+                                </div>
+                                <p class="mt-5 text-lg font-extrabold">Asisten Bisnis Telegram</p>
+                                <p class="mt-2 text-xs font-medium leading-relaxed text-emerald-50/85">Tanya omzet, profit, stok, produk terlaris, dan shift langsung melalui chat.</p>
+                                <a href="#telegram" @click="featureOpen = false" class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white hover:gap-3 transition-all">
+                                    Lihat cara kerjanya
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                                </a>
+                                <a href="#keunggulan" @click="featureOpen = false" class="mt-4 block border-t border-white/15 pt-4 text-xs font-bold text-emerald-50 hover:text-white">Laporan penjualan, profit &amp; stok →</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <a href="#keunggulan" class="hover:opacity-70 transition-opacity">Keunggulan</a>
-                                <a href="#harga" class="hover:opacity-70 transition-opacity">Harga</a>
+                <a href="#harga" class="hover:opacity-70 transition-opacity">Harga</a>
                 <a href="#faq" class="hover:opacity-70 transition-opacity">FAQ</a>
             </nav>
 
             <div class="hidden lg:flex items-center gap-7 ml-auto">
-                <a href="{{ url('/login') }}" class="text-[15px] font-bold transition-colors duration-300" :class="scrolled ? 'text-slate-800' : 'text-white'">Masuk</a>
+                <a href="{{ url('/login') }}" class="text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">Masuk</a>
                 <a href="{{ $waLink }}" target="_blank"
                    class="px-7 py-3 rounded-full text-[15px] font-bold transition-colors duration-300"
-                   :class="scrolled ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-emerald-700 hover:bg-emerald-50'">
+                   :class="scrolled || featureOpen ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-emerald-700 hover:bg-emerald-50'">
                     Coba Gratis
                 </a>
             </div>
@@ -86,7 +155,26 @@
 
         {{-- Mobile menu --}}
         <div x-show="mobileOpen" x-cloak x-transition class="lg:hidden border-t border-slate-200 bg-white px-6 py-4 space-y-3">
-            <a @click="mobileOpen=false" href="#tentang" class="block text-sm font-medium text-slate-700">Tentang</a>
+            <button type="button" @click="mobileFeatures = !mobileFeatures" class="w-full flex items-center justify-between py-1 text-sm font-bold text-slate-800" :aria-expanded="mobileFeatures">
+                Fitur
+                <svg class="w-4 h-4 transition-transform" :class="mobileFeatures ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div x-show="mobileFeatures" x-cloak x-transition class="rounded-2xl bg-slate-50 p-3 space-y-1">
+                @foreach ([
+                    ['#kasir', 'Transaksi Kasir & QRIS'],
+                    ['#keunggulan', 'Stok, Resep & Kitchen'],
+                    ['#keunggulan', 'Shift & Manajemen Karyawan'],
+                    ['#usaha', 'Pelanggan, Promo & Loyalty'],
+                    ['#telegram', 'Asisten Bisnis Telegram'],
+                    ['#keunggulan', 'Laporan Penjualan & Profit'],
+                ] as [$href, $label])
+                    <a @click="mobileOpen=false; mobileFeatures=false" href="{{ $href }}"
+                       class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {{ $href === '#telegram' ? 'bg-emerald-700 text-white' : 'text-slate-700 hover:bg-white' }}">
+                        {{ $label }}
+                        <span aria-hidden="true">→</span>
+                    </a>
+                @endforeach
+            </div>
             <a @click="mobileOpen=false" href="#keunggulan" class="block text-sm font-medium text-slate-700">Keunggulan</a>
             <a @click="mobileOpen=false" href="#harga" class="block text-sm font-medium text-slate-700">Harga</a>
             <a @click="mobileOpen=false" href="#faq" class="block text-sm font-medium text-slate-700">FAQ</a>
@@ -263,6 +351,97 @@
                 <div class="absolute top-0 right-0 left-14 bottom-14 rounded-[28px] bg-[#0c874e]"></div>
                 <img src="{{ asset('images/about/dashboard-tim.webp') }}" alt="Dua staf toko melihat dashboard Yoka POS di laptop"
                      class="relative w-full rounded-[24px] shadow-[0_18px_40px_rgba(15,23,42,.25)]" loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    {{-- ================= TELEGRAM ASSISTANT ================= --}}
+    <section id="telegram" class="scroll-mt-24 py-20 md:py-28 px-6 bg-emerald-950 overflow-hidden">
+        <div class="max-w-[1100px] mx-auto grid lg:grid-cols-[.92fr_1.08fr] gap-14 lg:gap-20 items-center">
+            <div class="text-white">
+                <div class="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-800/60 px-3.5 py-2 text-xs font-extrabold uppercase tracking-[.12em] text-emerald-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 3-7.5 18-4.3-7.7L3 9.5 21 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.2 13.3 21 3"/></svg>
+                    Asisten Bisnis Telegram
+                </div>
+                <h2 class="mt-6 text-[34px] md:text-[46px] font-extrabold leading-[1.12]">
+                    Tanya kondisi toko,<br><em class="font-black italic text-emerald-300">langsung dari chat</em>
+                </h2>
+                <p class="mt-6 text-[17px] md:text-[18px] leading-[1.75] text-emerald-50/80">
+                    Tidak sempat membuka dashboard? Chat bot Yoka seperti berbicara dengan asisten sendiri. Data omzet, profit, stok, dan shift dijawab langsung dari bisnis Anda.
+                </p>
+
+                <ul class="mt-8 grid sm:grid-cols-2 gap-4">
+                    @foreach ([
+                        ['Omzet & profit', 'Cek hari ini sampai bulan lalu'],
+                        ['Stok menipis', 'Tahu bahan yang perlu dibeli'],
+                        ['Produk terlaris', 'Lihat menu dan jam paling ramai'],
+                        ['Shift kasir', 'Pantau siapa yang sedang berjaga'],
+                    ] as [$title, $desc])
+                        <li class="flex gap-3">
+                            <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-emerald-400/20 text-emerald-300 flex items-center justify-center text-xs font-black">✓</span>
+                            <span><strong class="block text-sm text-white">{{ $title }}</strong><span class="mt-0.5 block text-xs leading-relaxed text-emerald-100/60">{{ $desc }}</span></span>
+                        </li>
+                    @endforeach
+                </ul>
+
+                <a href="{{ $waLink }}" target="_blank" class="mt-9 inline-flex items-center gap-3 rounded-full bg-white px-6 py-3.5 text-sm font-extrabold text-emerald-800 hover:bg-emerald-50 transition-colors">
+                    Coba Asisten Telegram
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                </a>
+            </div>
+
+            <div class="relative mx-auto w-full max-w-[560px]">
+                <div class="absolute -top-16 -right-20 w-64 h-64 rounded-full bg-emerald-400/15 blur-3xl"></div>
+                <div class="absolute -bottom-16 -left-20 w-64 h-64 rounded-full bg-teal-400/10 blur-3xl"></div>
+                <div class="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#dce8e2] shadow-[0_30px_80px_rgba(0,0,0,.35)]">
+                    <div class="flex items-center gap-3 bg-white px-5 py-4 shadow-sm">
+                        <div class="w-11 h-11 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 3-7.5 18-4.3-7.7L3 9.5 21 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.2 13.3 21 3"/></svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-extrabold text-slate-900">Yoka POS Assistant</p>
+                            <p class="mt-0.5 text-xs font-semibold text-emerald-600">bot · online</p>
+                        </div>
+                        <div class="ml-auto flex gap-1.5">
+                            <span class="w-1 h-1 rounded-full bg-slate-400"></span><span class="w-1 h-1 rounded-full bg-slate-400"></span><span class="w-1 h-1 rounded-full bg-slate-400"></span>
+                        </div>
+                    </div>
+
+                    <div class="min-h-[430px] space-y-4 p-5 sm:p-7">
+                        <div class="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-emerald-600 px-4 py-3 text-sm leading-relaxed text-white shadow-sm">
+                            Omzet hari ini berapa?
+                            <span class="mt-1 block text-right text-[10px] text-emerald-100">14.32 ✓✓</span>
+                        </div>
+                        <div class="max-w-[88%] rounded-2xl rounded-bl-md bg-white px-4 py-3.5 text-sm leading-relaxed text-slate-700 shadow-sm">
+                            <p>💰 Omzet hari ini: <strong class="text-slate-950">Rp4.850.000</strong> dari 73 transaksi.</p>
+                            <p class="mt-2 text-emerald-700">📈 Naik 18% dibanding periode sebelumnya.</p>
+                            <span class="mt-2 block text-right text-[10px] text-slate-400">14.32</span>
+                        </div>
+                        <div class="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-emerald-600 px-4 py-3 text-sm leading-relaxed text-white shadow-sm">
+                            Stok apa yang mau habis?
+                            <span class="mt-1 block text-right text-[10px] text-emerald-100">14.33 ✓✓</span>
+                        </div>
+                        <div class="max-w-[88%] rounded-2xl rounded-bl-md bg-white px-4 py-3.5 text-sm leading-relaxed text-slate-700 shadow-sm">
+                            <p class="font-bold text-slate-900">⚠️ Bahan yang perlu dibeli:</p>
+                            <p class="mt-2">• Susu segar: sisa 4 liter<br>• Biji kopi: sisa 1,2 kg<br>• Sirup vanilla: sisa 1 botol</p>
+                            <span class="mt-2 block text-right text-[10px] text-slate-400">14.33</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-slate-200/70 bg-white/80 px-4 py-3 backdrop-blur-sm">
+                        <div class="flex items-center gap-3 rounded-full bg-white px-4 py-3 text-xs font-medium text-slate-400 shadow-sm">
+                            Tulis pertanyaan tentang toko...
+                            <span class="ml-auto w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 3-7.5 18-4.3-7.7L3 9.5 21 3Z"/></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative mt-5 flex flex-wrap justify-center gap-2">
+                    @foreach (['Omzet hari ini', 'Produk terlaris', 'Shift berjalan'] as $quick)
+                        <span class="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-emerald-100">{{ $quick }}</span>
+                    @endforeach
+                </div>
             </div>
         </div>
     </section>
