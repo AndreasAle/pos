@@ -95,6 +95,7 @@
 @endif
 
 @php
+    $hasSales    = (array_sum($rev) + array_sum($ord)) > 0;
     $isManager   = in_array($role, ['owner','admin']);
     $lowCount    = count($lowStock);
     $iconCash    = 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8V6m0 12v-2m9-6a9 9 0 11-18 0 9 9 0 0118 0z';
@@ -144,32 +145,33 @@
             }
         @endphp
         @if(count($hints))
-        <div class="fade-up flex flex-wrap gap-2" style="--i:1">
+        <div class="fade-up grid grid-cols-1 sm:grid-cols-2 gap-3" style="--i:1">
             @foreach($hints as $h)
-            <a href="{{ $h['href'] }}" class="group inline-flex items-center gap-2 h-10 pl-3.5 pr-3 rounded-full whitespace-nowrap text-[13px] sm:text-sm max-w-full bg-white border border-[#E5E7EB] text-sm hover:border-[#16A34A] hover:bg-[#ECFDF3] transition-colors">
-                <span class="w-2 h-2 rounded-full {{ $h['dot'] }} {{ $h['pulse'] ? 'pulse-dot' : '' }}" style="color:inherit"></span>
-                <span class="text-[#0B1B3F]">{{ $h['text'] }}</span>
-                <span class="inline-flex items-center gap-0.5 font-semibold text-[#16A34A]">{{ $h['cta'] }}
+            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white pl-4 pr-3 py-3 hover:border-[#16A34A]/50 hover:shadow-sm transition">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $h['dot'] }} {{ $h['pulse'] ? 'pulse-dot' : '' }}"></span>
+                <p class="flex-1 min-w-0 text-sm font-medium text-[#0B1B3F]">{{ $h['text'] }}</p>
+                <a href="{{ $h['href'] }}" class="group shrink-0 h-9 inline-flex items-center gap-1 px-3.5 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
+                    {{ $h['cta'] }}
                     <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-                </span>
-            </a>
+                </a>
+            </div>
             @endforeach
         </div>
         @endif
 
         {{-- Banner laporan --}}
         @if($isManager)
-        <section class="fade-up relative overflow-hidden rounded-xl border border-[#BBF7D0] bg-gradient-to-r from-[#ECFDF3] via-[#F3FDF7] to-white p-6" style="--i:2">
-            <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-4 items-center">
+        <section class="fade-up relative overflow-hidden rounded-xl border border-[#BBF7D0] bg-gradient-to-r from-[#ECFDF3] via-[#F3FDF7] to-white px-6 py-4" style="--i:2">
+            <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_150px] gap-4 items-center">
                 <div>
                     <h3 class="text-lg font-semibold">Cek laporan penjualan Anda</h3>
-                    <p class="mt-1 text-sm text-[#64748B] max-w-md">Lihat performa toko, produk terlaris, dan laba usaha dalam satu tempat.</p>
-                    <a href="{{ route('reports.sales') }}" class="group mt-4 h-10 inline-flex items-center gap-2 px-5 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
+                    <p class="mt-0.5 text-sm text-[#64748B] max-w-md">Performa toko, produk terlaris, dan laba usaha.</p>
+                    <a href="{{ route('reports.sales') }}" class="group mt-3 h-9 inline-flex items-center gap-2 px-4 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
                         Lihat Laporan
                         <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
                 </div>
-                <div class="hidden sm:block h-[140px]">@include('dashboard._report')</div>
+                <div class="hidden sm:block h-[96px]">@include('dashboard._report')</div>
             </div>
         </section>
         @endif
@@ -179,7 +181,7 @@
             <div class="px-6 py-5 flex flex-wrap items-center justify-between gap-2">
                 <div>
                     <h3 class="text-lg font-semibold">Transaksi Terbaru</h3>
-                    <p class="text-xs text-[#64748B] mt-0.5">Aktivitas penjualan terakhir</p>
+                    <p class="text-sm text-[#64748B] mt-0.5">Aktivitas penjualan terakhir</p>
                 </div>
                 <a href="{{ route('orders.index') }}" class="text-sm font-semibold text-[#16A34A] hover:text-[#15803D]">Lihat Semua &rarr;</a>
             </div>
@@ -187,11 +189,11 @@
                 <table class="w-full text-sm whitespace-nowrap">
                     <thead>
                         <tr class="bg-slate-50 border-y border-[#E5E7EB]">
-                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">No. Order</th>
-                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Kasir</th>
-                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Status</th>
-                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Total</th>
-                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Waktu</th>
+                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">No. Order</th>
+                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Kasir</th>
+                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Status</th>
+                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Total</th>
+                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Waktu</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#E5E7EB]">
@@ -204,7 +206,7 @@
                             <td class="px-6 py-3.5"><a href="{{ route('orders.show', $order['id']) }}" class="font-mono text-xs font-semibold text-[#16A34A] hover:underline">{{ $order['order_number'] }}</a></td>
                             <td class="px-6 py-3.5">
                                 <span class="flex items-center gap-2 text-slate-700">
-                                    <span class="w-6 h-6 rounded-full bg-[#ECFDF3] text-[#16A34A] text-[11px] font-bold flex items-center justify-center">{{ strtoupper(substr($order['user']['name'] ?? '-', 0, 1)) }}</span>
+                                    <span class="w-6 h-6 rounded-full bg-[#ECFDF3] text-[#16A34A] text-xs font-bold flex items-center justify-center">{{ strtoupper(substr($order['user']['name'] ?? '-', 0, 1)) }}</span>
                                     {{ $order['user']['name'] ?? '-' }}
                                 </span>
                             </td>
@@ -286,7 +288,14 @@
                 @endif
             </div>
             <p class="mt-1 text-[32px] leading-10 font-semibold tracking-tight">{{ $rp($summary['todayRevenue']) }}</p>
+                    @if($hasSales)
                     <div class="mt-3" style="position:relative;height:150px"><canvas id="miniRevenue"></canvas></div>
+                    @else
+                    <div class="mt-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm text-[#64748B]">
+                        <svg class="w-9 h-9 shrink-0 text-[#16A34A]/70 anim-float" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+                        <span>Belum ada data 7 hari terakhir. Grafik muncul setelah transaksi pertama.</span>
+                    </div>
+                    @endif
                 </div>
 
                 {{-- Transaksi --}}
@@ -303,7 +312,14 @@
                 @endif
             </div>
             <p class="mt-1 text-[32px] leading-10 font-semibold tracking-tight">{{ number_format($summary['todayOrders']) }}</p>
+                    @if($hasSales)
                     <div class="mt-3" style="position:relative;height:150px"><canvas id="miniOrders"></canvas></div>
+                    @else
+                    <div class="mt-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm text-[#64748B]">
+                        <svg class="w-9 h-9 shrink-0 text-[#16A34A]/70 anim-float" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+                        <span>Belum ada data 7 hari terakhir. Grafik muncul setelah transaksi pertama.</span>
+                    </div>
+                    @endif
                 </div>
 
                 {{-- Pembayaran --}}
@@ -315,7 +331,7 @@
             <div class="relative mx-auto" style="height:160px;max-width:220px">
                 <canvas id="paymentChart"></canvas>
                 <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span class="text-[11px] text-[#64748B] uppercase tracking-wider">Total</span>
+                    <span class="text-xs text-[#64748B] uppercase tracking-wider">Total</span>
                     <span class="text-base font-semibold">{{ $rp($payTotal) }}</span>
                 </div>
             </div>
@@ -512,8 +528,8 @@ function miniLine(id, data, color, fmt) {
             interaction: { mode: 'index', intersect: false },
             plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0B1B3F', padding: 10, cornerRadius: 8, displayColors: false, callbacks: { label: c => fmt(c.raw) } } },
             scales: {
-                x: { border: { display: false }, grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 4 } },
-                y: { beginAtZero: true, border: { display: false }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 3, callback: v => v >= 1000000 ? (v/1000000).toFixed(1) + ' jt' : v >= 1000 ? (v/1000).toFixed(0) + ' rb' : v } }
+                x: { border: { display: false }, grid: { display: false }, ticks: { font: { size: 12 }, color: '#64748b', maxTicksLimit: 4 } },
+                y: { beginAtZero: true, border: { display: false }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 12 }, color: '#64748b', maxTicksLimit: 3, callback: v => v >= 1000000 ? (v/1000000).toFixed(1) + ' jt' : v >= 1000 ? (v/1000).toFixed(0) + ' rb' : v } }
             }
         }
     });
