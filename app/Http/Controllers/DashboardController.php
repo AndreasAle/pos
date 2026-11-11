@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -26,9 +27,22 @@ class DashboardController extends Controller
             ? $this->dashboard->getOutletPerformance($business)
             : [];
 
+        // Beranda berbentuk daftar menu ala aplikasi chat: tiap baris punya pratinjau data terkini.
+        $bid = $business->id;
+        $stats = [
+            'products'    => DB::table('products')->where('business_id', $bid)->count(),
+            'categories'  => DB::table('product_categories')->where('business_id', $bid)->count(),
+            'customers'   => DB::table('customers')->where('business_id', $bid)->count(),
+            'users'       => DB::table('users')->where('business_id', $bid)->count(),
+            'ingredients' => DB::table('ingredients')->where('business_id', $bid)->count(),
+            'promotions'  => DB::table('promotions')->where('business_id', $bid)->count(),
+        ];
+        $activeShift = $user->activeShift()->with('outlet')->first();
+        $business->loadMissing('outlets');
+
         return view('dashboard.index', compact(
-            'summary', 'topProducts', 'salesChart', 'paymentBreakdown',
-            'lowStock', 'recentOrders', 'outlets', 'outletId', 'outletPerformance'
+            'summary', 'topProducts', 'salesChart', 'paymentBreakdown', 'lowStock', 'recentOrders',
+            'outlets', 'outletId', 'outletPerformance', 'stats', 'activeShift', 'business'
         ));
     }
 }

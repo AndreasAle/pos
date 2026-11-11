@@ -60,3 +60,10 @@ main div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .page .fade-up { opacity: 1; transform: none }
     .page .line-draw { stroke-dashoffset: 0 }
 }
+
+/* Beranda berbentuk daftar chat. Tema terang/gelap lewat atribut data-theme pada .wa */
+.wa { --wa-bg:#ffffff; --wa-fg:#111b21; --wa-mute:#667781; --wa-field:#f0f2f5; --wa-chip:#f0f2f5; --wa-chip-on-bg:#d9fdd3; --wa-chip-on-fg:#0a7a3f;
+      --wa-hover:#f5f6f6; --wa-line:#e9edef; --wa-accent:#22c55e; --wa-badge-fg:#ffffff; --wa-frame:#e5e7eb; }
+.wa[data-theme="dark"] { --wa-bg:#111b21; --wa-fg:#e9edef; --wa-mute:#8696a0; --wa-field:#202c33; --wa-chip:#202c33; --wa-chip-on-bg:#103529; --wa-chip-on-fg:#25d366;
+      --wa-hover:#1a252c; --wa-line:#222d34; --wa-accent:#25d366; --wa-badge-fg:#111b21; --wa-frame:#2a3942; }
+.wa .wa-scroll { scrollbar-width: none; } .wa .wa-scroll::-webkit-scrollbar { display: none; }
