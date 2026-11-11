@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Exclude Midtrans webhook from CSRF
         $middleware->validateCsrfTokens(except: [
             '/midtrans/callback',
+            '/telegram/webhook',
         ]);
 
         $middleware->web(append: [

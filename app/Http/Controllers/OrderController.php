@@ -59,6 +59,8 @@ class OrderController extends Controller
             $this->balance->reverseFromRefund($order);
         });
 
+        \App\Services\TelegramNotifier::orderReversed($order->fresh(), 'void', $request->reason);
+
         return back()->with('success', 'Order berhasil dibatalkan dan stok dikembalikan.');
     }
 
@@ -89,6 +91,8 @@ class OrderController extends Controller
             // that were never actually credited.
             $this->balance->reverseFromRefund($order);
         });
+
+        \App\Services\TelegramNotifier::orderReversed($order->fresh(), 'refund', $request->reason);
 
         return back()->with('success', 'Refund berhasil. Stok dan poin sudah dikembalikan.');
     }

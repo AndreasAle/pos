@@ -4,6 +4,7 @@ use App\Jobs\SendDailySummary;
 use App\Jobs\SendLowStockAlert;
 use App\Jobs\SendShiftUnclosedAlert;
 use App\Models\Business;
+use App\Services\TelegramNotifier;
 use Illuminate\Support\Facades\Schedule;
 
 // ── Cek stok menipis — setiap 6 jam ──────────────────────────────────────────
@@ -26,3 +27,13 @@ Schedule::call(function () {
         SendDailySummary::dispatch($biz);
     });
 })->dailyAt('21:00')->name('daily-summary')->withoutOverlapping();
+
+// ── Telegram: dikirim langsung (tanpa antrean) supaya tidak butuh queue worker ──
+Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::dailySummary($b)))
+    ->dailyAt('21:00')->name('telegram-daily')->withoutOverlapping();
+
+Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::lowStock($b)))
+    ->everySixHours()->name('telegram-low-stock')->withoutOverlapping();
+
+Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::shiftUnclosed($b)))
+    ->everyTwoHours()->name('telegram-shift-unclosed')->withoutOverlapping();

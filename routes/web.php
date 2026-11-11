@@ -34,6 +34,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn() => view('landing'))->name('landing');
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
+// Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
+Route::post('telegram/webhook', [\App\Http\Controllers\TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login',     [LoginController::class, 'showLogin'])->name('login');
     Route::post('/login',    [LoginController::class, 'login'])->name('login.post');
@@ -215,6 +218,11 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::post('receipt',  [SettingController::class, 'updateReceipt'])->name('receipt.update');
         Route::get('qris',      [SettingController::class, 'qris'])->name('qris');
         Route::post('qris',     [SettingController::class, 'updateQris'])->name('qris.update');
+        Route::get('telegram',          [SettingController::class, 'telegram'])->name('telegram');
+        Route::post('telegram/link',    [SettingController::class, 'telegramLink'])->name('telegram.link');
+        Route::post('telegram/prefs',   [SettingController::class, 'telegramPrefs'])->name('telegram.prefs');
+        Route::post('telegram/test',    [SettingController::class, 'telegramTest'])->name('telegram.test');
+        Route::post('telegram/unlink',  [SettingController::class, 'telegramUnlink'])->name('telegram.unlink');
     });
 
     // SaaS

@@ -23,7 +23,7 @@ class PosOrderService
 
     public function createOrder($user, array $data, bool $paymentPending = false): Order
     {
-        return DB::transaction(function () use ($user, $data, $paymentPending) {
+        $created = DB::transaction(function () use ($user, $data, $paymentPending) {
             $business = $user->business;
             $settings = $business->settings ?? [];
             $shift    = $user->activeShift()->first();
@@ -334,6 +334,12 @@ class PosOrderService
 
             return $order;
         });
+
+        if (!$paymentPending) {
+            \App\Services\TelegramNotifier::orderPaid($created);
+        }
+
+        return $created;
     }
 
     /** A customer of this business, or null — never another shop's. */

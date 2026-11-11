@@ -85,6 +85,40 @@ class Business extends Model
         return ($this->settings['business_type'] ?? 'fnb') === 'retail';
     }
 
+    // ── Telegram (disimpan di kolom settings, tanpa migrasi) ─────────────────
+    public function telegram(): array
+    {
+        return (array) ($this->settings['telegram'] ?? []);
+    }
+
+    public function telegramLinked(): bool
+    {
+        return !empty($this->telegram()['chat_id']);
+    }
+
+    /** Preferensi notifikasi: daily & alerts default aktif, orders default mati. */
+    public function telegramWants(string $key): bool
+    {
+        if (!$this->telegramLinked()) return false;
+        $defaults = ['daily' => true, 'alerts' => true, 'orders' => false];
+        return (bool) ($this->telegram()['prefs'][$key] ?? $defaults[$key] ?? false);
+    }
+
+    /** Simpan data tautan Telegram; null = putuskan. */
+    public function setTelegram(?array $data): void
+    {
+        $settings = (array) $this->settings;
+        if ($data === null) {
+            // Preferensi tetap disimpan agar tidak hilang saat tersambung ulang.
+            $prefs = $settings['telegram']['prefs'] ?? null;
+            unset($settings['telegram']);
+            if ($prefs) $settings['telegram'] = ['prefs' => $prefs];
+        } else {
+            $settings['telegram'] = $data;
+        }
+        $this->update(['settings' => $settings]);
+    }
+
     public function getSetting(string $key, mixed $default = null): mixed
     {
         return data_get($this->settings, $key, $default);

@@ -4,6 +4,7 @@ $navItems = [
     ['route'=>'settings.outlet',   'label'=>'Outlet'],
     ['route'=>'settings.receipt',  'label'=>'Struk & Pajak'],
     ['route'=>'settings.qris',     'label'=>'🔳 QRIS'],
+    ['route'=>'settings.telegram', 'label'=>'Bot Telegram'],
 ];
 @endphp
 <div class="flex flex-wrap gap-2 mb-5">

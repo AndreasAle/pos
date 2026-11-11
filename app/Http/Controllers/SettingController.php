@@ -5,6 +5,10 @@ namespace App\Http\Controllers;
 use App\Services\QrisService;
 
 use App\Models\Outlet;
+use App\Services\TelegramNotifier;
+use App\Services\TelegramService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
 class SettingController extends Controller
@@ -165,5 +169,65 @@ class SettingController extends Controller
 
         $business->update($data);
         return back()->with('success', 'Pengaturan QRIS berhasil disimpan.');
+    }
+
+    // ── Telegram ─────────────────────────────────────────────────────────────
+    public function telegram()
+    {
+        $business = auth()->user()->business;
+        $code     = session('telegram_code');
+
+        return view('settings.telegram', [
+            'business' => $business,
+            'tg'       => $business->telegram(),
+            'enabled'  => TelegramService::enabled() && TelegramService::username(),
+            'username' => TelegramService::username(),
+            'code'     => $code,
+            'link'     => $code ? TelegramService::deepLink($code) : null,
+        ]);
+    }
+
+    public function telegramLink()
+    {
+        $business = auth()->user()->business;
+        abort_unless(TelegramService::enabled() && TelegramService::username(), 422, 'Bot Telegram belum dikonfigurasi di server.');
+
+        $code = Str::upper(Str::random(8));
+        Cache::put('tg-link:' . $code, $business->id, now()->addMinutes(15));
+
+        return redirect()->route('settings.telegram')->with('telegram_code', $code);
+    }
+
+    public function telegramPrefs(Request $request)
+    {
+        $business = auth()->user()->business;
+        abort_unless($business->telegramLinked(), 422);
+
+        $tg = $business->telegram();
+        $tg['prefs'] = [
+            'daily'  => $request->boolean('daily'),
+            'alerts' => $request->boolean('alerts'),
+            'orders' => $request->boolean('orders'),
+        ];
+        $business->setTelegram($tg);
+
+        return back()->with('success', 'Preferensi notifikasi Telegram disimpan.');
+    }
+
+    public function telegramTest()
+    {
+        $business = auth()->user()->business;
+        $ok = $business->telegramLinked() && TelegramNotifier::deliver(
+            $business,
+            "✅ <b>Tes dari Yoka POS</b>\nBot Telegram untuk " . TelegramService::esc($business->name) . " sudah aktif."
+        );
+
+        return back()->with($ok ? 'success' : 'error', $ok ? 'Pesan tes terkirim ke Telegram.' : 'Pesan tes gagal dikirim. Coba hubungkan ulang.');
+    }
+
+    public function telegramUnlink()
+    {
+        auth()->user()->business->setTelegram(null);
+        return back()->with('success', 'Telegram diputuskan.');
     }
 }
