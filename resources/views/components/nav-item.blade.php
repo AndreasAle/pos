@@ -32,9 +32,10 @@ $path = $icons[$icon] ?? $icons['home'];
 @endphp
 
 <a href="{{ route($route) }}"
-   class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors
-          {{ $active ? 'bg-emerald-50 text-emerald-700' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
-    <svg class="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+   class="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+          {{ $active ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm ring-1 ring-emerald-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
+    @if($active)<span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-emerald-500"></span>@endif
+    <svg class="w-5 h-5 flex-shrink-0 {{ $active ? 'text-emerald-600' : 'text-gray-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {!! $path !!}
     </svg>
     <span>{{ $slot }}</span>
