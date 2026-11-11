@@ -1,7 +1,7 @@
 {{-- Loader layar penuh: logo Y Yoka + titik beranimasi. Tampil saat halaman dimuat & saat pindah halaman. --}}
 <style>
-    #yoka-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(255,255,255,.96);opacity:1;visibility:visible;transition:opacity .25s ease,visibility .25s ease}
-    #yoka-loader.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
+    #yoka-loader{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:rgba(255,255,255,.96);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .25s ease,visibility .25s ease}
+    #yoka-loader.is-on{opacity:1;visibility:visible;pointer-events:auto}
     #yoka-loader img{width:64px;height:64px;object-fit:contain;animation:yoka-bob 1.2s ease-in-out infinite}
     #yoka-loader .dots{display:flex;gap:10px}
     #yoka-loader .dots i{width:12px;height:12px;border-radius:9999px;background:#10b981;animation:yoka-dot 1.2s ease-in-out infinite}
@@ -19,12 +19,12 @@
 </div>
 <script>
 (function(){
-    var el=document.getElementById('yoka-loader');
-    var hide=function(){el.classList.add('is-hidden')};
-    var show=function(){el.classList.remove('is-hidden')};
-    window.addEventListener('load',function(){setTimeout(hide,150)});
+    var el=document.getElementById('yoka-loader'),t=null,DELAY=500;
+    var hide=function(){clearTimeout(t);el.classList.remove('is-on')};
+    // Tampil hanya kalau proses lebih lama dari DELAY ms
+    var later=function(){clearTimeout(t);t=setTimeout(function(){el.classList.add('is-on')},DELAY)};
+    if(document.readyState!=='complete'){later();window.addEventListener('load',hide)}
     window.addEventListener('pageshow',function(e){if(e.persisted)hide()});
-    setTimeout(hide,8000);
     document.addEventListener('click',function(e){
         var a=e.target.closest&&e.target.closest('a[href]');
         if(!a||e.defaultPrevented||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey||e.button!==0)return;
@@ -34,11 +34,11 @@
         if(!h||h.charAt(0)==='#'||/^(javascript|mailto|tel):/i.test(h))return;
         if(a.origin!==location.origin)return;
         if(a.pathname===location.pathname&&a.search===location.search)return;
-        show();setTimeout(hide,8000);
+        later();setTimeout(hide,10000);
     });
     document.addEventListener('submit',function(e){
         var f=e.target;if(e.defaultPrevented||(f.target&&f.target!=='_self'))return;
-        setTimeout(function(){if(!e.defaultPrevented)show()},0);setTimeout(hide,8000);
+        setTimeout(function(){if(!e.defaultPrevented){later();setTimeout(hide,10000)}},0);
     });
 })();
 </script>
