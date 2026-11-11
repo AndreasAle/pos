@@ -130,19 +130,21 @@
     @endphp
     <header class="fixed inset-x-0 top-0 z-50 h-14 bg-[#0B1F44] border-b border-[#31486B] px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
         {{-- Brand --}}
-        <div class="flex items-center gap-2 shrink-0 lg:w-[156px]">
+        <div class="flex items-center gap-2 shrink-0 lg:w-[228px] lg:justify-between">
             <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/10" aria-label="Menu">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
+            <div class="flex items-center gap-2">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5" aria-label="Yoka POS">
                 <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="w-6 h-6 object-contain"></span>
                 <span class="hidden sm:inline text-base font-semibold leading-6">Yoka POS</span>
             </a>
-        </div>
-
-        <button @click="toggle()" class="hidden lg:inline-flex p-2 rounded-lg text-[#A7B0C2] hover:bg-white/10 hover:text-white shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
+            </div>
+            <button @click="toggle()" class="hidden lg:inline-flex p-2 -mr-2 rounded-lg text-[#A7B0C2] hover:bg-white/10 hover:text-white shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/></svg>
         </button>
+        </div>
+
 
         {{-- Pencarian global (menu & laporan) --}}
         <div class="relative flex-1 min-w-0 max-w-3xl"
