@@ -31,16 +31,18 @@ class TelegramAssistant
 
     public function answer(Business $biz, string $raw): string
     {
-        $text = $this->normalize($raw);
+        // Singkatan & salah ketik dibereskan dulu ("brp transaski" -> "berapa transaksi").
+        $semi = $this->expandSlang($this->normalize($raw));
+        $text = $this->fixTypos($semi);
         [$from, $to, $label, $explicit] = $this->period($text);
 
         // Pertanyaan spesifik lebih dulu: "es kopi susu terjual berapa?"
         if ($this->has($text, ['terjual', 'laku', 'kejual', 'berapa porsi', 'berapa cup', 'berapa gelas', 'berapa pcs', 'penjualan'])
-            && ($name = $this->matchProduct($biz, $text))) {
+            && ($name = $this->matchProduct($biz, $semi))) {
             return $this->productSales($biz, $name, $from, $to, $label);
         }
         if ($this->has($text, ['stok', 'stock', 'sisa', 'persediaan', 'masih ada', 'tinggal berapa'])
-            && ($ing = $this->matchIngredient($biz, $text))) {
+            && ($ing = $this->matchIngredient($biz, $semi))) {
             return $this->ingredientStock($ing);
         }
 
@@ -272,6 +274,87 @@ class TelegramAssistant
     }
 
     // ── Bahasa ───────────────────────────────────────────────────────────────
+
+    /** Singkatan chat yang umum -> kata baku. */
+    private const SLANG = [
+        'brp' => 'berapa', 'brapa' => 'berapa', 'berapaan' => 'berapa', 'brpa' => 'berapa', 'bpa' => 'berapa',
+        'ad' => 'ada', 'ni' => 'ini', 'nih' => 'ini', 'tu' => 'itu', 'yg' => 'yang', 'yng' => 'yang',
+        'gmn' => 'gimana', 'gmna' => 'gimana', 'gimane' => 'gimana', 'bgmn' => 'bagaimana',
+        'utk' => 'untuk', 'dgn' => 'dengan', 'krn' => 'karena', 'tdk' => 'tidak', 'gak' => 'tidak', 'ga' => 'tidak', 'nggak' => 'tidak',
+        'udh' => 'sudah', 'udah' => 'sudah', 'sdh' => 'sudah', 'sy' => 'saya', 'aq' => 'aku', 'gw' => 'aku', 'gue' => 'aku',
+        'kmrn' => 'kemarin', 'kmren' => 'kemarin', 'kemaren' => 'kemarin', 'kmaren' => 'kemarin',
+        'bln' => 'bulan', 'blan' => 'bulan', 'mgg' => 'minggu', 'mggu' => 'minggu', 'mng' => 'minggu', 'thn' => 'tahun',
+        'hr' => 'hari', 'hri' => 'hari', 'skrg' => 'sekarang', 'skrng' => 'sekarang', 'td' => 'tadi', 'lg' => 'lagi',
+        'dpt' => 'dapat', 'dpet' => 'dapat', 'dapet' => 'dapat', 'bs' => 'bisa', 'blh' => 'boleh', 'tlg' => 'tolong',
+        'trx' => 'transaksi', 'trans' => 'transaksi', 'transaki' => 'transaksi', 'stk' => 'stok', 'hbs' => 'habis', 'mnipis' => 'menipis',
+        'omset' => 'omzet', 'pnjualan' => 'penjualan', 'pjualan' => 'penjualan',
+        'kasr' => 'kasir', 'pembyaran' => 'pembayaran', 'tmksh' => 'terima kasih', 'mksh' => 'makasih', 'trims' => 'terima kasih',
+    ];
+
+    /** Kosakata yang dipakai pencocokan fuzzy untuk membetulkan salah ketik. */
+    private const VOCAB = [
+        'berapa', 'transaksi', 'omzet', 'pendapatan', 'pemasukan', 'penghasilan', 'penjualan', 'jualan', 'laba', 'untung', 'keuntungan', 'profit',
+        'terlaris', 'terjual', 'produk', 'stok', 'stock', 'habis', 'menipis', 'persediaan', 'shift', 'kasir', 'ringkasan', 'laporan', 'rekap',
+        'kemarin', 'minggu', 'bulan', 'tahun', 'sekarang', 'pembayaran', 'tunai', 'qris', 'bantuan', 'pesanan', 'pelanggan', 'bahan', 'belanja',
+        'terima', 'kasih', 'makasih', 'halo', 'gimana', 'bagaimana', 'sudah', 'hari',
+    ];
+
+    private function expandSlang(string $text): string
+    {
+        $out = [];
+        foreach (explode(' ', $text) as $w) {
+            $out[] = self::SLANG[$w] ?? $w;
+        }
+        return implode(' ', $out);
+    }
+
+    /** Ganti kata yang mirip kosakata (selisih 1-2 huruf, termasuk huruf tertukar) dengan kata yang benar. */
+    private function fixTypos(string $text): string
+    {
+        $out = [];
+        foreach (explode(' ', $text) as $w) {
+            $out[] = $this->closest($w) ?? $w;
+        }
+        return implode(' ', $out);
+    }
+
+    private function closest(string $w): ?string
+    {
+        $len = mb_strlen($w);
+        if ($len < 4 || in_array($w, self::VOCAB, true) || ctype_digit($w)) return null;
+
+        $max  = $len >= 7 ? 2 : 1;
+        $best = null;
+        $bestD = $max + 1;
+        foreach (self::VOCAB as $v) {
+            if (abs(mb_strlen($v) - $len) > $max) continue;
+            $d = $this->editDistance($w, $v);
+            if ($d < $bestD) { $bestD = $d; $best = $v; }
+        }
+        return $bestD <= $max ? $best : null;
+    }
+
+    /** Jarak edit Damerau-Levenshtein (tukar dua huruf bersebelahan dihitung 1). */
+    private function editDistance(string $a, string $b): int
+    {
+        $a = preg_split('//u', $a, -1, PREG_SPLIT_NO_EMPTY);
+        $b = preg_split('//u', $b, -1, PREG_SPLIT_NO_EMPTY);
+        $n = count($a);
+        $m = count($b);
+        $d = [];
+        for ($i = 0; $i <= $n; $i++) $d[$i][0] = $i;
+        for ($j = 0; $j <= $m; $j++) $d[0][$j] = $j;
+        for ($i = 1; $i <= $n; $i++) {
+            for ($j = 1; $j <= $m; $j++) {
+                $c = $a[$i - 1] === $b[$j - 1] ? 0 : 1;
+                $d[$i][$j] = min($d[$i - 1][$j] + 1, $d[$i][$j - 1] + 1, $d[$i - 1][$j - 1] + $c);
+                if ($i > 1 && $j > 1 && $a[$i - 1] === $b[$j - 2] && $a[$i - 2] === $b[$j - 1]) {
+                    $d[$i][$j] = min($d[$i][$j], $d[$i - 2][$j - 2] + 1);
+                }
+            }
+        }
+        return $d[$n][$m];
+    }
 
     private function normalize(string $s): string
     {
