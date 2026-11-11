@@ -193,6 +193,7 @@
                 'title' => 'Kasir Cepat, Struk Langsung Keluar',
                 'text' => 'Pilih menu, hitung, bayar, cetak. Untuk kafe, resto, dan bakery yang tidak mau antrean menumpuk.',
                 'cta' => 'Coba Gratis',
+                'href' => $waLink,
                 'alt' => 'Tablet kasir Yoka POS dan printer struk',
             ],
             [
@@ -202,7 +203,19 @@
                 'title' => 'Pantau Toko dari Mana Saja',
                 'text' => 'Penjualan, stok, dan shift kasir bisa dicek dari HP, tanpa harus menunggu laporan akhir hari.',
                 'cta' => 'Jadwalkan Demo',
+                'href' => $waLink,
                 'alt' => 'Pemilik toko memantau penjualan dari HP di samping kasir Yoka POS',
+            ],
+            [
+                'bg' => '#075f40',
+                'img' => asset('images/about/dashboard-tim.webp'),
+                'imgClass' => 'right-[-42%] bottom-0 w-[175%] sm:right-[-18%] sm:w-[135%] md:right-[-8%] md:w-[112%] lg:right-0 lg:w-[72%] max-w-none',
+                'maskStop' => '28%',
+                'title' => 'Satu Sistem untuk Seluruh Operasional',
+                'text' => 'Transaksi, stok, pelanggan, shift, dan laporan terhubung dalam satu sistem yang siap dipakai seluruh tim.',
+                'cta' => 'Jelajahi Fitur',
+                'href' => route('features.show', 'transaksi-kasir'),
+                'alt' => 'Tim Yoka POS memantau operasional toko melalui dashboard di laptop',
             ],
         ];
     @endphp
@@ -213,7 +226,7 @@
         x-init="start()"
         @mouseenter="hover = true" @mouseleave="hover = false"
         class="relative overflow-hidden h-[700px] md:h-[780px] lg:h-[720px] transition-colors duration-700"
-        :style="'background-color:' + ['{{ $slides[0]['bg'] }}','{{ $slides[1]['bg'] }}'][i]"
+        :style="'background-color:' + ['{{ $slides[0]['bg'] }}','{{ $slides[1]['bg'] }}','{{ $slides[2]['bg'] }}'][i]"
         aria-roledescription="carousel" aria-label="Yoka POS"
     >
         @foreach ($slides as $k => $s)
@@ -221,14 +234,14 @@
                  :class="i === {{ $k }} ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'"
                  :aria-hidden="i !== {{ $k }}">
                 <img src="{{ $s['img'] }}" alt="{{ $s['alt'] }}" class="absolute select-none {{ $s['imgClass'] }}"
-                     style="-webkit-mask-image:linear-gradient(to right,transparent 0,#000 8%);mask-image:linear-gradient(to right,transparent 0,#000 8%)"
+                     style="-webkit-mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }});mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }})"
                      @if ($k === 0) fetchpriority="high" @else loading="lazy" @endif>
                 <div class="relative max-w-[1200px] mx-auto px-6 h-full flex items-start lg:items-center pt-[104px] lg:pt-0">
                     <div class="max-w-[520px] lg:pb-8">
                         <h1 class="text-[34px] md:text-[48px] font-extrabold leading-[1.15] text-white mb-5">{{ $s['title'] }}</h1>
                         <p class="text-base md:text-lg text-white/90 mb-8 max-w-[440px]">{{ $s['text'] }}</p>
                         <div class="flex flex-wrap gap-3">
-                            <a href="{{ $waLink }}" target="_blank" class="px-5 sm:px-7 py-3 sm:py-3.5 rounded-full bg-white text-emerald-700 font-bold text-[15px] sm:text-base hover:bg-emerald-50 transition-colors">{{ $s['cta'] }}</a>
+                            <a href="{{ $s['href'] }}" @if (str_starts_with($s['href'], 'https://wa.me/')) target="_blank" @endif class="px-5 sm:px-7 py-3 sm:py-3.5 rounded-full bg-white text-emerald-700 font-bold text-[15px] sm:text-base hover:bg-emerald-50 transition-colors">{{ $s['cta'] }}</a>
                             <a href="{{ $waLink }}" target="_blank" class="px-5 sm:px-7 py-3 sm:py-3.5 rounded-full border border-white/70 text-white font-bold text-[15px] sm:text-base hover:bg-white/10 transition-colors">WhatsApp Kami</a>
                         </div>
                     </div>
