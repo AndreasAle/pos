@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\OutletController;
 use App\Http\Controllers\UserController;
@@ -32,6 +33,7 @@ use Illuminate\Support\Facades\Route;
 
 // ── Public ───────────────────────────────────────────────────────────────────
 Route::get('/', fn() => view('landing'))->name('landing');
+Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('features.show');
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
