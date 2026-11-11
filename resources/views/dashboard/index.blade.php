@@ -29,63 +29,40 @@
     $rp       = fn($v) => 'Rp ' . number_format($v, 0, ',', '.');
 @endphp
 
-{{-- Hero --}}
-<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 text-white p-6 sm:p-8 mt-2 mb-6 shadow-xl shadow-slate-200">
-    <div class="absolute -top-24 -right-16 w-80 h-80 rounded-full bg-emerald-400/20 blur-3xl pointer-events-none"></div>
-    <div class="absolute -bottom-32 left-1/3 w-72 h-72 rounded-full bg-teal-400/10 blur-3xl pointer-events-none"></div>
+@push('styles')
+<style>
+    .dash { --navy:#0B1B3F; --green:#16A34A; --soft:#ECFDF3; --border:#E5E7EB; --muted:#64748B; }
+    .dash .fade-up { opacity:0; transform:translateY(14px); animation:dash-up .6s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i,0) * 80ms); }
+    @keyframes dash-up { to { opacity:1; transform:none } }
+    .anim-float { animation:dash-float 5s ease-in-out infinite }
+    .anim-sway { animation:dash-sway 4s ease-in-out infinite }
+    .anim-drift { animation:dash-drift 9s ease-in-out infinite alternate }
+    .anim-twinkle { animation:dash-twinkle 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
+    .anim-coin { animation:dash-coin 3.2s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
+    .anim-sign { animation:dash-sign 2.8s ease-in-out infinite }
+    .anim-awning { animation:dash-awning 6s ease-in-out infinite; transform-box:fill-box; transform-origin:top }
+    .anim-bar { transform-box:fill-box; transform-origin:bottom; animation:dash-bar 3.6s ease-in-out infinite }
+    .anim-line { stroke-dasharray:1; stroke-dashoffset:1; animation:dash-line 3.6s ease-in-out infinite }
+    .anim-pop { animation:dash-pop 3.6s ease-in-out infinite }
+    @keyframes dash-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+    @keyframes dash-sway { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(4deg)} }
+    @keyframes dash-drift { from{transform:translateX(-6px)} to{transform:translateX(10px)} }
+    @keyframes dash-twinkle { 0%,100%{opacity:.35;transform:scale(.7)} 50%{opacity:1;transform:scale(1.1)} }
+    @keyframes dash-coin { 0%,100%{transform:translateY(0) rotateY(0)} 50%{transform:translateY(-9px) rotateY(180deg)} }
+    @keyframes dash-sign { 0%,100%{opacity:1} 92%{opacity:1} 95%{opacity:.35} 98%{opacity:1} }
+    @keyframes dash-awning { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.06)} }
+    @keyframes dash-bar { 0%{transform:scaleY(0)} 25%,80%{transform:scaleY(1)} 100%{transform:scaleY(0)} }
+    @keyframes dash-line { 0%,15%{stroke-dashoffset:1} 45%,85%{stroke-dashoffset:0} 100%{stroke-dashoffset:-1} }
+    @keyframes dash-pop { 0%,45%{transform:scale(0)} 58%{transform:scale(1.2)} 66%,85%{transform:scale(1)} 100%{transform:scale(0)} }
+    .dash .pulse-dot { animation:dash-dot 2s ease-out infinite }
+    @keyframes dash-dot { 0%{box-shadow:0 0 0 0 currentColor} 70%{box-shadow:0 0 0 7px transparent} 100%{box-shadow:0 0 0 0 transparent} }
+    @media (prefers-reduced-motion: reduce) { .dash *, .dash svg * { animation:none !important } .dash .fade-up { opacity:1; transform:none } .anim-bar{transform:none} .anim-line{stroke-dashoffset:0} }
+</style>
+@endpush
 
-    <div class="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-        <div>
-            <p class="text-emerald-300 text-sm font-medium">{{ now()->isoFormat('dddd, D MMMM Y') }}</p>
-            <h2 class="text-2xl sm:text-3xl font-extrabold mt-1">{{ $greet }}, {{ $first }}</h2>
-            <p class="text-slate-300 mt-1.5 text-sm">
-                Ringkasan <span class="text-white font-semibold">{{ $currentBusiness->name }}</span> hari ini.
-                @if($summary['todayOrders'] > 0)
-                    Sudah <span class="text-white font-semibold">{{ number_format($summary['todayOrders']) }} transaksi</span> masuk.
-                @else
-                    Belum ada transaksi, semangat membuka hari!
-                @endif
-            </p>
-        </div>
+<div class="dash text-[#0B1B3F]">
 
-        <div class="flex flex-wrap gap-3">
-            @if(in_array($role, ['owner','admin','cashier']))
-            <a href="{{ route('pos.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-semibold text-sm transition-colors shadow-lg shadow-emerald-900/30">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                Buka Kasir
-            </a>
-            @endif
-            @if(in_array($role, ['owner','admin']))
-            <a href="{{ route('reports.sales') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 font-semibold text-sm transition-colors">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-                Laporan
-            </a>
-            <a href="{{ route('products.index') }}" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 font-semibold text-sm transition-colors">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
-                Produk
-            </a>
-            @endif
-        </div>
-    </div>
-
-    {{-- Week strip --}}
-    <div class="relative grid grid-cols-3 gap-4 mt-7 pt-6 border-t border-white/10">
-        <div>
-            <p class="text-xs uppercase tracking-wider text-slate-400">Omzet 7 hari</p>
-            <p class="text-lg sm:text-xl font-bold mt-1">{{ $rp($week) }}</p>
-        </div>
-        <div>
-            <p class="text-xs uppercase tracking-wider text-slate-400">Transaksi 7 hari</p>
-            <p class="text-lg sm:text-xl font-bold mt-1">{{ number_format($weekOrd) }}</p>
-        </div>
-        <div>
-            <p class="text-xs uppercase tracking-wider text-slate-400">Rata-rata / hari</p>
-            <p class="text-lg sm:text-xl font-bold mt-1">{{ $rp($n ? round($week / $n) : 0) }}</p>
-        </div>
-    </div>
-</div>
-
-{{-- Trial banner --}}
+{{-- Banner trial --}}
 @if(config('pos.features.subscription') && $sub && $sub->status === 'trial' && $sub->ends_at)
     <div x-data="{
             endsAt: new Date('{{ $sub->ends_at->copy()->endOfDay()->toIso8601String() }}').getTime(),
@@ -101,252 +78,309 @@
             }
          }"
          x-init="tick(); setInterval(() => tick(), 1000)"
-         class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+         class="fade-up mt-4 mb-6 rounded-xl border border-[#BBF7D0] bg-[#ECFDF3] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
-            <span class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+            <span class="w-10 h-10 rounded-lg bg-[#16A34A] text-white flex items-center justify-center shrink-0">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </span>
             <div>
-                <p class="font-semibold text-sm text-emerald-900">Trial gratis aktif, semua fitur terbuka penuh</p>
-                <p class="text-xs text-emerald-700">Sisa waktu: <span class="font-mono font-semibold" x-text="remaining"></span> &middot; berakhir {{ $sub->ends_at->format('d M Y') }}</p>
+                <p class="font-semibold text-sm">Trial gratis aktif, semua fitur terbuka penuh</p>
+                <p class="text-xs text-[#166534]">Sisa waktu: <span class="font-mono font-semibold" x-text="remaining"></span> &middot; berakhir {{ $sub->ends_at->format('d M Y') }}</p>
             </div>
         </div>
         @if($user->isOwner())
-        <a href="{{ route('saas.current') }}" class="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors">Upgrade Sekarang</a>
+        <a href="{{ route('saas.current') }}" class="shrink-0 h-10 inline-flex items-center px-4 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors">Upgrade Sekarang</a>
         @endif
     </div>
 @endif
 
-{{-- Outlet filter --}}
-@if(count($outlets) > 1)
-<div class="mb-5 flex flex-wrap items-center gap-2">
-    <span class="text-sm text-gray-500 font-medium mr-1">Outlet:</span>
-    <a href="{{ route('dashboard') }}"
-       class="px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors {{ !$outletId ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400' }}">
-        Semua Outlet
-    </a>
-    @foreach($outlets as $outlet)
-    <a href="{{ route('dashboard', ['outlet_id' => $outlet->id]) }}"
-       class="px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors {{ $outletId == $outlet->id ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400' }}">
-        {{ $outlet->name }}
-    </a>
-    @endforeach
-</div>
-@endif
-
-{{-- KPI cards --}}
 @php
-    $kpis = [
-        ['label' => 'Omzet Hari Ini', 'value' => $rp($summary['todayRevenue']), 'sub' => $summary['todayOrders'] . ' transaksi', 'delta' => $revDelta, 'tone' => 'emerald',
-         'path' => 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8V6m0 12v-2m0-10v1m0 10v1m9-6a9 9 0 11-18 0 9 9 0 0118 0z'],
-        ['label' => 'Transaksi', 'value' => number_format($summary['todayOrders']), 'sub' => 'kemarin ' . number_format($ordY), 'delta' => $ordDelta, 'tone' => 'sky',
-         'path' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6m-6 7l2 2 4-4'],
-        ['label' => 'Estimasi Profit', 'value' => $rp($summary['todayProfit']), 'sub' => $margin !== null ? 'margin ' . $margin . '%' : 'berdasarkan harga modal', 'delta' => null, 'tone' => 'violet',
-         'path' => 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'],
-        ['label' => 'Rata-rata Order', 'value' => $rp($summary['avgOrder']), 'sub' => 'per transaksi', 'delta' => null, 'tone' => 'amber',
-         'path' => 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z'],
-    ];
-    $tones = [
-        'emerald' => 'from-emerald-500 to-teal-500 shadow-emerald-200',
-        'sky'     => 'from-sky-500 to-blue-500 shadow-sky-200',
-        'violet'  => 'from-violet-500 to-purple-500 shadow-violet-200',
-        'amber'   => 'from-amber-400 to-orange-500 shadow-amber-200',
-    ];
+    $isManager   = in_array($role, ['owner','admin']);
+    $lowCount    = count($lowStock);
+    $iconCash    = 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8V6m0 12v-2m9-6a9 9 0 11-18 0 9 9 0 0118 0z';
 @endphp
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-    @foreach($kpis as $k)
-    <div class="group bg-white rounded-2xl border border-gray-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-start justify-between">
-            <div class="w-11 h-11 rounded-xl bg-gradient-to-br {{ $tones[$k['tone']] }} text-white flex items-center justify-center shadow-lg">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $k['path'] }}"/></svg>
+
+<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-4">
+
+    {{-- ============ KOLOM KIRI ============ --}}
+    <div class="space-y-4 min-w-0">
+
+        {{-- Greeting --}}
+        <section class="fade-up relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-gradient-to-br from-white via-white to-[#ECFDF3] p-6" style="--i:0">
+            <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_260px] gap-4 items-center">
+                <div>
+                    <p class="text-xs font-semibold text-[#16A34A] uppercase tracking-wide">{{ now()->isoFormat('dddd, D MMMM Y') }}</p>
+                    <h2 class="mt-1 text-[28px] leading-9 font-semibold">{{ $greet }}, {{ $first }}</h2>
+                    <p class="mt-1 text-sm text-[#64748B] max-w-sm">Berikut ringkasan yang terjadi di <span class="font-medium text-[#0B1B3F]">{{ $currentBusiness->name }}</span> hari ini.</p>
+
+                    <div class="mt-5 flex flex-wrap gap-x-10 gap-y-4">
+                        <div x-data="{ v: 0, t: {{ (int) $summary['todayRevenue'] }}, init() { const s = performance.now(); const f = n => { const p = Math.min((n - s) / 1100, 1); this.v = Math.round(this.t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f) }; requestAnimationFrame(f) } }">
+                            <p class="text-sm font-semibold">Total Penjualan Hari Ini</p>
+                            <p class="mt-0.5 text-[32px] leading-10 font-semibold tracking-tight">Rp <span x-text="v.toLocaleString('id-ID')">{{ number_format($summary['todayRevenue'], 0, ',', '.') }}</span></p>
+                        </div>
+                        <div x-data="{ v: 0, t: {{ (int) $summary['todayOrders'] }}, init() { const s = performance.now(); const f = n => { const p = Math.min((n - s) / 900, 1); this.v = Math.round(this.t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f) }; requestAnimationFrame(f) } }">
+                            <p class="text-sm font-semibold">Total Transaksi</p>
+                            <p class="mt-0.5 text-[32px] leading-10 font-semibold tracking-tight" x-text="v.toLocaleString('id-ID')">{{ number_format($summary['todayOrders']) }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden sm:block h-[210px]">@include('dashboard._store')</div>
             </div>
-            @if($k['delta'] !== null)
-                <span class="inline-flex items-center gap-0.5 text-xs font-semibold rounded-full px-2 py-1 {{ $k['delta'] >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600' }}">
-                    <svg class="w-3 h-3 {{ $k['delta'] >= 0 ? '' : 'rotate-180' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>
-                    {{ abs($k['delta']) }}%
-                </span>
+        </section>
+
+        {{-- Daftar aksi --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]" style="--i:1">
+            {{-- 1: transaksi --}}
+            <div class="flex items-center gap-3 px-5 py-3.5">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $summary['todayOrders'] > 0 ? 'bg-[#16A34A] text-[#16A34A]' : 'bg-sky-500 text-sky-500' }} pulse-dot"></span>
+                <p class="flex-1 text-sm">
+                    @if($summary['todayOrders'] > 0)
+                        {{ number_format($summary['todayOrders']) }} transaksi hari ini dengan omzet <span class="font-semibold">{{ $rp($summary['todayRevenue']) }}</span>.
+                    @else
+                        Belum ada transaksi hari ini.
+                    @endif
+                </p>
+                @if(in_array($role, ['owner','admin','cashier']))
+                <a href="{{ $summary['todayOrders'] > 0 ? route('orders.index') : route('pos.index') }}" class="shrink-0 h-9 inline-flex items-center px-4 rounded-lg border border-[#16A34A] text-[#16A34A] text-sm font-semibold hover:bg-[#ECFDF3] transition-colors">{{ $summary['todayOrders'] > 0 ? 'Lihat Order' : 'Buka Kasir' }}</a>
+                @endif
+            </div>
+            {{-- 2: stok --}}
+            <div class="flex items-center gap-3 px-5 py-3.5">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $lowCount ? 'bg-amber-500 text-amber-500 pulse-dot' : 'bg-slate-400' }}"></span>
+                <p class="flex-1 text-sm">{{ $lowCount ? 'Stok menipis: ' . $lowCount . ' bahan baku.' : 'Stok menipis: 0 bahan baku.' }}</p>
+                @if($isManager && Route::has('ingredients.index'))
+                <a href="{{ route('ingredients.index') }}" class="shrink-0 h-9 inline-flex items-center px-4 rounded-lg border border-[#E5E7EB] text-[#0B1B3F] text-sm font-semibold hover:bg-slate-50 transition-colors">Lihat Stok</a>
+                @endif
+            </div>
+            {{-- 3: produk --}}
+            @if($isManager && count($topProducts) === 0)
+            <div class="flex items-center gap-3 px-5 py-3.5">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0 bg-slate-400"></span>
+                <p class="flex-1 text-sm">Coba tambahkan produk untuk mulai berjualan.</p>
+                <a href="{{ route('products.create') }}" class="shrink-0 h-9 inline-flex items-center px-4 rounded-lg border border-[#16A34A] text-[#16A34A] text-sm font-semibold hover:bg-[#ECFDF3] transition-colors">Tambah Produk</a>
+            </div>
+            @endif
+        </section>
+
+        {{-- Banner laporan --}}
+        @if($isManager)
+        <section class="fade-up relative overflow-hidden rounded-xl border border-[#BBF7D0] bg-gradient-to-r from-[#ECFDF3] via-[#F3FDF7] to-white p-6" style="--i:2">
+            <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-4 items-center">
+                <div>
+                    <h3 class="text-lg font-semibold">Cek laporan penjualan Anda</h3>
+                    <p class="mt-1 text-sm text-[#64748B] max-w-md">Lihat performa toko, produk terlaris, dan laba usaha dalam satu tempat.</p>
+                    <a href="{{ route('reports.sales') }}" class="group mt-4 h-10 inline-flex items-center gap-2 px-5 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
+                        Lihat Laporan
+                        <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </a>
+                </div>
+                <div class="hidden sm:block h-[140px]">@include('dashboard._report')</div>
+            </div>
+        </section>
+        @endif
+
+        {{-- Grafik 7 hari --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-6" style="--i:3">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                    <h3 class="text-lg font-semibold">Penjualan 7 Hari Terakhir</h3>
+                    <p class="text-xs text-[#64748B] mt-0.5">Omzet harian dan jumlah transaksi</p>
+                </div>
+                <div class="flex items-center gap-4 text-xs text-[#64748B]">
+                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#16A34A] inline-block"></span>Omzet</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-[#A855F7] inline-block rounded"></span>Transaksi</span>
+                </div>
+            </div>
+            <div style="position:relative; height:260px;"><canvas id="salesChart"></canvas></div>
+        </section>
+
+        {{-- Transaksi terbaru --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:4">
+            <div class="px-6 py-5 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                    <h3 class="text-lg font-semibold">Transaksi Terbaru</h3>
+                    <p class="text-xs text-[#64748B] mt-0.5">Aktivitas penjualan terakhir</p>
+                </div>
+                <a href="{{ route('orders.index') }}" class="text-sm font-semibold text-[#16A34A] hover:text-[#15803D]">Lihat Semua &rarr;</a>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-slate-50 border-y border-[#E5E7EB]">
+                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">No. Order</th>
+                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Kasir</th>
+                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Status</th>
+                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Total</th>
+                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-[11px] uppercase tracking-wider">Waktu</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#E5E7EB]">
+                        @php
+                            $statusColors = ['paid' => 'green', 'draft' => 'yellow', 'cancelled' => 'red', 'refunded' => 'blue'];
+                            $labels = ['paid' => 'Lunas', 'draft' => 'Draft', 'cancelled' => 'Batal', 'refunded' => 'Refund'];
+                        @endphp
+                        @forelse($recentOrders as $order)
+                        <tr class="hover:bg-slate-50/70 transition-colors">
+                            <td class="px-6 py-3.5"><a href="{{ route('orders.show', $order['id']) }}" class="font-mono text-xs font-semibold text-[#16A34A] hover:underline">{{ $order['order_number'] }}</a></td>
+                            <td class="px-6 py-3.5">
+                                <span class="flex items-center gap-2 text-slate-700">
+                                    <span class="w-6 h-6 rounded-full bg-[#ECFDF3] text-[#16A34A] text-[11px] font-bold flex items-center justify-center">{{ strtoupper(substr($order['user']['name'] ?? '-', 0, 1)) }}</span>
+                                    {{ $order['user']['name'] ?? '-' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-3.5"><x-badge :color="$statusColors[$order['status']] ?? 'gray'">{{ $labels[$order['status']] ?? $order['status'] }}</x-badge></td>
+                            <td class="px-6 py-3.5 text-right font-bold">{{ $rp($order['grand_total']) }}</td>
+                            <td class="px-6 py-3.5 text-right text-[#64748B] text-xs">{{ \Carbon\Carbon::parse($order['created_at'])->diffForHumans() }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="5" class="px-6 py-12 text-center text-sm text-[#64748B]">Belum ada transaksi</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        @if(count($outletPerformance) > 1)
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-6" style="--i:5">
+            <h3 class="text-lg font-semibold mb-4">Performa Outlet Hari Ini</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                @foreach($outletPerformance as $perf)
+                <div class="rounded-lg border border-[#E5E7EB] bg-slate-50/70 p-4">
+                    <p class="text-sm font-medium text-[#64748B]">{{ $perf['outlet_name'] }}</p>
+                    <p class="text-xl font-semibold mt-1">{{ $rp($perf['revenue']) }}</p>
+                    <p class="text-xs text-[#64748B]">{{ $perf['orders'] }} transaksi</p>
+                </div>
+                @endforeach
+            </div>
+        </section>
+        @endif
+    </div>
+
+    {{-- ============ KOLOM KANAN ============ --}}
+    <aside class="space-y-4 min-w-0">
+
+        {{-- Filter --}}
+        <div class="fade-up flex flex-wrap items-center gap-2" style="--i:1">
+            <span class="h-10 inline-flex items-center gap-2 px-3.5 rounded-lg border border-[#E5E7EB] bg-white text-sm font-medium">
+                <svg class="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"/></svg>
+                Hari ini
+            </span>
+            @if(count($outlets) > 1)
+            <div class="relative">
+                <select onchange="window.location = this.value" class="appearance-none h-10 pl-3.5 pr-9 rounded-lg border border-[#E5E7EB] bg-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#16A34A]/40 focus:border-[#16A34A] cursor-pointer hover:border-[#16A34A] transition-colors">
+                    <option value="{{ route('dashboard') }}" {{ !$outletId ? 'selected' : '' }}>Semua Outlet</option>
+                    @foreach($outlets as $outlet)
+                    <option value="{{ route('dashboard', ['outlet_id' => $outlet->id]) }}" {{ $outletId == $outlet->id ? 'selected' : '' }}>{{ $outlet->name }}</option>
+                    @endforeach
+                </select>
+                <svg class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </div>
             @endif
         </div>
-        <p class="mt-4 text-xs font-medium text-gray-500 uppercase tracking-wider">{{ $k['label'] }}</p>
-        <p class="mt-1 text-2xl font-extrabold text-gray-900 truncate tracking-tight">{{ $k['value'] }}</p>
-        <p class="mt-1 text-xs text-gray-400">{{ $k['sub'] }}@if($k['delta'] !== null && $k['label'] === 'Omzet Hari Ini') &middot; vs kemarin @endif</p>
-    </div>
-    @endforeach
-</div>
 
-{{-- Charts --}}
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
-    <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-            <div>
-                <h3 class="font-bold text-gray-900">Penjualan 7 Hari Terakhir</h3>
-                <p class="text-xs text-gray-400 mt-0.5">Omzet harian dan jumlah transaksi</p>
-            </div>
-            <div class="flex items-center gap-4 text-xs text-gray-500">
-                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block"></span>Omzet</span>
-                <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-indigo-500 inline-block rounded"></span>Transaksi</span>
-            </div>
-        </div>
-        <div style="position:relative; height:280px;">
-            <canvas id="salesChart"></canvas>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6">
-        <h3 class="font-bold text-gray-900">Metode Pembayaran</h3>
-        <p class="text-xs text-gray-400 mt-0.5 mb-5">Hari ini</p>
-        @if(count($paymentBreakdown) > 0)
-        @php $payTotal = collect($paymentBreakdown)->sum('total'); $dots = ['bg-emerald-500','bg-blue-500','bg-violet-500','bg-amber-500','bg-red-500','bg-gray-500']; @endphp
-        <div class="relative" style="height:170px;">
-            <canvas id="paymentChart"></canvas>
-            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span class="text-[11px] text-gray-400 uppercase tracking-wider">Total</span>
-                <span class="text-base font-extrabold text-gray-900">{{ $rp($payTotal) }}</span>
-            </div>
-        </div>
-        <div class="mt-5 space-y-3">
-            @foreach($paymentBreakdown as $i => $p)
-            <div class="flex items-center justify-between text-sm">
-                <span class="flex items-center gap-2 text-gray-600 capitalize">
-                    <span class="w-2.5 h-2.5 rounded-full {{ $dots[$i % 6] }}"></span>{{ $p['payment_method'] }}
+        {{-- Mini card: Total Penjualan --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5 hover:shadow-md transition-shadow" style="--i:2">
+            <div class="flex items-start justify-between gap-2">
+                <p class="text-sm font-semibold">Total Penjualan</p>
+                @if($revDelta !== null)
+                <span class="inline-flex items-center gap-0.5 text-xs font-semibold {{ $revDelta >= 0 ? 'text-[#16A34A]' : 'text-red-600' }}">
+                    <svg class="w-3 h-3 {{ $revDelta >= 0 ? '' : 'rotate-180' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>{{ abs($revDelta) }}%
+                    <span class="text-[#64748B] font-normal ml-1">vs hari sebelumnya</span>
                 </span>
-                <span class="text-right">
-                    <span class="font-semibold text-gray-900">{{ $rp($p['total']) }}</span>
-                    <span class="text-xs text-gray-400 ml-1">{{ $p['count'] }}x</span>
-                </span>
+                @else
+                <span class="text-xs text-[#64748B]">0% vs hari sebelumnya</span>
+                @endif
             </div>
-            @endforeach
-        </div>
-        @else
-        <div class="flex flex-col items-center justify-center h-52 text-gray-400">
-            <div class="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            </div>
-            <p class="text-sm">Belum ada transaksi hari ini</p>
-        </div>
-        @endif
-    </div>
-</div>
+            <p class="mt-1 text-[32px] leading-10 font-semibold tracking-tight">{{ $rp($summary['todayRevenue']) }}</p>
+            <div class="mt-3" style="position:relative;height:120px"><canvas id="miniRevenue"></canvas></div>
+        </section>
 
-{{-- Bottom row --}}
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
-    <div class="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6">
-        <h3 class="font-bold text-gray-900">Menu Terlaris</h3>
-        <p class="text-xs text-gray-400 mt-0.5 mb-4">Hari ini</p>
-        @php $maxRev = collect($topProducts)->max('total_revenue') ?: 1; @endphp
-        @forelse($topProducts as $i => $p)
-        <div class="py-3 {{ !$loop->last ? 'border-b border-gray-100' : '' }}">
-            <div class="flex items-center gap-3">
-                <span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0
-                             {{ $i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500' }}">{{ $i + 1 }}</span>
-                <div class="flex-1 min-w-0">
-                    <p class="text-sm font-semibold text-gray-900 truncate">{{ $p['product_name'] }}</p>
-                    <p class="text-xs text-gray-400">{{ number_format($p['total_qty'], 0, ',', '.') }} terjual</p>
+        {{-- Mini card: Total Transaksi --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5 hover:shadow-md transition-shadow" style="--i:3">
+            <div class="flex items-start justify-between gap-2">
+                <p class="text-sm font-semibold">Total Transaksi</p>
+                @if($ordDelta !== null)
+                <span class="inline-flex items-center gap-0.5 text-xs font-semibold {{ $ordDelta >= 0 ? 'text-[#16A34A]' : 'text-red-600' }}">
+                    <svg class="w-3 h-3 {{ $ordDelta >= 0 ? '' : 'rotate-180' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>{{ abs($ordDelta) }}%
+                    <span class="text-[#64748B] font-normal ml-1">vs hari sebelumnya</span>
+                </span>
+                @else
+                <span class="text-xs text-[#64748B]">0% vs hari sebelumnya</span>
+                @endif
+            </div>
+            <p class="mt-1 text-[32px] leading-10 font-semibold tracking-tight">{{ number_format($summary['todayOrders']) }}</p>
+            <div class="mt-3" style="position:relative;height:120px"><canvas id="miniOrders"></canvas></div>
+        </section>
+
+        {{-- Metode pembayaran --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5" style="--i:4">
+            <h3 class="text-base font-semibold">Metode Pembayaran</h3>
+            <p class="text-xs text-[#64748B] mt-0.5 mb-4">Hari ini</p>
+            @if(count($paymentBreakdown) > 0)
+            @php $payTotal = collect($paymentBreakdown)->sum('total'); $dots = ['bg-[#16A34A]','bg-blue-500','bg-[#A855F7]','bg-amber-500','bg-red-500','bg-slate-500']; @endphp
+            <div class="relative mx-auto" style="height:160px;max-width:220px">
+                <canvas id="paymentChart"></canvas>
+                <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span class="text-[11px] text-[#64748B] uppercase tracking-wider">Total</span>
+                    <span class="text-base font-semibold">{{ $rp($payTotal) }}</span>
                 </div>
-                <span class="text-sm font-bold text-gray-900">{{ $rp($p['total_revenue']) }}</span>
             </div>
-            <div class="mt-2 ml-10 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500" style="width: {{ max(4, round($p['total_revenue'] / $maxRev * 100)) }}%"></div>
+            <div class="mt-4 space-y-2.5">
+                @foreach($paymentBreakdown as $i => $p)
+                <div class="flex items-center justify-between text-sm">
+                    <span class="flex items-center gap-2 text-slate-600 capitalize"><span class="w-2.5 h-2.5 rounded-full {{ $dots[$i % 6] }}"></span>{{ $p['payment_method'] }}</span>
+                    <span class="text-right"><span class="font-semibold">{{ $rp($p['total']) }}</span><span class="text-xs text-[#64748B] ml-1">{{ $p['count'] }}x</span></span>
+                </div>
+                @endforeach
             </div>
-        </div>
-        @empty
-        <div class="flex flex-col items-center justify-center py-12 text-gray-400">
-            <div class="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+            @else
+            <div class="flex flex-col items-center justify-center py-8 text-[#64748B]">
+                <div class="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center mb-2">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                </div>
+                <p class="text-sm">Belum ada transaksi hari ini</p>
             </div>
-            <p class="text-sm">Belum ada data penjualan</p>
-        </div>
-        @endforelse
-    </div>
+            @endif
+        </section>
 
-    <div class="xl:col-span-2 bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
-        <div class="px-6 py-5 flex flex-wrap items-center justify-between gap-2">
-            <div>
-                <h3 class="font-bold text-gray-900">Transaksi Terbaru</h3>
-                <p class="text-xs text-gray-400 mt-0.5">Aktivitas penjualan terakhir</p>
+        {{-- Produk terlaris --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5" style="--i:5">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-semibold">Produk Terlaris</h3>
+                @if($isManager)<a href="{{ route('reports.products') }}" class="text-xs font-semibold text-[#16A34A] hover:text-[#15803D]">Lihat Semua &rarr;</a>@endif
             </div>
-            <a href="{{ route('orders.index') }}" class="text-sm font-semibold text-emerald-600 hover:text-emerald-700">Lihat semua &rarr;</a>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-gray-50/80 border-y border-gray-100">
-                        <th class="text-left px-6 py-3 font-semibold text-gray-400 text-[11px] uppercase tracking-wider">No. Order</th>
-                        <th class="text-left px-6 py-3 font-semibold text-gray-400 text-[11px] uppercase tracking-wider">Kasir</th>
-                        <th class="text-left px-6 py-3 font-semibold text-gray-400 text-[11px] uppercase tracking-wider">Status</th>
-                        <th class="text-right px-6 py-3 font-semibold text-gray-400 text-[11px] uppercase tracking-wider">Total</th>
-                        <th class="text-right px-6 py-3 font-semibold text-gray-400 text-[11px] uppercase tracking-wider">Waktu</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100">
-                    @php
-                        $statusColors = ['paid' => 'green', 'draft' => 'yellow', 'cancelled' => 'red', 'refunded' => 'blue'];
-                        $labels = ['paid' => 'Lunas', 'draft' => 'Draft', 'cancelled' => 'Batal', 'refunded' => 'Refund'];
-                    @endphp
-                    @forelse($recentOrders as $order)
-                    <tr class="hover:bg-gray-50/60 transition-colors">
-                        <td class="px-6 py-3.5">
-                            <a href="{{ route('orders.show', $order['id']) }}" class="font-mono text-xs font-semibold text-emerald-700 hover:underline">{{ $order['order_number'] }}</a>
-                        </td>
-                        <td class="px-6 py-3.5">
-                            <span class="flex items-center gap-2 text-gray-700">
-                                <span class="w-6 h-6 rounded-full bg-gray-100 text-gray-500 text-[11px] font-bold flex items-center justify-center">{{ strtoupper(substr($order['user']['name'] ?? '-', 0, 1)) }}</span>
-                                {{ $order['user']['name'] ?? '-' }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-3.5">
-                            <x-badge :color="$statusColors[$order['status']] ?? 'gray'">{{ $labels[$order['status']] ?? $order['status'] }}</x-badge>
-                        </td>
-                        <td class="px-6 py-3.5 text-right font-bold text-gray-900">{{ $rp($order['grand_total']) }}</td>
-                        <td class="px-6 py-3.5 text-right text-gray-400 text-xs whitespace-nowrap">{{ \Carbon\Carbon::parse($order['created_at'])->diffForHumans() }}</td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="px-6 py-14 text-center text-sm text-gray-400">Belum ada transaksi</td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+            @php $maxRev = collect($topProducts)->max('total_revenue') ?: 1; @endphp
+            @forelse($topProducts as $i => $p)
+            <div class="py-3 {{ !$loop->last ? 'border-b border-[#E5E7EB]' : '' }}">
+                <div class="flex items-center gap-3">
+                    <span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 {{ $i === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500' }}">{{ $i + 1 }}</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold truncate">{{ $p['product_name'] }}</p>
+                        <p class="text-xs text-[#64748B]">{{ number_format($p['total_qty'], 0, ',', '.') }} terjual</p>
+                    </div>
+                    <span class="text-sm font-bold">{{ $rp($p['total_revenue']) }}</span>
+                </div>
+                <div class="mt-2 ml-10 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div class="h-full rounded-full bg-gradient-to-r from-[#4ADE80] to-[#16A34A]" style="width: {{ max(4, round($p['total_revenue'] / $maxRev * 100)) }}%"></div>
+                </div>
+            </div>
+            @empty
+            <div class="flex flex-col items-center text-center py-8">
+                <svg class="w-20 h-20 anim-float" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                    <ellipse cx="40" cy="70" rx="24" ry="4" fill="#16A34A" opacity=".12"/>
+                    <path d="M40 14l22 11v26L40 62 18 51V25z" fill="#ECFDF3" stroke="#BBF7D0" stroke-width="2" stroke-linejoin="round"/>
+                    <path d="M18 25l22 11 22-11M40 36v26" stroke="#16A34A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+                    <path d="M29 19.5l22 11" stroke="#86EFAC" stroke-width="2" stroke-linecap="round"/>
+                    <g class="anim-twinkle"><path d="M64 14l1.6 3.4 3.4 1.6-3.4 1.6L64 24l-1.6-3.4L59 19l3.4-1.6z" fill="#4ADE80"/></g>
+                </svg>
+                <p class="mt-2 text-sm font-semibold">Belum ada data</p>
+                <p class="mt-1 text-xs text-[#64748B] max-w-[220px]">Data produk terlaris akan muncul setelah ada transaksi.</p>
+            </div>
+            @endforelse
+        </section>
+    </aside>
 </div>
-
-{{-- Low stock --}}
-@if(count($lowStock) > 0)
-<div class="mt-4 bg-white border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-start gap-4">
-    <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-    </span>
-    <div class="flex-1">
-        <p class="font-bold text-gray-900">Stok bahan baku menipis</p>
-        <div class="flex flex-wrap gap-2 mt-2.5">
-            @foreach($lowStock as $item)
-            <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 text-xs font-medium px-2.5 py-1 rounded-full border border-amber-200">
-                {{ $item['name'] }}
-                <span class="text-amber-600">({{ number_format($item['current_stock'], 1) }} {{ $item['unit'] }})</span>
-            </span>
-            @endforeach
-        </div>
-    </div>
-    <a href="{{ route('ingredients.index') }}" class="text-sm text-amber-700 font-semibold hover:underline shrink-0">Kelola stok &rarr;</a>
 </div>
-@endif
-
-{{-- Outlet performance --}}
-@if(count($outletPerformance) > 1)
-<div class="mt-4 bg-white rounded-2xl border border-gray-200/80 shadow-sm p-6">
-    <h3 class="font-bold text-gray-900 mb-4">Performa Outlet Hari Ini</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        @foreach($outletPerformance as $perf)
-        <div class="rounded-xl border border-gray-100 bg-gray-50/70 p-4">
-            <p class="text-sm font-medium text-gray-600">{{ $perf['outlet_name'] }}</p>
-            <p class="text-xl font-extrabold text-gray-900 mt-1">{{ $rp($perf['revenue']) }}</p>
-            <p class="text-xs text-gray-400">{{ $perf['orders'] }} transaksi</p>
-        </div>
-        @endforeach
-    </div>
-</div>
-@endif
 @endsection
 
 @push('scripts')
@@ -356,8 +390,8 @@ const salesCtx = document.getElementById('salesChart');
 if (salesCtx) {
     const g = salesCtx.getContext('2d');
     const grad = g.createLinearGradient(0, 0, 0, 280);
-    grad.addColorStop(0, 'rgba(16, 185, 129, 0.95)');
-    grad.addColorStop(1, 'rgba(20, 184, 166, 0.55)');
+    grad.addColorStop(0, 'rgba(22, 163, 74, 0.95)');
+    grad.addColorStop(1, 'rgba(74, 222, 128, 0.55)');
     new Chart(salesCtx, {
         data: {
             labels: salesData.labels,
@@ -376,11 +410,11 @@ if (salesCtx) {
                     type: 'line',
                     label: 'Transaksi',
                     data: salesData.orders,
-                    borderColor: 'rgb(99, 102, 241)',
+                    borderColor: 'rgb(168, 85, 247)',
                     borderWidth: 2.5,
                     pointRadius: 4,
                     pointBackgroundColor: '#fff',
-                    pointBorderColor: 'rgb(99, 102, 241)',
+                    pointBorderColor: 'rgb(168, 85, 247)',
                     pointBorderWidth: 2,
                     tension: 0.4,
                     order: 1,
@@ -449,7 +483,7 @@ if (payCtx) {
             labels: payData.map(p => p.payment_method.toUpperCase()),
             datasets: [{
                 data: payData.map(p => p.total),
-                backgroundColor: ['#10b981','#3b82f6','#8b5cf6','#f59e0b','#ef4444','#6b7280'],
+                backgroundColor: ['#16a34a','#3b82f6','#a855f7','#f59e0b','#ef4444','#64748b'],
                 borderWidth: 3,
                 borderColor: '#fff',
                 hoverOffset: 4,
@@ -464,5 +498,32 @@ if (payCtx) {
     });
 }
 @endif
+
+function miniLine(id, data, color, fmt) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    const h = el.parentElement.clientHeight || 120;
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, color + '55');
+    g.addColorStop(1, color + '00');
+    new Chart(el, {
+        type: 'line',
+        data: { labels: salesData.labels, datasets: [{ data: data, borderColor: color, backgroundColor: g, fill: true, borderWidth: 2.2, tension: 0.4, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: color }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutCubic' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0B1B3F', padding: 10, cornerRadius: 8, displayColors: false, callbacks: { label: c => fmt(c.raw) } } },
+            scales: {
+                x: { border: { display: false }, grid: { display: false }, ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 4 } },
+                y: { beginAtZero: true, border: { display: false }, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 }, color: '#94a3b8', maxTicksLimit: 3, callback: v => v >= 1000000 ? (v/1000000).toFixed(1) + ' jt' : v >= 1000 ? (v/1000).toFixed(0) + ' rb' : v } }
+            }
+        }
+    });
+}
+miniLine('miniRevenue', salesData.revenue, '#16A34A', v => ' Omzet: Rp ' + Intl.NumberFormat('id').format(v));
+miniLine('miniOrders', salesData.orders, '#A855F7', v => ' Transaksi: ' + v);
 </script>
 @endpush
+
