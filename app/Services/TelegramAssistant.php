@@ -63,6 +63,14 @@ class TelegramAssistant
                 => $this->lowStock($biz),
             $this->has($text, ['shift', 'kasir', 'siapa jaga', 'siapa yang jaga', 'lagi buka', 'sedang buka', 'toko buka'])
                 => $this->shifts($biz),
+            $this->has($text, ['rinci', 'rincian', 'rincikan', 'detail', 'detil', 'daftar', 'list', 'tampilkan', 'perlihatkan', 'sebutkan', 'apa saja', 'apa aja', 'satu satu', 'lengkap', 'isi'])
+                && $this->has($text, ['transaksi', 'order', 'pesanan', 'nota', 'struk', 'penjualan', 'jualan'])
+                => $this->orderList($biz, $from, $to, $label),
+            $this->has($text, ['jam berapa', 'jam ramai', 'jam sibuk', 'waktu ramai', 'paling ramai', 'paling sepi', 'jam paling'])
+                => $this->peakHours($biz, $explicit ? $from : now()->subDays(29)->startOfDay(), $explicit ? $to : now()->endOfDay(), $explicit ? $label : '30 hari terakhir'),
+            $this->has($text, ['pelanggan', 'member', 'langganan', 'customer'])
+                && $this->has($text, ['terbanyak', 'paling', 'setia', 'top', 'sering', 'terbaik', 'teratas', 'siapa'])
+                => $this->topCustomers($biz, $explicit ? $from : now()->subDays(29)->startOfDay(), $explicit ? $to : now()->endOfDay(), $explicit ? $label : '30 hari terakhir'),
             $this->has($text, ['transaksi', 'order', 'pesanan', 'nota', 'struk', 'pelanggan datang', 'pembeli', 'ramai'])
                 => $this->orders($biz, $from, $to, $label),
             $this->has($text, ['omzet', 'omset', 'pendapatan', 'pemasukan', 'penghasilan', 'uang masuk', 'jualan', 'penjualan', 'dapat berapa', 'dapet berapa', 'laku berapa', 'income', 'revenue', 'sales'])
@@ -85,8 +93,8 @@ class TelegramAssistant
 
     private function examples(): string
     {
-        return "• Omzet hari ini berapa?\n• Kemarin laku berapa transaksi?\n• Produk apa yang paling laris bulan ini?\n"
-            . "• Untung minggu ini berapa?\n• Stok apa yang mau habis?\n• Es kopi susu terjual berapa hari ini?\n• Siapa yang lagi jaga kasir?";
+        return "• Omzet hari ini berapa?\n• Kemarin laku berapa transaksi?\n• Rincikan transaksi hari ini\n• Produk apa yang paling laris bulan ini?\n"
+            . "• Untung minggu ini berapa?\n• Stok apa yang mau habis?\n• Es kopi susu terjual berapa hari ini?\n• Jam berapa paling ramai?\n• Siapa pelanggan paling sering beli?\n• Siapa yang lagi jaga kasir?";
     }
 
     private function revenue(Business $biz, Carbon $from, Carbon $to, string $label): string
@@ -124,6 +132,54 @@ class TelegramAssistant
         $lines = ["🏆 Produk paling laris {$label}:", ''];
         foreach ($rows as $i => $r) {
             $lines[] = ($i + 1) . '. ' . TelegramService::esc($r->product_name) . ' · ' . number_format($r->qty, 0, ',', '.') . ' terjual · ' . TelegramService::rp($r->total);
+        }
+        return implode("\n", $lines);
+    }
+
+    private function orderList(Business $biz, Carbon $from, Carbon $to, string $label): string
+    {
+        $q = Order::forBusiness($biz->id)->whereIn('status', ['paid', 'cancelled', 'refunded'])->whereBetween('created_at', [$from, $to]);
+        $total = (clone $q)->count();
+        if ($total === 0) return "Belum ada transaksi {$label}.";
+
+        $rows = (clone $q)->with('user')->latest()->limit(12)->get();
+        $lines = ["🧾 <b>Transaksi {$label}</b> ({$total})", ''];
+        foreach ($rows as $o) {
+            $mark = $o->status === 'cancelled' ? ' · <i>dibatalkan</i>' : ($o->status === 'refunded' ? ' · <i>refund</i>' : '');
+            $lines[] = $o->created_at->format('H:i') . ' · ' . TelegramService::esc($o->order_number) . ' · <b>' . TelegramService::rp($o->grand_total) . '</b>'
+                . ' · ' . TelegramService::esc(strtoupper((string) $o->payment_method)) . $mark;
+        }
+        if ($total > count($rows)) $lines[] = "\n… dan " . ($total - count($rows)) . ' transaksi lainnya. Lihat semuanya di menu Riwayat Order.';
+        return implode("\n", $lines);
+    }
+
+    private function peakHours(Business $biz, Carbon $from, Carbon $to, string $label): string
+    {
+        $rows = Order::forBusiness($biz->id)->paid()->whereBetween('created_at', [$from, $to])
+            ->select(DB::raw('HOUR(created_at) h'), DB::raw('COUNT(*) c'))->groupBy('h')->orderByDesc('c')->limit(3)->get();
+        if ($rows->isEmpty()) return "Belum ada transaksi {$label}.";
+
+        $lines = ["⏰ Jam paling ramai ({$label}):", ''];
+        foreach ($rows as $i => $r) {
+            $lines[] = ($i + 1) . '. Pukul ' . str_pad($r->h, 2, '0', STR_PAD_LEFT) . '.00–' . str_pad(($r->h + 1) % 24, 2, '0', STR_PAD_LEFT) . '.00 · ' . $r->c . ' transaksi';
+        }
+        $quiet = Order::forBusiness($biz->id)->paid()->whereBetween('created_at', [$from, $to])
+            ->select(DB::raw('HOUR(created_at) h'), DB::raw('COUNT(*) c'))->groupBy('h')->orderBy('c')->first();
+        if ($quiet && $rows->count() > 1) $lines[] = "\nPaling sepi sekitar pukul " . str_pad($quiet->h, 2, '0', STR_PAD_LEFT) . '.00.';
+        return implode("\n", $lines);
+    }
+
+    private function topCustomers(Business $biz, Carbon $from, Carbon $to, string $label): string
+    {
+        $rows = Order::where('orders.business_id', $biz->id)->where('orders.status', 'paid')->whereNotNull('orders.customer_id')->whereBetween('orders.created_at', [$from, $to])
+            ->join('customers', 'customers.id', '=', 'orders.customer_id')
+            ->select('customers.name', DB::raw('COUNT(*) c'), DB::raw('SUM(orders.grand_total) t'))
+            ->groupBy('customers.id', 'customers.name')->orderByDesc('t')->limit(5)->get();
+        if ($rows->isEmpty()) return "Belum ada transaksi dengan data pelanggan {$label}.";
+
+        $lines = ["👥 Pelanggan paling sering belanja ({$label}):", ''];
+        foreach ($rows as $i => $r) {
+            $lines[] = ($i + 1) . '. ' . TelegramService::esc($r->name) . ' · ' . $r->c . 'x belanja · ' . TelegramService::rp($r->t);
         }
         return implode("\n", $lines);
     }
@@ -296,13 +352,16 @@ class TelegramAssistant
         'berapa', 'transaksi', 'omzet', 'pendapatan', 'pemasukan', 'penghasilan', 'penjualan', 'jualan', 'laba', 'untung', 'keuntungan', 'profit',
         'terlaris', 'terjual', 'produk', 'stok', 'stock', 'habis', 'menipis', 'persediaan', 'shift', 'kasir', 'ringkasan', 'laporan', 'rekap',
         'kemarin', 'minggu', 'bulan', 'tahun', 'sekarang', 'pembayaran', 'tunai', 'qris', 'bantuan', 'pesanan', 'pelanggan', 'bahan', 'belanja',
-        'terima', 'kasih', 'makasih', 'halo', 'gimana', 'bagaimana', 'sudah', 'hari',
+        'terima', 'kasih', 'makasih', 'halo', 'gimana', 'bagaimana', 'sudah', 'hari', 'rincian', 'rincikan', 'tampilkan', 'daftar', 'pelanggan', 'terbanyak', 'ramai',
     ];
 
     private function expandSlang(string $text): string
     {
         $out = [];
         foreach (explode(' ', $text) as $w) {
+            // "transaksinya" -> "transaksi", "berapakah" -> "berapa"
+            if (mb_strlen($w) > 6 && str_ends_with($w, 'nya')) $w = mb_substr($w, 0, -3);
+            elseif (mb_strlen($w) > 6 && str_ends_with($w, 'kah')) $w = mb_substr($w, 0, -3);
             $out[] = self::SLANG[$w] ?? $w;
         }
         return implode(' ', $out);
