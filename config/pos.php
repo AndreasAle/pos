@@ -18,6 +18,9 @@ return [
     |
     */
 
+    // Link tombol "Hubungi Support" di sidebar (mis. https://wa.me/62812xxxx). Kosong = pakai email MAIL_FROM_ADDRESS.
+    'support_url' => env('POS_SUPPORT_URL'),
+
     'features' => [
 
         // Staff activity trail. Useful on its own, off by default to keep the

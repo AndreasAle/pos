@@ -116,8 +116,25 @@
             @endif
         </nav>
 
-        <div class="px-5 py-3 border-t border-[#E5E7EB] shrink-0 text-[11px] font-medium text-gray-400" :class="collapsed ? 'lg:hidden' : ''">
-            Yoka POS &copy; {{ now()->year }}
+        @php $supportUrl = config('pos.support_url') ?: 'mailto:' . config('mail.from.address'); @endphp
+        <div class="px-3 pb-3 pt-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
+            <div class="rounded-xl bg-[#F4F6F8] p-3" :class="collapsed ? 'lg:hidden' : ''">
+                <div class="flex items-center gap-2.5">
+                    <svg class="w-8 h-8 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.5"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2M12 16.8v.01"/></svg>
+                    <div class="min-w-0">
+                        <p class="text-[13px] font-bold text-gray-900 leading-tight">Butuh bantuan?</p>
+                        <p class="text-xs text-gray-500 leading-tight mt-0.5">Hubungi tim support kami.</p>
+                    </div>
+                </div>
+                <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="mt-3 h-10 flex items-center justify-center gap-2 rounded-lg bg-[#E1F5EA] text-[#0B8F5B] text-sm font-semibold hover:bg-[#CFEFDD] transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 14v-2a8 8 0 1116 0v2M4 14a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 01-2 2h-1v-5h1a2 2 0 012 2zM18 18a3 3 0 01-3 3h-2"/></svg>
+                    Hubungi Support
+                </a>
+            </div>
+            <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="hidden h-9 items-center justify-center rounded-lg text-[#0B8F5B] hover:bg-[#F4F6F8]" :class="collapsed ? 'lg:flex' : ''"
+               @mouseenter="tipShow($event, 'Hubungi Support')" @mouseleave="tipHide()" aria-label="Hubungi Support">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 14v-2a8 8 0 1116 0v2M4 14a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 01-2 2h-1v-5h1a2 2 0 012 2zM18 18a3 3 0 01-3 3h-2"/></svg>
+            </a>
         </div>
 
     </aside>
