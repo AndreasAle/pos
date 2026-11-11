@@ -179,23 +179,8 @@
         </section>
         @endif
 
-        {{-- Grafik 7 hari --}}
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-6" style="--i:3">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <div>
-                    <h3 class="text-lg font-semibold">Penjualan 7 Hari Terakhir</h3>
-                    <p class="text-xs text-[#64748B] mt-0.5">Omzet harian dan jumlah transaksi</p>
-                </div>
-                <div class="flex items-center gap-4 text-xs text-[#64748B]">
-                    <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#16A34A] inline-block"></span>Omzet</span>
-                    <span class="flex items-center gap-1.5"><span class="w-3 h-0.5 bg-[#A855F7] inline-block rounded"></span>Transaksi</span>
-                </div>
-            </div>
-            <div style="position:relative; height:260px;"><canvas id="salesChart"></canvas></div>
-        </section>
-
         {{-- Transaksi terbaru --}}
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:4">
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:3">
             <div class="px-6 py-5 flex flex-wrap items-center justify-between gap-2">
                 <div>
                     <h3 class="text-lg font-semibold">Transaksi Terbaru</h3>
