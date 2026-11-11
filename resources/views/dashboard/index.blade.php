@@ -128,39 +128,34 @@
             </div>
         </section>
 
-        {{-- Daftar aksi --}}
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white divide-y divide-[#E5E7EB]" style="--i:1">
-            {{-- 1: transaksi --}}
-            <div class="flex items-center gap-3 px-5 py-3.5">
-                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $summary['todayOrders'] > 0 ? 'bg-[#16A34A] text-[#16A34A]' : 'bg-sky-500 text-sky-500' }} pulse-dot"></span>
-                <p class="flex-1 text-sm">
-                    @if($summary['todayOrders'] > 0)
-                        {{ number_format($summary['todayOrders']) }} transaksi hari ini dengan omzet <span class="font-semibold">{{ $rp($summary['todayRevenue']) }}</span>.
-                    @else
-                        Belum ada transaksi hari ini.
-                    @endif
-                </p>
-                @if(in_array($role, ['owner','admin','cashier']))
-                <a href="{{ $summary['todayOrders'] > 0 ? route('orders.index') : route('pos.index') }}" class="shrink-0 h-9 inline-flex items-center px-4 rounded-lg border border-[#16A34A] text-[#16A34A] text-sm font-semibold hover:bg-[#ECFDF3] transition-colors">{{ $summary['todayOrders'] > 0 ? 'Lihat Order' : 'Buka Kasir' }}</a>
-                @endif
-            </div>
-            {{-- 2: stok --}}
-            <div class="flex items-center gap-3 px-5 py-3.5">
-                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $lowCount ? 'bg-amber-500 text-amber-500 pulse-dot' : 'bg-slate-400' }}"></span>
-                <p class="flex-1 text-sm">{{ $lowCount ? 'Stok menipis: ' . $lowCount . ' bahan baku.' : 'Stok menipis: 0 bahan baku.' }}</p>
-                @if($isManager && Route::has('ingredients.index'))
-                <a href="{{ route('ingredients.index') }}" class="shrink-0 h-9 inline-flex items-center px-4 rounded-lg border border-[#E5E7EB] text-[#0B1B3F] text-sm font-semibold hover:bg-slate-50 transition-colors">Lihat Stok</a>
-                @endif
-            </div>
-            {{-- 3: produk --}}
-            @if($isManager && count($topProducts) === 0)
-            <div class="flex items-center gap-3 px-5 py-3.5">
-                <span class="w-2.5 h-2.5 rounded-full shrink-0 bg-slate-400"></span>
-                <p class="flex-1 text-sm">Coba tambahkan produk untuk mulai berjualan.</p>
-                <a href="{{ route('products.create') }}" class="shrink-0 h-9 inline-flex items-center px-4 rounded-lg border border-[#16A34A] text-[#16A34A] text-sm font-semibold hover:bg-[#ECFDF3] transition-colors">Tambah Produk</a>
-            </div>
-            @endif
-        </section>
+        {{-- Pengingat singkat: chip yang bisa diklik --}}
+        @php
+            $hints = [];
+            if (in_array($role, ['owner','admin','cashier'])) {
+                $hints[] = $summary['todayOrders'] > 0
+                    ? ['dot' => 'bg-[#16A34A]', 'text' => number_format($summary['todayOrders']) . ' transaksi hari ini', 'cta' => 'Lihat', 'href' => route('orders.index'), 'pulse' => false]
+                    : ['dot' => 'bg-sky-500', 'text' => 'Belum ada transaksi hari ini', 'cta' => 'Buka Kasir', 'href' => route('pos.index'), 'pulse' => true];
+            }
+            if ($isManager && $lowCount > 0 && Route::has('ingredients.index')) {
+                $hints[] = ['dot' => 'bg-amber-500', 'text' => $lowCount . ' bahan baku menipis', 'cta' => 'Cek stok', 'href' => route('ingredients.index'), 'pulse' => true];
+            }
+            if ($isManager && count($topProducts) === 0) {
+                $hints[] = ['dot' => 'bg-slate-400', 'text' => 'Belum ada produk terjual', 'cta' => 'Tambah produk', 'href' => route('products.create'), 'pulse' => false];
+            }
+        @endphp
+        @if(count($hints))
+        <div class="fade-up flex flex-wrap gap-2" style="--i:1">
+            @foreach($hints as $h)
+            <a href="{{ $h['href'] }}" class="group inline-flex items-center gap-2 h-10 pl-3.5 pr-3 rounded-full whitespace-nowrap text-[13px] sm:text-sm max-w-full bg-white border border-[#E5E7EB] text-sm hover:border-[#16A34A] hover:bg-[#ECFDF3] transition-colors">
+                <span class="w-2 h-2 rounded-full {{ $h['dot'] }} {{ $h['pulse'] ? 'pulse-dot' : '' }}" style="color:inherit"></span>
+                <span class="text-[#0B1B3F]">{{ $h['text'] }}</span>
+                <span class="inline-flex items-center gap-0.5 font-semibold text-[#16A34A]">{{ $h['cta'] }}
+                    <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </span>
+            </a>
+            @endforeach
+        </div>
+        @endif
 
         {{-- Banner laporan --}}
         @if($isManager)
