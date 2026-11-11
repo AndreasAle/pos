@@ -122,27 +122,6 @@
             @endif
         </nav>
 
-        {{-- User Profile --}}
-        <div class="border-t border-[#E5E7EB] px-3 py-3 shrink-0">
-            <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#F4F6F8]" :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
-                <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                    <span class="text-sm font-semibold text-emerald-700">{{ substr(auth()->user()->name, 0, 1) }}</span>
-                </div>
-                <div class="flex-1 min-w-0" :class="collapsed ? 'lg:hidden' : ''">
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ auth()->user()->name }}</p>
-                    <p class="text-xs text-gray-500 capitalize">{{ auth()->user()->role }}</p>
-                </div>
-                <form method="POST" action="{{ route('logout') }}" :class="collapsed ? 'lg:hidden' : ''">
-                    @csrf
-                    <button type="submit" class="p-1 text-gray-400 hover:text-red-500 rounded" title="Logout">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                        </svg>
-                    </button>
-                </form>
-            </div>
-        </div>
     </aside>
 
     {{-- Main content --}}
@@ -179,10 +158,24 @@
                 </a>
                 @endif
 
-                {{-- Profile link --}}
-                <a href="{{ route('profile') }}" class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span class="text-sm font-semibold text-emerald-700">{{ substr(auth()->user()->name, 0, 1) }}</span>
-                </a>
+                {{-- Profil & logout --}}
+                <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
+                    <button @click="menu = !menu" class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center" aria-label="Menu akun">
+                        <span class="text-sm font-semibold text-emerald-700">{{ substr(auth()->user()->name, 0, 1) }}</span>
+                    </button>
+                    <div x-show="menu" x-cloak x-transition.opacity.duration.100ms
+                         class="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-[#E5E7EB] shadow-lg py-1 z-30">
+                        <div class="px-3 py-2 border-b border-[#E5E7EB]">
+                            <p class="text-sm font-semibold text-gray-900 truncate">{{ auth()->user()->name }}</p>
+                            <p class="text-xs text-gray-500 capitalize">{{ auth()->user()->role }}</p>
+                        </div>
+                        <a href="{{ route('profile') }}" class="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-[#F4F6F8]">Profil Saya</a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Keluar</button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </header>
 
