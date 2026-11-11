@@ -9,6 +9,7 @@ $icons = [
     'clipboard-list'     => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>',
     'clock'              => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>',
     'cube'               => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>',
+    'squares-plus'       => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 2h6m-3-3v6"/>',
     'tag'                => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>',
     'users'              => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>',
     'badge-percent'      => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>',
@@ -31,12 +32,15 @@ $icons = [
 $path = $icons[$icon] ?? $icons['home'];
 @endphp
 
+@php $label = trim(strip_tags((string) $slot)); @endphp
 <a href="{{ route($route) }}"
-   class="relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
-          {{ $active ? 'bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700 shadow-sm ring-1 ring-emerald-100' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900' }}">
-    @if($active)<span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-emerald-500"></span>@endif
-    <svg class="w-5 h-5 flex-shrink-0 {{ $active ? 'text-emerald-600' : 'text-gray-400' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+   @mouseenter="tipShow($event, @js($label))" @mouseleave="tipHide()" @focus="tipShow($event, @js($label))" @blur="tipHide()"
+   @if($active) aria-current="page" @endif
+   class="flex items-center gap-2 h-10 px-3 rounded-lg text-sm font-medium transition-colors
+          {{ $active ? 'bg-[#E8F7EF] text-[#0B8F5B] font-semibold' : 'text-gray-700 hover:bg-[#F4F6F8] hover:text-gray-900' }}"
+   :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
+    <svg class="w-6 h-6 flex-shrink-0 {{ $active ? 'text-[#0B8F5B]' : 'text-gray-500' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75">
         {!! $path !!}
     </svg>
-    <span>{{ $slot }}</span>
+    <span class="truncate" :class="collapsed ? 'lg:hidden' : ''">{{ $slot }}</span>
 </a>

@@ -11,7 +11,14 @@
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
 </head>
-<body class="h-full bg-gray-50 font-sans" x-data="{ sidebarOpen: false }">
+<body class="h-full bg-gray-50 font-sans" x-data="{
+        sidebarOpen: false,
+        collapsed: (() => { try { return localStorage.getItem('yoka.sidebar') === '1' } catch (e) { return false } })(),
+        tip: { show: false, text: '', y: 0 },
+        toggle() { this.collapsed = !this.collapsed; try { localStorage.setItem('yoka.sidebar', this.collapsed ? '1' : '0') } catch (e) {} this.tip.show = false },
+        tipShow(e, text) { if (!this.collapsed || window.innerWidth < 1024) return; const r = e.currentTarget.getBoundingClientRect(); this.tip = { show: true, text, y: r.top + r.height / 2 } },
+        tipHide() { this.tip.show = false }
+    }">
     <x-page-loader/>
 
     {{-- Mobile sidebar backdrop --}}
@@ -20,20 +27,31 @@
          class="fixed inset-0 z-30 bg-black/50 lg:hidden"></div>
 
     {{-- Sidebar --}}
-    <aside class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200 lg:translate-x-0"
-           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
+    <aside class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-[#E5E7EB] flex flex-col -translate-x-full lg:translate-x-0 transition-[width,transform] duration-200"
+           :class="[sidebarOpen ? '!translate-x-0' : '', collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]']">
 
         {{-- Logo --}}
-        <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-200">
-            <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka POS" class="w-8 h-8 rounded-lg object-contain">
-            <div>
-                <p class="text-sm font-bold text-gray-900 leading-none">{{ $currentBusiness->name ?? config('app.name') }}</p>
-                <p class="text-xs text-gray-500 mt-0.5">Yoka POS</p>
+        <div class="flex items-center h-16 px-5 shrink-0" :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
+            <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="Yoka POS" class="h-8 w-auto" :class="collapsed ? 'lg:hidden' : ''">
+            <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka" class="hidden w-8 h-8 object-contain" :class="collapsed ? 'lg:block' : ''">
+        </div>
+
+        {{-- Business / outlet --}}
+        @php $outletName = auth()->user()->outlet?->name ?? 'Semua Outlet'; @endphp
+        <div class="px-3 pb-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
+            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-3 h-14"
+                 :class="collapsed ? 'lg:justify-center lg:px-0 lg:h-10 lg:border-0' : ''"
+                 @mouseenter="tipShow($event, @js(($currentBusiness->name ?? config('app.name')).' · '.$outletName))" @mouseleave="tipHide()">
+                <svg class="w-6 h-6 text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 21v-6h6v6"/></svg>
+                <div class="min-w-0 flex-1" :class="collapsed ? 'lg:hidden' : ''">
+                    <p class="text-sm font-bold text-gray-900 leading-tight truncate">{{ $currentBusiness->name ?? config('app.name') }}</p>
+                    <p class="text-xs text-gray-500 truncate">{{ $outletName }}</p>
+                </div>
             </div>
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-1" :class="collapsed ? 'lg:px-4' : ''">
             @php
                 $role     = auth()->user()->role;
                 $isRetail = (bool) auth()->user()->business?->isRetail();
@@ -51,9 +69,7 @@
 
             @if(in_array($role, ['owner','admin']))
             {{-- Master Data --}}
-            <div class="pt-3">
-                <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Master Data</p>
-            </div>
+            <x-nav-section title="Master Data"/>
             <x-nav-item route="products.index" icon="cube">{{ $isRetail ? 'Produk' : 'Produk / Menu' }}</x-nav-item>
             <x-nav-item route="bundles.index" icon="squares-plus">Bundling Produk</x-nav-item>
             <x-nav-item route="categories.index" icon="tag">Kategori</x-nav-item>
@@ -63,9 +79,7 @@
 
             @if(!$isRetail && in_array($role, ['owner','admin','kitchen']))
             {{-- Operations --}}
-            <div class="pt-3">
-                <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Operasional</p>
-            </div>
+            <x-nav-section title="Operasional"/>
             <x-nav-item route="kitchen.index" icon="fire">Dapur (KDS)</x-nav-item>
             @endif
 
@@ -77,9 +91,7 @@
 
             @if(in_array($role, ['owner','admin']))
             {{-- Reports --}}
-            <div class="pt-3">
-                <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Laporan</p>
-            </div>
+            <x-nav-section title="Laporan"/>
             <x-nav-item route="reports.sales" icon="chart-bar">Laporan Penjualan</x-nav-item>
             <x-nav-item route="reports.products" icon="chart-pie">Produk Terlaris</x-nav-item>
             <x-nav-item route="reports.cashier" icon="user-circle">Laporan Kasir</x-nav-item>
@@ -90,9 +102,7 @@
 
             @if(in_array($role, ['owner','admin']))
             {{-- Settings --}}
-            <div class="pt-3">
-                <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Pengaturan</p>
-            </div>
+            <x-nav-section title="Pengaturan"/>
             <x-nav-item route="outlets.index" icon="building-storefront">Outlet</x-nav-item>
             <x-nav-item route="users.index" icon="user-group">Manajemen User</x-nav-item>
             <x-nav-item route="settings.business" icon="building-office">Profil Bisnis</x-nav-item>
@@ -114,16 +124,16 @@
         </nav>
 
         {{-- User Profile --}}
-        <div class="border-t border-gray-200 px-3 py-3">
-            <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50">
+        <div class="border-t border-[#E5E7EB] px-3 py-3 shrink-0">
+            <div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#F4F6F8]" :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
                 <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                     <span class="text-sm font-semibold text-emerald-700">{{ substr(auth()->user()->name, 0, 1) }}</span>
                 </div>
-                <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0" :class="collapsed ? 'lg:hidden' : ''">
                     <p class="text-sm font-medium text-gray-900 truncate">{{ auth()->user()->name }}</p>
                     <p class="text-xs text-gray-500 capitalize">{{ auth()->user()->role }}</p>
                 </div>
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ route('logout') }}" :class="collapsed ? 'lg:hidden' : ''">
                     @csrf
                     <button type="submit" class="p-1 text-gray-400 hover:text-red-500 rounded" title="Logout">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -137,7 +147,7 @@
     </aside>
 
     {{-- Main content --}}
-    <div class="lg:pl-64 flex flex-col min-h-screen min-w-0 overflow-x-clip">
+    <div class="transition-all duration-200 flex flex-col min-h-screen min-w-0 overflow-x-clip" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
 
         {{-- Topbar --}}
         <header class="sticky top-0 z-20 bg-white border-b border-gray-200 px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
@@ -147,6 +157,9 @@
                 </svg>
             </button>
 
+            <button @click="toggle()" class="hidden lg:inline-flex p-2 -ml-1 rounded-lg text-gray-500 hover:bg-[#F4F6F8] shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/></svg>
+            </button>
             <div class="flex-1 min-w-0">
                 <h1 class="text-base sm:text-lg font-semibold text-gray-900 truncate">@yield('page-title', 'Dashboard')</h1>
             </div>
@@ -229,6 +242,11 @@
             @yield('content')
         </main>
     </div>
+
+    {{-- Tooltip sidebar collapsed --}}
+    <div x-show="tip.show" x-cloak x-transition.opacity.duration.100ms
+         class="hidden lg:block fixed z-50 pointer-events-none px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-medium shadow-lg whitespace-nowrap"
+         :style="`left: 80px; top: ${tip.y}px; transform: translateY(-50%)`" x-text="tip.text"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
     @stack('scripts')
