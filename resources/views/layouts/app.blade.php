@@ -24,21 +24,15 @@
     {{-- Mobile sidebar backdrop --}}
     <div x-show="sidebarOpen" x-cloak
          @click="sidebarOpen = false"
-         class="fixed inset-0 z-30 bg-black/50 lg:hidden"></div>
+         class="fixed inset-x-0 bottom-0 top-14 z-30 bg-black/50 lg:hidden"></div>
 
     {{-- Sidebar --}}
-    <aside class="fixed inset-y-0 left-0 z-40 w-[260px] bg-white border-r border-[#E5E7EB] flex flex-col -translate-x-full lg:translate-x-0 transition-[width,transform] duration-200"
+    <aside class="fixed top-14 bottom-0 left-0 z-40 w-[260px] bg-white border-r border-[#E5E7EB] flex flex-col -translate-x-full lg:translate-x-0 transition-[width,transform] duration-200"
            :class="[sidebarOpen ? '!translate-x-0' : '', collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]']">
-
-        {{-- Logo --}}
-        <div class="flex items-center h-14 px-5 shrink-0" :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
-            <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="Yoka POS" class="h-8 w-auto" :class="collapsed ? 'lg:hidden' : ''">
-            <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka" class="hidden w-8 h-8 object-contain" :class="collapsed ? 'lg:block' : ''">
-        </div>
 
         {{-- Business / outlet --}}
         @php $outletName = auth()->user()->outlet?->name ?? 'Semua Outlet'; @endphp
-        <div class="px-3 pb-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
+        <div class="px-3 pt-3 pb-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
             <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-2.5 h-11"
                  :class="collapsed ? 'lg:justify-center lg:px-0 lg:h-10 lg:border-0' : ''"
                  @mouseenter="tipShow($event, @js(($currentBusiness->name ?? config('app.name')).' · '.$outletName))" @mouseleave="tipHide()">
@@ -128,60 +122,101 @@
 
     </aside>
 
-    {{-- Main content --}}
-    <div class="transition-all duration-200 flex flex-col min-h-screen min-w-0 overflow-x-clip" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
-
-        {{-- Topbar --}}
-        <header class="sticky top-0 z-20 bg-white border-b border-gray-200 px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-4">
-            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 shrink-0" aria-label="Menu">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                </svg>
+    {{-- Topbar --}}
+    @php
+        $me = auth()->user();
+        $activeShift = $me->activeShift()->first();
+        $canSettings = in_array($me->role, ['owner','admin']);
+    @endphp
+    <header class="fixed inset-x-0 top-0 z-50 h-14 bg-[#0B1F44] border-b border-[#31486B] px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
+        {{-- Brand --}}
+        <div class="flex items-center gap-2 shrink-0 lg:w-[156px]">
+            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/10" aria-label="Menu">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
+            <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5" aria-label="Yoka POS">
+                <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="w-6 h-6 object-contain"></span>
+                <span class="hidden sm:inline text-base font-semibold leading-6">Yoka POS</span>
+            </a>
+        </div>
 
-            <button @click="toggle()" class="hidden lg:inline-flex p-2 -ml-1 rounded-lg text-gray-500 hover:bg-[#F4F6F8] shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/></svg>
-            </button>
-            <div class="flex-1 min-w-0">
-                <h1 class="text-base sm:text-lg font-semibold text-gray-900 truncate">@yield('page-title', 'Dashboard')</h1>
+        <button @click="toggle()" class="hidden lg:inline-flex p-2 rounded-lg text-[#A7B0C2] hover:bg-white/10 hover:text-white shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/></svg>
+        </button>
+
+        {{-- Pencarian global (menu & laporan) --}}
+        <div class="relative flex-1 min-w-0 max-w-3xl"
+             x-data="{
+                q: '', open: false, sel: 0, items: [],
+                load() { this.items = [...document.querySelectorAll('aside nav a[href]')].map(a => ({ label: a.textContent.trim(), href: a.href })) },
+                get results() { const t = this.q.trim().toLowerCase(); return t ? this.items.filter(i => i.label.toLowerCase().includes(t)).slice(0, 8) : [] },
+                go() { const r = this.results[this.sel]; if (r) window.location = r.href }
+             }" @click.outside="open = false" @keydown.window="if ($event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) { $event.preventDefault(); $refs.q.focus() }">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7B0C2] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+            <input x-ref="q" type="text" x-model="q" autocomplete="off"
+                   @focus="load(); open = true" @input="sel = 0; open = true"
+                   @keydown.arrow-down.prevent="sel = Math.min(sel + 1, results.length - 1)" @keydown.arrow-up.prevent="sel = Math.max(sel - 1, 0)"
+                   @keydown.enter.prevent="go()" @keydown.escape="open = false; $refs.q.blur()"
+                   placeholder="Cari menu, produk, atau laporan..."
+                   class="w-full h-10 pl-10 pr-3 rounded-lg bg-[#22365F] text-sm font-normal text-white placeholder:text-[#A7B0C2] border border-transparent focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60">
+            <div x-show="open && q.trim()" x-cloak class="absolute left-0 right-0 mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
+                <template x-for="(r, i) in results" :key="r.href">
+                    <a :href="r.href" class="block px-3 py-2 text-sm font-medium" :class="i === sel ? 'bg-[#E8F7EF] text-[#0B8F5B]' : 'hover:bg-[#F4F6F8]'" x-text="r.label"></a>
+                </template>
+                <p x-show="!results.length" class="px-3 py-2 text-sm text-gray-500">Tidak ada hasil untuk "<span x-text="q"></span>"</p>
             </div>
+        </div>
 
-            <div class="flex items-center gap-3 shrink-0">
-                {{-- Date --}}
-                <span class="hidden sm:inline text-sm text-gray-500">{{ now()->isoFormat('dddd, D MMMM Y') }}</span>
+        <div class="flex items-center gap-2 sm:gap-4 shrink-0 ml-auto">
+            @if($activeShift)
+            <a href="{{ route('shifts.show', $activeShift) }}" class="hidden md:flex items-center gap-1.5 text-xs font-medium bg-white/10 text-white rounded-full px-3 py-1.5 hover:bg-white/15">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse"></span>Shift Aktif
+            </a>
+            @endif
 
-                {{-- Active shift indicator --}}
-                @php
-                    $activeShift = auth()->user()->activeShift()->first();
-                @endphp
-                @if($activeShift)
-                <a href="{{ route('shifts.show', $activeShift) }}"
-                   class="hidden sm:flex items-center gap-1.5 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-3 py-1">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Shift Aktif
-                </a>
-                @endif
-
-                {{-- Profil & logout --}}
-                <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
-                    <button @click="menu = !menu" class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center" aria-label="Menu akun">
-                        <span class="text-sm font-semibold text-emerald-700">{{ substr(auth()->user()->name, 0, 1) }}</span>
-                    </button>
-                    <div x-show="menu" x-cloak x-transition.opacity.duration.100ms
-                         class="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-[#E5E7EB] shadow-lg py-1 z-30">
-                        <div class="px-3 py-2 border-b border-[#E5E7EB]">
-                            <p class="text-sm font-semibold text-gray-900 truncate">{{ auth()->user()->name }}</p>
-                            <p class="text-xs text-gray-500 capitalize">{{ auth()->user()->role }}</p>
-                        </div>
-                        <a href="{{ route('profile') }}" class="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-[#F4F6F8]">Profil Saya</a>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Keluar</button>
-                        </form>
-                    </div>
+            {{-- Notifikasi --}}
+            <div class="relative" x-data="{ n: false }" @click.outside="n = false" @keydown.escape.window="n = false">
+                <button @click="n = !n" class="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:bg-white/10 transition-colors" :class="n ? 'bg-white/10' : ''" aria-label="Notifikasi">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
+                </button>
+                <div x-show="n" x-cloak x-transition.opacity.duration.100ms class="absolute right-0 mt-2 w-72 rounded-lg bg-white text-gray-800 border border-[#E5E7EB] shadow-xl z-50">
+                    <p class="px-4 py-3 text-sm font-semibold border-b border-[#E5E7EB]">Notifikasi</p>
+                    <p class="px-4 py-8 text-sm text-gray-500 text-center">Belum ada notifikasi baru.</p>
                 </div>
             </div>
-        </header>
+
+            <span class="hidden sm:block w-px h-6 bg-[#31486B]"></span>
+
+            {{-- Profil --}}
+            <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
+                <button @click="menu = !menu" class="flex items-center gap-3 h-10 pl-1 pr-2 rounded-lg hover:bg-white/10 transition-colors" :class="menu ? 'bg-white/10' : ''" aria-label="Menu akun" :aria-expanded="menu">
+                    <span class="w-8 h-8 rounded-full bg-emerald-100 text-[#0B8F5B] flex items-center justify-center text-sm font-bold">{{ strtoupper(substr($me->name, 0, 1)) }}</span>
+                    <span class="hidden md:block text-left leading-tight max-w-[150px]">
+                        <span class="block text-sm font-semibold truncate">{{ $me->name }}</span>
+                        <span class="block text-xs text-[#A7B0C2] capitalize">{{ $me->role }}</span>
+                    </span>
+                    <svg class="w-4 h-4 text-[#A7B0C2] transition-transform" :class="menu ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div x-show="menu" x-cloak x-transition.opacity.duration.100ms class="absolute right-0 mt-2 w-52 rounded-lg bg-white text-gray-800 border border-[#E5E7EB] shadow-xl py-1 z-50">
+                    <a href="{{ route('profile') }}" class="flex items-center gap-2.5 px-3 py-2 text-sm font-medium hover:bg-[#F4F6F8]">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM4 21a8 8 0 0116 0"/></svg>Profil Saya</a>
+                    @if($canSettings)
+                    <a href="{{ route('settings.business') }}" class="flex items-center gap-2.5 px-3 py-2 text-sm font-medium hover:bg-[#F4F6F8]">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.5 1l.1-.1a1.7 1.7 0 012.4 2.4l-.1.1a1.7 1.7 0 001 2.5 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1 2.5l.1.1a1.7 1.7 0 01-2.4 2.4l-.1-.1a1.7 1.7 0 00-2.5 1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.5-1l-.1.1a1.7 1.7 0 01-2.4-2.4l.1-.1a1.7 1.7 0 00-1-2.5 1.7 1.7 0 010-3.4 1.7 1.7 0 001-2.5l-.1-.1a1.7 1.7 0 012.4-2.4l.1.1a1.7 1.7 0 002.5-1zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Pengaturan</a>
+                    @endif
+                    <div class="my-1 border-t border-[#E5E7EB]"></div>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>Keluar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {{-- Main content --}}
+    <div class="transition-all duration-200 flex flex-col min-h-screen min-w-0 overflow-x-clip pt-14" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
 
         {{-- Flash messages --}}
         <div class="px-4 sm:px-6 pt-4">
@@ -235,6 +270,9 @@
 
         {{-- Page content --}}
         <main class="flex-1 min-w-0 px-4 sm:px-6 pb-8">
+            @unless(request()->routeIs('dashboard'))
+            <h1 class="pt-5 pb-1 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
+            @endunless
             @yield('content')
         </main>
     </div>
