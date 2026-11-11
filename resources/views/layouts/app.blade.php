@@ -145,7 +145,7 @@
         $activeShift = $me->activeShift()->first();
         $canSettings = in_array($me->role, ['owner','admin']);
     @endphp
-    <header class="fixed inset-x-0 top-0 z-50 h-14 bg-gradient-to-r from-[#0B8F5B] via-[#0E9F6E] to-[#0D9488] border-b border-white/10 shadow-sm px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
+    <header class="fixed inset-x-0 top-0 z-50 h-14 bg-[#0A5C3A] border-b border-black/10 shadow-sm px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
         {{-- Brand --}}
         <div class="flex items-center gap-2 shrink-0 lg:w-[228px] lg:justify-between">
             <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/10" aria-label="Menu">
@@ -164,20 +164,21 @@
 
 
         {{-- Pencarian global (menu & laporan) --}}
-        <div class="relative flex-1 min-w-0 max-w-3xl"
+        <div class="group relative flex-1 min-w-0 max-w-xl"
              x-data="{
                 q: '', open: false, sel: 0, items: [],
                 load() { this.items = [...document.querySelectorAll('aside nav a[href]')].map(a => ({ label: a.textContent.trim(), href: a.href })) },
                 get results() { const t = this.q.trim().toLowerCase(); return t ? this.items.filter(i => i.label.toLowerCase().includes(t)).slice(0, 8) : [] },
                 go() { const r = this.results[this.sel]; if (r) window.location = r.href }
              }" @click.outside="open = false" @keydown.window="if ($event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) { $event.preventDefault(); $refs.q.focus() }">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/75 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/60 group-focus-within:text-[#0A5C3A] transition-colors pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
             <input x-ref="q" type="text" x-model="q" autocomplete="off"
                    @focus="load(); open = true" @input="sel = 0; open = true"
                    @keydown.arrow-down.prevent="sel = Math.min(sel + 1, results.length - 1)" @keydown.arrow-up.prevent="sel = Math.max(sel - 1, 0)"
                    @keydown.enter.prevent="go()" @keydown.escape="open = false; $refs.q.blur()"
                    placeholder="Cari menu, produk, atau laporan..."
-                   class="w-full h-10 pl-10 pr-3 rounded-lg bg-white/15 text-sm font-normal text-white placeholder:text-white/70 border border-transparent focus:outline-none focus:bg-white/20 focus:border-white/60 focus:ring-2 focus:ring-white/40">
+                   class="w-full h-10 pl-10 pr-12 rounded-xl bg-black/20 text-sm font-normal text-white placeholder:text-white/60 border border-white/10 shadow-inner transition-all duration-200 hover:bg-black/25 focus:outline-none focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-400 focus:border-white focus:ring-4 focus:ring-white/20">
+            <kbd class="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-md border border-white/20 bg-white/10 text-[11px] font-semibold text-white/70 pointer-events-none group-focus-within:hidden">/</kbd>
             <div x-show="open && q.trim()" x-cloak class="absolute left-0 right-0 mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
                 <template x-for="(r, i) in results" :key="r.href">
                     <a :href="r.href" class="block px-3 py-2 text-sm font-medium" :class="i === sel ? 'bg-[#E8F7EF] text-[#0B8F5B]' : 'hover:bg-[#F4F6F8]'" x-text="r.label"></a>
