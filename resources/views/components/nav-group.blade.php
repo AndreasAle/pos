@@ -8,10 +8,10 @@
         open: (() => { if (@js($hasActive)) return true; try { return localStorage.getItem(@js($key)) !== '0' } catch (e) { return true } })(),
         flip() { this.open = !this.open; try { localStorage.setItem(@js($key), this.open ? '1' : '0') } catch (e) {} }
      }">
-    <button type="button" @click="flip()" :class="collapsed ? 'lg:hidden' : ''" :aria-expanded="open"
-            class="w-full flex items-center justify-between px-2.5 h-6 rounded text-[11px] font-bold uppercase tracking-wide text-gray-500 hover:text-gray-800 transition-colors">
+    <button type="button" @click="flip()" :aria-expanded="open"
+            class="w-full flex items-center justify-between px-2.5 h-7 rounded-md text-[11px] font-bold uppercase tracking-wide cursor-pointer transition-colors hover:bg-[#F4F6F8] hover:text-gray-900" :class="[collapsed ? 'lg:hidden' : '', open ? 'text-gray-700' : 'text-gray-500']">
         <span>{{ $title }}</span>
-        <svg class="w-3 h-3 transition-transform duration-200" :class="open ? '' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        <svg class="w-4 h-4 transition-transform duration-200 text-gray-400" :class="open ? '' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
     </button>
     <div class="hidden border-t border-[#E5E7EB] mx-2 mb-1" :class="collapsed ? 'lg:block' : ''"></div>
     <div class="space-y-px" x-show="open || (collapsed && window.innerWidth >= 1024)">

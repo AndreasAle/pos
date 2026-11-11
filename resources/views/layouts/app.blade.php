@@ -122,7 +122,9 @@
             @endif
         </nav>
 
-        <x-promo-card/>
+        <div class="px-5 py-3 border-t border-[#E5E7EB] shrink-0 text-[11px] font-medium text-gray-400" :class="collapsed ? 'lg:hidden' : ''">
+            Yoka POS &copy; {{ now()->year }}
+        </div>
 
     </aside>
 
