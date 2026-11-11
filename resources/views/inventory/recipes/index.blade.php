@@ -2,6 +2,7 @@
 @section('title','Resep Produk')
 @section('page-title','Resep Produk')
 @section('content')
+<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="flex items-center gap-3 mb-5">
     <a href="{{ route('ingredients.index') }}" class="text-sm font-medium bg-white text-gray-600 border border-gray-300 hover:border-emerald-400 px-4 py-2 rounded-xl">Bahan Baku</a>
     <a href="{{ route('inventory.movements') }}" class="text-sm font-medium bg-white text-gray-600 border border-gray-300 hover:border-emerald-400 px-4 py-2 rounded-xl">Pergerakan Stok</a>
@@ -13,9 +14,9 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Produk</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Bahan Resep</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Produk</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Bahan Resep</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

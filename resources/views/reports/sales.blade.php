@@ -49,7 +49,7 @@
             @foreach($paymentBreakdown as $p)
             <div class="flex items-center justify-between text-sm">
                 <span class="capitalize text-gray-600">{{ $p->payment_method }}</span>
-                <span class="font-semibold text-gray-900">{{ $p->count }}x Â· Rp {{ number_format($p->total,0,',','.') }}</span>
+                <span class="font-semibold text-gray-900">{{ $p->count }}x · Rp {{ number_format($p->total,0,',','.') }}</span>
             </div>
             @endforeach
         </div>
@@ -64,9 +64,9 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Transaksi</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Omzet</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tanggal</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Transaksi</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Omzet</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -90,9 +90,9 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Produk</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Penjualan</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Produk</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Penjualan</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -127,12 +127,12 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Order</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase min-w-[16rem]">Item</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Subtotal</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Diskon</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Total</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Pembayaran</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Order</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider min-w-[16rem]">Item</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Subtotal</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Diskon</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Pembayaran</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">

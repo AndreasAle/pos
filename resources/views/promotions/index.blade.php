@@ -3,6 +3,7 @@
 @section('page-title','Promo & Diskon')
 
 @section('content')
+<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <p class="text-sm text-gray-500">{{ $promotions->total() }} promo terdaftar</p>
     <a href="{{ route('promotions.create') }}"
@@ -16,13 +17,13 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Nama Promo</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Tipe & Nilai</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Min. Order</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Periode</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Outlet</th>
-                <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Nama Promo</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tipe & Nilai</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Min. Order</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Periode</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Outlet</th>
+                <th class="text-center px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

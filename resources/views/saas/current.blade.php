@@ -60,11 +60,11 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Paket</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Mulai</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Berakhir</th>
-                <th class="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Harga</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Paket</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Mulai</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Berakhir</th>
+                <th class="text-center px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Harga</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

@@ -3,6 +3,7 @@
 @section('page-title','Bahan Baku / Inventory')
 
 @section('content')
+<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
     <div class="flex gap-2">
         <a href="{{ route('ingredients.index') }}" class="text-sm font-semibold bg-emerald-600 text-white px-4 py-2 rounded-xl">Bahan Baku</a>
@@ -33,12 +34,12 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Nama Bahan</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Satuan</th>
-                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Stok</th>
-                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Stok Min</th>
-                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Harga Rata</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Aksi</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Nama Bahan</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Satuan</th>
+                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Stok</th>
+                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Stok Min</th>
+                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Harga Rata</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Aksi</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

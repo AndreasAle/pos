@@ -3,6 +3,7 @@
 @section('page-title', 'Bundling Produk')
 
 @section('content')
+<x-page-header eyebrow="Data Master" :title="trim(View::getSection('page-title', ''))"/>
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <p class="text-sm text-gray-500">Kelola paket bundling produk yang tampil di kasir POS.</p>
     <a href="{{ route('bundles.create') }}"

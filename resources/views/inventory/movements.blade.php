@@ -12,14 +12,14 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Bahan</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Tipe</th>
-                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Sebelum</th>
-                <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Sesudah</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">User</th>
-                <th class="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Catatan</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Waktu</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Bahan</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tipe</th>
+                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Qty</th>
+                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Sebelum</th>
+                <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Sesudah</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">User</th>
+                <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Catatan</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Waktu</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

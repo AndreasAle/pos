@@ -9,11 +9,11 @@
     <table class="w-full text-sm">
         <thead>
             <tr class="bg-gray-50 border-b border-gray-100">
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">#</th>
-                <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Nama Kasir</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Jumlah Transaksi</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Total Revenue</th>
-                <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Rata-rata / Transaksi</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">#</th>
+                <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Nama Kasir</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Jumlah Transaksi</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Total Revenue</th>
+                <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Rata-rata / Transaksi</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">

@@ -46,10 +46,10 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="bg-gray-50 border-b border-gray-100">
-                    <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
-                    <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Revenue</th>
-                    <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">HPP</th>
-                    <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Profit</th>
+                    <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Tanggal</th>
+                    <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Revenue</th>
+                    <th class="text-right px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">HPP</th>
+                    <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">Profit</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
