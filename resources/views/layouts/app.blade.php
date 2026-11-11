@@ -122,6 +122,8 @@
             @endif
         </nav>
 
+        <x-promo-card/>
+
     </aside>
 
     {{-- Main content --}}
