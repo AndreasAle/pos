@@ -111,7 +111,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_260px] gap-4 items-center">
                 <div>
                     <p class="text-xs font-semibold text-[#16A34A] uppercase tracking-wide">{{ now()->isoFormat('dddd, D MMMM Y') }}</p>
-                    <h2 class="mt-1 text-[28px] leading-9 font-semibold">{{ $greet }}, {{ $first }}</h2>
+                    <h2 class="mt-1 text-[28px] leading-9 font-semibold">{{ $greet }}, <span class="inline-block px-2.5 -mx-0.5 rounded-lg bg-[#16A34A] text-white">{{ $first }}</span></h2>
                     <p class="mt-1 text-sm text-[#64748B] max-w-sm">Berikut ringkasan yang terjadi di <span class="font-medium text-[#0B1B3F]">{{ $currentBusiness->name }}</span> hari ini.</p>
 
                     <div class="mt-5 flex flex-wrap gap-x-10 gap-y-4">
