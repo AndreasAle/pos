@@ -2,24 +2,8 @@
 @section('title','Buka Shift')
 @section('page-title','Buka Shift Baru')
 
-@push('styles')
-<style>
-    .pg .fade-up { opacity:0; transform:translateY(12px); animation:pg-up .55s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i,0) * 80ms); }
-    @keyframes pg-up { to { opacity:1; transform:none } }
-    .pg .float { animation:pg-float 4.5s ease-in-out infinite }
-    .pg .twinkle { animation:pg-tw 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
-    .pg .sweep { transform-origin:56px 56px; animation:pg-sweep 10s linear infinite }
-    .pg .coin { animation:pg-coin 3s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
-    @keyframes pg-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-    @keyframes pg-tw { 0%,100%{opacity:.3;transform:scale(.7)} 50%{opacity:1;transform:scale(1.1)} }
-    @keyframes pg-sweep { to { transform:rotate(360deg) } }
-    @keyframes pg-coin { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-    @media (prefers-reduced-motion: reduce) { .pg *, .pg svg * { animation:none !important } .pg .fade-up { opacity:1; transform:none } }
-</style>
-@endpush
-
 @section('content')
-<div class="pg text-[#0B1B3F] pt-2 max-w-4xl mx-auto">
+<div class="page text-[#0B1B3F] pt-2 max-w-4xl mx-auto">
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] gap-5">
 
         {{-- Form --}}

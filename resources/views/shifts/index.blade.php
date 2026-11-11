@@ -2,30 +2,22 @@
 @section('title','Shift Kasir')
 @section('page-title','Shift Kasir')
 
-@push('styles')
-<style>
-    .pg .fade-up { opacity:0; transform:translateY(12px); animation:pg-up .55s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i,0) * 70ms); }
-    @keyframes pg-up { to { opacity:1; transform:none } }
-    .pg .float { animation:pg-float 4.5s ease-in-out infinite }
-    .pg .twinkle { animation:pg-tw 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
-    .pg .tick { transform-origin:56px 56px; animation:pg-tick 8s linear infinite }
-    .pg .ring { animation:pg-ring 2.2s ease-out infinite }
-    @keyframes pg-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-    @keyframes pg-tw { 0%,100%{opacity:.3;transform:scale(.7)} 50%{opacity:1;transform:scale(1.1)} }
-    @keyframes pg-tick { to { transform:rotate(360deg) } }
-    @keyframes pg-ring { 0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)} 70%,100%{box-shadow:0 0 0 9px rgba(22,163,74,0)} }
-    @media (prefers-reduced-motion: reduce) { .pg *, .pg svg * { animation:none !important } .pg .fade-up { opacity:1; transform:none } }
-</style>
-@endpush
-
 @section('content')
 @php $rp = fn($v) => 'Rp ' . number_format($v, 0, ',', '.'); @endphp
 
-<div class="pg text-[#0B1B3F] pt-2">
+<div class="page text-[#0B1B3F] pt-2">
+
+    {{-- Sub judul + jumlah (sama seperti halaman Riwayat Order) --}}
+    <div class="fade-up flex flex-wrap items-end justify-between gap-2 mb-4" style="--i:0">
+        <p class="text-sm text-[#64748B]">Pantau shift kasir yang sedang berjalan dan riwayat shift sebelumnya.</p>
+        <span class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#ECFDF3] text-[#15803D] text-sm font-semibold">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>{{ number_format($shifts->total()) }} shift
+        </span>
+    </div>
 
     {{-- Kartu status shift --}}
-    <section class="fade-up mb-4 rounded-xl border p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4
-                    {{ $activeShift ? 'border-[#BBF7D0] bg-gradient-to-r from-[#ECFDF3] to-white' : 'border-[#E5E7EB] bg-white' }}" style="--i:0">
+    <section class="fade-up mb-4 rounded-xl border p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4
+                    {{ $activeShift ? 'border-[#BBF7D0] bg-gradient-to-r from-[#ECFDF3] to-white' : 'border-[#E5E7EB] bg-white' }}" style="--i:1">
         <span class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 {{ $activeShift ? 'bg-[#16A34A] text-white ring' : 'bg-slate-100 text-slate-500' }}">
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </span>
@@ -51,8 +43,8 @@
     </section>
 
     {{-- Riwayat --}}
-    <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:1">
-        <div class="px-5 sm:px-6 py-4 flex items-center justify-between border-b border-[#E5E7EB]">
+    <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:2">
+        <div class="px-5 sm:px-6 py-5 flex items-center justify-between border-b border-[#E5E7EB]">
             <div>
                 <h3 class="text-lg font-semibold">Riwayat Shift</h3>
                 <p class="text-sm text-[#64748B]">{{ number_format($shifts->total()) }} shift tercatat</p>

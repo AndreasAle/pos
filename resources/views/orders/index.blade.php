@@ -2,24 +2,8 @@
 @section('title','Riwayat Order')
 @section('page-title','Riwayat Order')
 
-@push('styles')
-<style>
-    .ord .fade-up { opacity:0; transform:translateY(12px); animation:ord-up .55s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i,0) * 70ms); }
-    @keyframes ord-up { to { opacity:1; transform:none } }
-    .ord .float { animation:ord-float 4.5s ease-in-out infinite }
-    .ord .twinkle { animation:ord-tw 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
-    .ord .line-draw { stroke-dasharray:60; stroke-dashoffset:60; animation:ord-draw 3.2s ease-in-out infinite }
-    @keyframes ord-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-    @keyframes ord-tw { 0%,100%{opacity:.3;transform:scale(.7)} 50%{opacity:1;transform:scale(1.1)} }
-    @keyframes ord-draw { 0%,10%{stroke-dashoffset:60} 50%,85%{stroke-dashoffset:0} 100%{stroke-dashoffset:-60} }
-    @media (prefers-reduced-motion: reduce) { .ord *, .ord svg * { animation:none !important } .ord .fade-up { opacity:1; transform:none } .ord .line-draw{stroke-dashoffset:0} }
-</style>
-@endpush
-
 @section('content')
 @php
-    $statusColor = ['pending'=>'yellow','paid'=>'green','draft'=>'yellow','cancelled'=>'red','refunded'=>'blue'];
-    $statusLabel = ['pending'=>'Pending','paid'=>'Lunas','draft'=>'Draft','cancelled'=>'Batal','refunded'=>'Refund'];
     $tabs        = ['' => 'Semua', 'paid' => 'Lunas', 'draft' => 'Draft', 'cancelled' => 'Batal', 'refunded' => 'Refund'];
     $current     = (string) request('status', '');
     $keep        = request()->except('status', 'page');
@@ -27,7 +11,7 @@
     $rp          = fn($v) => 'Rp ' . number_format($v, 0, ',', '.');
 @endphp
 
-<div class="ord text-[#0B1B3F] pt-2">
+<div class="page text-[#0B1B3F] pt-2">
 
     {{-- Sub judul + jumlah --}}
     <div class="fade-up flex flex-wrap items-end justify-between gap-2 mb-4" style="--i:0">
@@ -44,7 +28,7 @@
             <div class="flex gap-1 p-1 rounded-lg bg-slate-50 border border-[#E5E7EB] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
                 @foreach($tabs as $v => $l)
                 <a href="{{ route('orders.index', $v === '' ? $keep : array_merge($keep, ['status' => $v])) }}" role="tab"
-                   class="shrink-0 h-8 px-3.5 inline-flex items-center rounded-md text-[13px] font-semibold transition-all
+                   class="shrink-0 h-9 px-3.5 inline-flex items-center rounded-md text-[13px] font-semibold transition-all
                           {{ $current === $v ? 'bg-white text-[#16A34A] shadow-sm ring-1 ring-[#E5E7EB]' : 'text-[#64748B] hover:text-[#0B1B3F]' }}">{{ $l }}</a>
                 @endforeach
             </div>
@@ -97,7 +81,7 @@
                         </td>
                         <td class="px-6 py-4 capitalize text-slate-600">{{ $order->payment_method ?: '-' }}</td>
                         <td class="px-6 py-4">
-                            <x-badge :color="$statusColor[$order->status] ?? 'gray'">{{ $statusLabel[$order->status] ?? ucfirst($order->status) }}</x-badge>
+                            <x-order-status :status="$order->status"/>
                         </td>
                         <td class="px-6 py-4 text-right font-bold">{{ $rp($order->grand_total) }}</td>
                         <td class="px-6 py-4 text-right text-[#64748B]">{{ $order->created_at->format('d M, H:i') }}</td>
@@ -118,7 +102,7 @@
             <a href="{{ route('orders.show', $order) }}" class="block px-4 py-3.5 active:bg-[#ECFDF3]/60">
                 <div class="flex items-center justify-between gap-2">
                     <span class="font-mono text-[13px] font-semibold text-[#16A34A] truncate">{{ $order->order_number }}</span>
-                    <x-badge :color="$statusColor[$order->status] ?? 'gray'">{{ $statusLabel[$order->status] ?? ucfirst($order->status) }}</x-badge>
+                    <x-order-status :status="$order->status"/>
                 </div>
                 <div class="mt-1.5 flex items-end justify-between gap-2">
                     <div class="text-sm text-[#64748B] min-w-0">

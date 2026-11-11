@@ -32,8 +32,6 @@
 @push('styles')
 <style>
     .dash { --navy:#0B1B3F; --green:#16A34A; --soft:#ECFDF3; --border:#E5E7EB; --muted:#64748B; }
-    .dash .fade-up { opacity:0; transform:translateY(14px); animation:dash-up .6s cubic-bezier(.2,.7,.2,1) forwards; animation-delay:calc(var(--i,0) * 80ms); }
-    @keyframes dash-up { to { opacity:1; transform:none } }
     .anim-float { animation:dash-float 5s ease-in-out infinite }
     .anim-sway { animation:dash-sway 4s ease-in-out infinite }
     .anim-drift { animation:dash-drift 9s ease-in-out infinite alternate }
@@ -56,11 +54,11 @@
     @keyframes dash-pop { 0%,45%{transform:scale(0)} 58%{transform:scale(1.2)} 66%,85%{transform:scale(1)} 100%{transform:scale(0)} }
     .dash .pulse-dot { animation:dash-dot 2s ease-out infinite }
     @keyframes dash-dot { 0%{box-shadow:0 0 0 0 currentColor} 70%{box-shadow:0 0 0 7px transparent} 100%{box-shadow:0 0 0 0 transparent} }
-    @media (prefers-reduced-motion: reduce) { .dash *, .dash svg * { animation:none !important } .dash .fade-up { opacity:1; transform:none } .anim-bar{transform:none} .anim-line{stroke-dashoffset:0} }
+    @media (prefers-reduced-motion: reduce) { .dash *, .dash svg * { animation:none !important } .anim-bar{transform:none} .anim-line{stroke-dashoffset:0} }
 </style>
 @endpush
 
-<div class="dash text-[#0B1B3F] pt-5">
+<div class="dash page text-[#0B1B3F] pt-5">
 
 {{-- Banner trial --}}
 @if(config('pos.features.subscription') && $sub && $sub->status === 'trial' && $sub->ends_at)
@@ -150,7 +148,7 @@
             <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] bg-white pl-4 pr-3 py-3 hover:border-[#16A34A]/50 hover:shadow-sm transition">
                 <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $h['dot'] }} {{ $h['pulse'] ? 'pulse-dot' : '' }}"></span>
                 <p class="flex-1 min-w-0 text-sm font-medium text-[#0B1B3F]">{{ $h['text'] }}</p>
-                <a href="{{ $h['href'] }}" class="group shrink-0 h-9 inline-flex items-center gap-1 px-3.5 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
+                <a href="{{ $h['href'] }}" class="group shrink-0 h-10 inline-flex items-center gap-1 px-3.5 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
                     {{ $h['cta'] }}
                     <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 </a>
@@ -166,7 +164,7 @@
                 <div>
                     <h3 class="text-lg font-semibold">Cek laporan penjualan Anda</h3>
                     <p class="mt-0.5 text-sm text-[#64748B] max-w-md">Performa toko, produk terlaris, dan laba usaha.</p>
-                    <a href="{{ route('reports.sales') }}" class="group mt-3 h-9 inline-flex items-center gap-2 px-4 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
+                    <a href="{{ route('reports.sales') }}" class="group mt-3 h-10 inline-flex items-center gap-2 px-4 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors shadow-sm">
                         Lihat Laporan
                         <svg class="w-4 h-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                     </a>
@@ -178,52 +176,73 @@
 
         {{-- Transaksi terbaru --}}
         <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:3">
-            <div class="px-6 py-5 flex flex-wrap items-center justify-between gap-2">
+            <div class="px-5 sm:px-6 py-5 flex flex-wrap items-center justify-between gap-2">
                 <div>
                     <h3 class="text-lg font-semibold">Transaksi Terbaru</h3>
                     <p class="text-sm text-[#64748B] mt-0.5">Aktivitas penjualan terakhir</p>
                 </div>
                 <a href="{{ route('orders.index') }}" class="text-sm font-semibold text-[#16A34A] hover:text-[#15803D]">Lihat Semua &rarr;</a>
             </div>
-            <div class="overflow-x-auto">
+            @if(count($recentOrders))
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-sm whitespace-nowrap">
                     <thead>
                         <tr class="bg-slate-50 border-y border-[#E5E7EB]">
-                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">No. Order</th>
-                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Kasir</th>
-                            <th class="text-left px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Status</th>
-                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Total</th>
-                            <th class="text-right px-6 py-3 font-semibold text-[#64748B] text-xs uppercase tracking-wider">Waktu</th>
+                            <th class="text-left px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">No. Order</th>
+                            <th class="text-left px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Kasir</th>
+                            <th class="text-left px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Status</th>
+                            <th class="text-right px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Total</th>
+                            <th class="text-right px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Waktu</th>
+                            <th class="px-6 py-3.5"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#E5E7EB]">
-                        @php
-                            $statusColors = ['paid' => 'green', 'draft' => 'yellow', 'cancelled' => 'red', 'refunded' => 'blue'];
-                            $labels = ['paid' => 'Lunas', 'draft' => 'Draft', 'cancelled' => 'Batal', 'refunded' => 'Refund'];
-                        @endphp
-                        @forelse($recentOrders as $order)
-                        <tr class="hover:bg-slate-50/70 transition-colors">
-                            <td class="px-6 py-3.5"><a href="{{ route('orders.show', $order['id']) }}" class="font-mono text-xs font-semibold text-[#16A34A] hover:underline">{{ $order['order_number'] }}</a></td>
-                            <td class="px-6 py-3.5">
-                                <span class="flex items-center gap-2 text-slate-700">
-                                    <span class="w-6 h-6 rounded-full bg-[#ECFDF3] text-[#16A34A] text-xs font-bold flex items-center justify-center">{{ strtoupper(substr($order['user']['name'] ?? '-', 0, 1)) }}</span>
+                        @foreach($recentOrders as $order)
+                        <tr class="group hover:bg-[#ECFDF3]/50 transition-colors cursor-pointer" onclick="window.location='{{ route('orders.show', $order['id']) }}'">
+                            <td class="px-6 py-4"><a href="{{ route('orders.show', $order['id']) }}" class="font-mono text-[13px] font-semibold text-[#16A34A] hover:underline">{{ $order['order_number'] }}</a></td>
+                            <td class="px-6 py-4">
+                                <span class="flex items-center gap-2.5 text-slate-700">
+                                    <span class="w-7 h-7 rounded-full bg-[#ECFDF3] text-[#16A34A] text-xs font-bold flex items-center justify-center">{{ strtoupper(substr($order['user']['name'] ?? '-', 0, 1)) }}</span>
                                     {{ $order['user']['name'] ?? '-' }}
                                 </span>
                             </td>
-                            <td class="px-6 py-3.5"><x-badge :color="$statusColors[$order['status']] ?? 'gray'">{{ $labels[$order['status']] ?? $order['status'] }}</x-badge></td>
-                            <td class="px-6 py-3.5 text-right font-bold">{{ $rp($order['grand_total']) }}</td>
-                            <td class="px-6 py-3.5 text-right text-[#64748B] text-xs">{{ \Carbon\Carbon::parse($order['created_at'])->diffForHumans() }}</td>
+                            <td class="px-6 py-4"><x-order-status :status="$order['status']"/></td>
+                            <td class="px-6 py-4 text-right font-bold">{{ $rp($order['grand_total']) }}</td>
+                            <td class="px-6 py-4 text-right text-[#64748B]">{{ \Carbon\Carbon::parse($order['created_at'])->format('d M, H:i') }}</td>
+                            <td class="px-6 py-4 text-right">
+                                <span class="inline-flex items-center gap-1 text-[13px] font-semibold text-[#16A34A] opacity-70 group-hover:opacity-100">Detail
+                                    <svg class="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                                </span>
+                            </td>
                         </tr>
-                        @empty
-                        <tr><td colspan="5" class="px-6 py-12 text-center text-sm text-[#64748B]">Belum ada transaksi</td></tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
+            <div class="md:hidden divide-y divide-[#E5E7EB] border-t border-[#E5E7EB]">
+                @foreach($recentOrders as $order)
+                <a href="{{ route('orders.show', $order['id']) }}" class="block px-4 py-3.5 active:bg-[#ECFDF3]/60">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-[13px] font-semibold text-[#16A34A] truncate">{{ $order['order_number'] }}</span>
+                        <x-order-status :status="$order['status']"/>
+                    </div>
+                    <div class="mt-1.5 flex items-end justify-between gap-2">
+                        <div class="text-sm text-[#64748B] min-w-0">
+                            <p class="truncate">{{ $order['user']['name'] ?? '-' }}</p>
+                            <p class="text-xs">{{ \Carbon\Carbon::parse($order['created_at'])->format('d M, H:i') }}</p>
+                        </div>
+                        <p class="text-base font-bold shrink-0">{{ $rp($order['grand_total']) }}</p>
+                    </div>
+                </a>
+                @endforeach
+            </div>
+            @else
+            <div class="border-t border-[#E5E7EB] px-6 py-12 text-center text-sm text-[#64748B]">Belum ada transaksi</div>
+            @endif
         </section>
 
         @if(count($outletPerformance) > 1)
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-6" style="--i:5">
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6" style="--i:5">
             <h3 class="text-lg font-semibold mb-4">Performa Outlet Hari Ini</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @foreach($outletPerformance as $perf)
@@ -358,7 +377,7 @@
         {{-- Produk terlaris --}}
         <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5" style="--i:5">
             <div class="flex items-center justify-between">
-                <h3 class="text-base font-semibold">Produk Terlaris</h3>
+                <h3 class="text-lg font-semibold">Produk Terlaris</h3>
                 @if($isManager)<a href="{{ route('reports.products') }}" class="text-xs font-semibold text-[#16A34A] hover:text-[#15803D]">Lihat Semua &rarr;</a>@endif
             </div>
             @php $maxRev = collect($topProducts)->max('total_revenue') ?: 1; @endphp

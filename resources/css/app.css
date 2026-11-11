@@ -29,3 +29,27 @@ main div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     #receipt-print { position: absolute; left: 0; top: 0; }
     .no-print { display: none !important; }
 }
+
+
+/* PAGE MOTION: animasi bersama untuk halaman admin (dashboard, order, shift, dst).
+   Pakai class "page" di wrapper, lalu "fade-up" + style="--i:N" pada tiap kartu. */
+.page .fade-up { opacity: 0; transform: translateY(12px); animation: page-up .55s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: calc(var(--i, 0) * 80ms); }
+@keyframes page-up { to { opacity: 1; transform: none } }
+.page .float { animation: page-float 4.5s ease-in-out infinite }
+.page .twinkle { animation: page-tw 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center }
+.page .line-draw { stroke-dasharray: 60; stroke-dashoffset: 60; animation: page-draw 3.2s ease-in-out infinite }
+.page .tick { transform-origin: 56px 56px; animation: page-spin 8s linear infinite }
+.page .sweep { transform-origin: 56px 56px; animation: page-spin 10s linear infinite }
+.page .coin { animation: page-coin 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center }
+.page .ring { animation: page-ring 2.2s ease-out infinite }
+@keyframes page-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+@keyframes page-tw { 0%,100% { opacity: .3; transform: scale(.7) } 50% { opacity: 1; transform: scale(1.1) } }
+@keyframes page-draw { 0%,10% { stroke-dashoffset: 60 } 50%,85% { stroke-dashoffset: 0 } 100% { stroke-dashoffset: -60 } }
+@keyframes page-spin { to { transform: rotate(360deg) } }
+@keyframes page-coin { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@keyframes page-ring { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.45) } 70%,100% { box-shadow: 0 0 0 9px rgba(22,163,74,0) } }
+@media (prefers-reduced-motion: reduce) {
+    .page *, .page svg * { animation: none !important }
+    .page .fade-up { opacity: 1; transform: none }
+    .page .line-draw { stroke-dashoffset: 0 }
+}
