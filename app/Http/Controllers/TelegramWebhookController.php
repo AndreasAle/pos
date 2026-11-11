@@ -3,9 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Business;
-use App\Models\CashierShift;
-use App\Services\DashboardService;
-use App\Services\TelegramNotifier;
+use App\Services\TelegramAssistant;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +17,7 @@ class TelegramWebhookController extends Controller
 {
     public function __construct(
         protected TelegramService $tg,
-        protected DashboardService $dash,
+        protected TelegramAssistant $assistant,
     ) {}
 
     public function handle(Request $request)
@@ -33,16 +31,13 @@ class TelegramWebhookController extends Controller
         $chatId = data_get($msg, 'chat.id');
         $text   = trim((string) data_get($msg, 'text', ''));
 
-        if (!$chatId || $text === '' || $text[0] !== '/') {
+        if (!$chatId || $text === '') {
             return response()->json(['ok' => true]);
         }
 
-        // "/omzet@NamaBot arg" -> command "omzet", arg "arg"
-        [$cmd, $arg] = array_pad(preg_split('/\s+/', $text, 2), 2, '');
-        $cmd = strtolower(explode('@', ltrim($cmd, '/'))[0]);
-
         try {
-            $this->tg->send($chatId, $this->reply($cmd, trim($arg), (string) $chatId, (string) data_get($msg, 'chat.title', data_get($msg, 'from.first_name', ''))));
+            [$reply, $linked] = $this->reply($text, (string) $chatId, (string) data_get($msg, 'chat.title', data_get($msg, 'from.first_name', '')));
+            $this->tg->send($chatId, $reply, $linked);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -50,28 +45,48 @@ class TelegramWebhookController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    private function reply(string $cmd, string $arg, string $chatId, string $chatName): string
+    /** @return array{0:string,1:bool} [teks balasan, apakah chat sudah terhubung (untuk tombol cepat)] */
+    private function reply(string $text, string $chatId, string $chatName): array
     {
+        // "/omzet@NamaBot arg" -> perintah "omzet", sisanya argumen. Teks biasa dianggap pertanyaan.
+        $isCmd = $text[0] === '/';
+        $cmd   = '';
+        $arg   = '';
+        if ($isCmd) {
+            [$c, $arg] = array_pad(preg_split('/\s+/', $text, 2), 2, '');
+            $cmd = strtolower(explode('@', ltrim($c, '/'))[0]);
+            $arg = trim($arg);
+        }
+
         if ($cmd === 'start' && $arg !== '') {
-            return $this->link($arg, $chatId, $chatName);
+            return [$this->link($arg, $chatId, $chatName), true];
         }
 
         $biz = Business::where('is_active', true)->where('settings->telegram->chat_id', $chatId)->first();
 
         if (!$biz) {
-            return "Halo! Chat ini belum terhubung ke akun Yoka POS.\n\n"
-                . "Buka <b>Pengaturan → Bot Telegram</b> di Yoka POS, klik <b>Buat tautan</b>, lalu tekan tombol Buka Telegram.";
+            return ["Halo! Chat ini belum terhubung ke akun Yoka POS.
+
+"
+                . "Buka <b>Pengaturan → Bot Telegram</b> di Yoka POS, klik <b>Hubungkan Telegram</b>, lalu tekan tombol Buka Telegram.", false];
         }
 
-        return match ($cmd) {
-            'start', 'help', 'bantuan' => $this->help($biz),
-            'omzet', 'ringkasan'       => $this->summary($biz),
-            'terlaris'                 => $this->top($biz),
-            'stok'                     => $this->stock($biz),
-            'shift'                    => $this->shift($biz),
-            'putus'                    => $this->unlink($biz),
-            default                    => "Perintah tidak dikenal. Ketik /help untuk daftar perintah.",
+        if ($cmd === 'putus') {
+            return [$this->unlink($biz), false];
+        }
+
+        // Perintah lama tetap jalan, tapi pengguna tidak perlu tahu: semuanya lewat asisten.
+        $question = match ($cmd) {
+            ''                     => $text,
+            'start', 'help', 'bantuan' => 'bantuan',
+            'omzet', 'ringkasan'   => 'ringkasan hari ini',
+            'terlaris'             => 'produk terlaris hari ini',
+            'stok'                 => 'stok menipis',
+            'shift'                => 'shift berjalan',
+            default                => ltrim($text, '/'),
         };
+
+        return [$this->assistant->answer($biz, $question), true];
     }
 
     private function link(string $code, string $chatId, string $chatName): string
@@ -95,61 +110,10 @@ class TelegramWebhookController extends Controller
             'prefs'     => $biz->telegram()['prefs'] ?? [],
         ]);
 
-        return "✅ <b>Terhubung!</b>\nChat ini sekarang menerima notifikasi untuk <b>" . TelegramService::esc($biz->name) . "</b>.\n\n" . $this->help($biz);
-    }
+        return "✅ <b>Terhubung!</b>
+Chat ini sekarang menerima laporan dan peringatan untuk <b>" . TelegramService::esc($biz->name) . "</b>.
 
-    private function help(Business $biz): string
-    {
-        return "<b>Perintah Yoka POS</b>\n"
-            . "/omzet - ringkasan penjualan hari ini\n"
-            . "/terlaris - 5 produk terlaris hari ini\n"
-            . "/stok - bahan baku yang menipis\n"
-            . "/shift - shift yang sedang berjalan\n"
-            . "/putus - putuskan koneksi chat ini\n"
-            . "/help - tampilkan daftar ini";
-    }
-
-    private function summary(Business $biz): string
-    {
-        return TelegramNotifier::summaryText(
-            $biz,
-            $this->dash->getSummary($biz),
-            $this->dash->getTopProducts($biz, null, 5),
-            count($this->dash->getLowStockIngredients($biz)),
-            'Penjualan hari ini'
-        );
-    }
-
-    private function top(Business $biz): string
-    {
-        $top = $this->dash->getTopProducts($biz, null, 5);
-        if (!$top) return 'Belum ada produk terjual hari ini.';
-
-        $lines = ['🏆 <b>Terlaris hari ini</b>', ''];
-        foreach ($top as $i => $p) {
-            $lines[] = ($i + 1) . '. ' . TelegramService::esc($p['product_name'])
-                . ' · ' . number_format($p['total_qty'], 0, ',', '.') . ' terjual · ' . TelegramService::rp($p['total_revenue']);
-        }
-        return implode("\n", $lines);
-    }
-
-    private function stock(Business $biz): string
-    {
-        $items = $this->dash->getLowStockIngredients($biz);
-        return $items ? TelegramNotifier::stockText($biz, $items, '⚠️ <b>Stok menipis</b>') : '✅ Semua stok bahan baku aman.';
-    }
-
-    private function shift(Business $biz): string
-    {
-        $shifts = CashierShift::where('business_id', $biz->id)->where('status', 'open')->with(['user', 'outlet'])->get();
-        if ($shifts->isEmpty()) return 'Tidak ada shift yang sedang berjalan.';
-
-        $lines = ['⏱ <b>Shift berjalan</b>', ''];
-        foreach ($shifts as $s) {
-            $lines[] = '• ' . TelegramService::esc($s->user->name ?? '-') . ' · ' . TelegramService::esc($s->outlet->name ?? '-')
-                . ' · dibuka ' . $s->opened_at->diffForHumans() . ' · modal ' . TelegramService::rp($s->opening_cash);
-        }
-        return implode("\n", $lines);
+" . $this->assistant->help();
     }
 
     private function unlink(Business $biz): string

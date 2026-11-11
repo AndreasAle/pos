@@ -98,7 +98,7 @@ class TelegramNotifier
                 if (!Cache::add("tg:shift:{$shift->id}:" . today()->toDateString(), 1, now()->endOfDay())) continue;
                 self::deliver($biz, '⏰ <b>Shift belum ditutup</b>' . "\n"
                     . TelegramService::esc($shift->user->name ?? '-') . ' · ' . TelegramService::esc($shift->outlet->name ?? '-') . "\n"
-                    . 'Dibuka ' . $shift->opened_at->diffForHumans() . '.');
+                    . 'Dibuka ' . $shift->opened_at->locale('id')->diffForHumans() . '.');
             }
         });
     }

@@ -39,19 +39,27 @@ class TelegramService
     }
 
     /** Kirim pesan HTML. Mengembalikan true bila Telegram menerimanya. */
-    public function send(string|int $chatId, string $html): bool
+    public function send(string|int $chatId, string $html, bool $quickReplies = false): bool
     {
         if (!self::enabled()) {
             return false;
         }
 
         try {
-            $res = Http::timeout(6)->asForm()->post($this->url('sendMessage'), [
+            $payload = [
                 'chat_id'                  => $chatId,
                 'text'                     => mb_substr($html, 0, 4000),
                 'parse_mode'               => 'HTML',
                 'disable_web_page_preview' => true,
-            ]);
+            ];
+
+            // Tombol cepat di bawah kolom ketik, supaya tidak perlu mengetik.
+            if ($quickReplies) {
+                $rows = array_chunk(array_map(fn ($t) => ['text' => $t], TelegramAssistant::QUICK), 2);
+                $payload['reply_markup'] = json_encode(['keyboard' => $rows, 'resize_keyboard' => true, 'is_persistent' => true]);
+            }
+
+            $res = Http::timeout(6)->asForm()->post($this->url('sendMessage'), $payload);
 
             if (!$res->successful()) {
                 Log::warning('Telegram send failed', ['status' => $res->status(), 'body' => $res->body()]);

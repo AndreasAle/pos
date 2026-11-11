@@ -33,7 +33,7 @@
                 </div>
 
                 <h2 class="mt-4 text-2xl sm:text-[28px] sm:leading-9 font-semibold">Laporan toko, langsung di Telegram</h2>
-                <p class="mt-2 text-[15px] text-[#64748B] max-w-xl">Dapatkan ringkasan penjualan dan peringatan penting tanpa membuka aplikasi. Tanya angka kapan saja lewat perintah singkat seperti <code class="px-1.5 py-0.5 rounded bg-white border border-[#E5E7EB] text-[#15803D] font-semibold text-[13px]">/omzet</code>.</p>
+                <p class="mt-2 text-[15px] text-[#64748B] max-w-xl">Dapatkan ringkasan penjualan dan peringatan penting tanpa membuka aplikasi. Tanya angka kapan saja dengan bahasa sehari-hari, misalnya <span class="px-1.5 py-0.5 rounded bg-white border border-[#E5E7EB] text-[#15803D] font-semibold text-[13px]">"omzet hari ini berapa?"</span>, tanpa perintah rumit.</p>
 
                 {{-- Aksi --}}
                 <div class="mt-6">
@@ -114,7 +114,7 @@
                             <p class="text-[#64748B]">Susu UHT: 2,0 liter</p>
                             <p class="text-[#64748B]">Gula pasir: 1,5 kg</p>
                         </div>
-                        <div class="pop-in ml-auto max-w-[60%] rounded-2xl rounded-br-md bg-[#DCF8C6] px-3 py-2 shadow-sm" style="--d:2.4; transform-origin:right bottom">/omzet</div>
+                        <div class="pop-in ml-auto max-w-[60%] rounded-2xl rounded-br-md bg-[#DCF8C6] px-3 py-2 shadow-sm" style="--d:2.4; transform-origin:right bottom">Omzet kemarin berapa?</div>
                         <div class="pop-in max-w-[50%] rounded-2xl rounded-bl-md bg-white px-3.5 py-2.5 shadow-sm" style="--d:3.2"><span class="typing"><i></i><i></i><i></i></span></div>
                     </div>
                 </div>
@@ -160,18 +160,29 @@
         </form>
     </section>
 
-    {{-- Perintah --}}
+    {{-- Contoh pertanyaan --}}
     <section class="fade-up mt-5 rounded-xl border border-[#E5E7EB] bg-white p-5 sm:p-6" style="--i:2">
-        <h3 class="text-lg font-semibold">Perintah bot</h3>
-        <p class="text-sm text-[#64748B]">Ketik di chat Telegram yang sudah terhubung.</p>
-        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-3">
-            @foreach([['/omzet','Ringkasan penjualan hari ini'],['/terlaris','5 produk terlaris hari ini'],['/stok','Bahan baku yang menipis'],['/shift','Shift yang sedang berjalan'],['/help','Daftar semua perintah'],['/putus','Putuskan koneksi chat']] as [$c, $d])
-            <div class="flex items-center gap-3">
-                <code class="shrink-0 min-w-[84px] text-center px-2.5 py-1 rounded-md bg-[#ECFDF3] text-[#15803D] font-semibold text-[13px]">{{ $c }}</code>
-                <span class="text-sm text-[#64748B]">{{ $d }}</span>
+        <h3 class="text-lg font-semibold">Contoh yang bisa kamu tanyakan</h3>
+        <p class="text-sm text-[#64748B]">Ketik bebas seperti chat biasa, atau tekan tombol cepat yang muncul di Telegram. Sebut waktunya kalau perlu: hari ini, kemarin, minggu ini, bulan lalu.</p>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            @foreach([
+                ['Penjualan', 'Omzet hari ini berapa?'],
+                ['Transaksi', 'Kemarin ada berapa transaksi?'],
+                ['Laba', 'Untung minggu ini berapa?'],
+                ['Terlaris', 'Produk apa yang paling laris bulan ini?'],
+                ['Per produk', 'Es kopi susu terjual berapa hari ini?'],
+                ['Stok', 'Stok apa yang mau habis?'],
+                ['Pembayaran', 'Pembayaran QRIS bulan ini berapa?'],
+                ['Kasir', 'Siapa yang lagi jaga kasir?'],
+                ['Ringkasan', 'Gimana toko hari ini?'],
+            ] as [$tag, $q])
+            <div class="flex items-start gap-3 rounded-lg bg-slate-50 p-3.5">
+                <span class="shrink-0 mt-0.5 px-2 py-0.5 rounded-md bg-[#ECFDF3] text-[#15803D] text-xs font-semibold">{{ $tag }}</span>
+                <span class="text-sm font-medium">"{{ $q }}"</span>
             </div>
             @endforeach
         </div>
+        <p class="mt-4 text-sm text-[#64748B]">Untuk memutus koneksi dari Telegram, ketik <span class="font-mono font-semibold text-[#0B1B3F]">/putus</span>.</p>
     </section>
 </div>
 @endsection
