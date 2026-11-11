@@ -238,7 +238,7 @@
     <div class="transition-all duration-200 flex flex-col min-h-screen min-w-0 overflow-x-clip pt-14" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
 
         {{-- Flash messages --}}
-        <div class="px-4 sm:px-6 pt-4">
+        <div class="px-4 sm:px-6 @if(session('success') || session('error') || session('info') || $errors->any()) pt-4 @endif">
             @if(session('success'))
             <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
                  class="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 mb-4">

@@ -78,7 +78,7 @@
             }
          }"
          x-init="tick(); setInterval(() => tick(), 1000)"
-         class="fade-up mt-4 mb-6 rounded-xl border border-[#BBF7D0] bg-[#ECFDF3] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+         class="fade-up mb-6 rounded-xl border border-[#BBF7D0] bg-[#ECFDF3] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div class="flex items-center gap-3">
             <span class="w-10 h-10 rounded-lg bg-[#16A34A] text-white flex items-center justify-center shrink-0">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -100,7 +100,7 @@
     $iconCash    = 'M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8V6m0 12v-2m9-6a9 9 0 11-18 0 9 9 0 0118 0z';
 @endphp
 
-<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6 mt-4">
+<div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
 
     {{-- ============ KOLOM KIRI ============ --}}
     <div class="space-y-4 min-w-0">
