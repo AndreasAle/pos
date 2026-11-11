@@ -139,6 +139,63 @@ Login platform selalu mengirim kode 2FA enam digit ke email akun. Karena itu
 konfigurasi `MAIL_*` di `.env` wajib aktif. Semua login, impersonasi, perubahan
 status/paket, dan tindakan penarikan dicatat di menu **Aktivitas Tim**.
 
+### Auto-deploy setiap push ke `main`
+
+Repository memiliki workflow `.github/workflows/deploy-production.yml`. Setelah
+setup satu kali di bawah ini, setiap push ke branch `main` otomatis membuka SSH
+ke Hostinger, menjalankan `./deploy.sh`, lalu memeriksa endpoint `/up` pada
+`yokapos.com` dan `pos.conweb.id`. Workflow juga dapat dijalankan manual dari
+tab **Actions**.
+
+Di Mac lokal, buat kunci SSH khusus deploy. Jangan memakai private key pribadi:
+
+```bash
+ssh-keygen -t ed25519 -C "github-actions-yokapos" -f ~/.ssh/yokapos_actions
+```
+
+Tambahkan public key-nya ke akun Hostinger:
+
+```bash
+ssh -p 65002 u598194357@145.79.14.195 \
+  'umask 077; mkdir -p ~/.ssh; cat >> ~/.ssh/authorized_keys' \
+  < ~/.ssh/yokapos_actions.pub
+```
+
+Pastikan kuncinya bekerja tanpa meminta password server:
+
+```bash
+ssh -i ~/.ssh/yokapos_actions -p 65002 \
+  u598194357@145.79.14.195 'cd /home/u598194357/pos_app && pwd'
+```
+
+Di GitHub buka **Settings → Environments → New environment**, buat environment
+bernama `production`, lalu tambahkan lima **Environment secrets** berikut:
+
+| Secret | Isi |
+| --- | --- |
+| `HOSTINGER_SSH_HOST` | Host/IP SSH Hostinger |
+| `HOSTINGER_SSH_PORT` | Port SSH Hostinger |
+| `HOSTINGER_SSH_USER` | Username SSH Hostinger |
+| `HOSTINGER_SSH_PRIVATE_KEY` | Seluruh isi `~/.ssh/yokapos_actions`, termasuk baris BEGIN/END |
+| `HOSTINGER_SSH_KNOWN_HOSTS` | Baris host key server yang sudah diverifikasi |
+
+Ambil kandidat baris known-host dari server, lalu cocokkan fingerprint-nya
+dengan fingerprint SSH yang ditampilkan Hostinger sebelum menyimpannya:
+
+```bash
+ssh-keyscan -p 65002 145.79.14.195
+```
+
+Untuk menyalin private key ke clipboard di macOS tanpa menampilkannya di layar:
+
+```bash
+pbcopy < ~/.ssh/yokapos_actions
+```
+
+Jangan pernah menaruh private key, password SSH, atau isi `.env` di repository.
+Batasi siapa yang dapat push/merge ke `main`, karena push ke branch tersebut
+berarti memiliki kewenangan melakukan deploy produksi.
+
 ---
 
 ## ⚠️ Baca ini dulu: subdomain vs subfolder

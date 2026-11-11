@@ -31,7 +31,7 @@ fi
 cd "$APP_DIR"
 
 echo "==> Mengambil kode terbaru"
-git pull
+git pull --ff-only origin main
 
 echo "==> Dependency PHP"
 composer install --no-dev --optimize-autoloader
