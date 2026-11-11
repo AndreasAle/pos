@@ -128,7 +128,7 @@
         $activeShift = $me->activeShift()->first();
         $canSettings = in_array($me->role, ['owner','admin']);
     @endphp
-    <header class="fixed inset-x-0 top-0 z-50 h-14 bg-[#0B1F44] border-b border-[#31486B] px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
+    <header class="fixed inset-x-0 top-0 z-50 h-14 bg-gradient-to-r from-[#0B8F5B] via-[#0E9F6E] to-[#0D9488] border-b border-white/10 shadow-sm px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
         {{-- Brand --}}
         <div class="flex items-center gap-2 shrink-0 lg:w-[228px] lg:justify-between">
             <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/10" aria-label="Menu">
@@ -140,7 +140,7 @@
                 <span class="hidden sm:inline text-base font-semibold leading-6">Yoka POS</span>
             </a>
             </div>
-            <button @click="toggle()" class="hidden lg:inline-flex p-2 -mr-2 rounded-lg text-[#A7B0C2] hover:bg-white/10 hover:text-white shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
+            <button @click="toggle()" class="hidden lg:inline-flex p-2 -mr-2 rounded-lg text-white/75 hover:bg-white/10 hover:text-white shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/></svg>
         </button>
         </div>
@@ -154,13 +154,13 @@
                 get results() { const t = this.q.trim().toLowerCase(); return t ? this.items.filter(i => i.label.toLowerCase().includes(t)).slice(0, 8) : [] },
                 go() { const r = this.results[this.sel]; if (r) window.location = r.href }
              }" @click.outside="open = false" @keydown.window="if ($event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) { $event.preventDefault(); $refs.q.focus() }">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#A7B0C2] pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/75 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
             <input x-ref="q" type="text" x-model="q" autocomplete="off"
                    @focus="load(); open = true" @input="sel = 0; open = true"
                    @keydown.arrow-down.prevent="sel = Math.min(sel + 1, results.length - 1)" @keydown.arrow-up.prevent="sel = Math.max(sel - 1, 0)"
                    @keydown.enter.prevent="go()" @keydown.escape="open = false; $refs.q.blur()"
                    placeholder="Cari menu, produk, atau laporan..."
-                   class="w-full h-10 pl-10 pr-3 rounded-lg bg-[#22365F] text-sm font-normal text-white placeholder:text-[#A7B0C2] border border-transparent focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/60">
+                   class="w-full h-10 pl-10 pr-3 rounded-lg bg-white/15 text-sm font-normal text-white placeholder:text-white/70 border border-transparent focus:outline-none focus:bg-white/20 focus:border-white/60 focus:ring-2 focus:ring-white/40">
             <div x-show="open && q.trim()" x-cloak class="absolute left-0 right-0 mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
                 <template x-for="(r, i) in results" :key="r.href">
                     <a :href="r.href" class="block px-3 py-2 text-sm font-medium" :class="i === sel ? 'bg-[#E8F7EF] text-[#0B8F5B]' : 'hover:bg-[#F4F6F8]'" x-text="r.label"></a>
@@ -171,8 +171,8 @@
 
         <div class="flex items-center gap-2 sm:gap-4 shrink-0 ml-auto">
             @if($activeShift)
-            <a href="{{ route('shifts.show', $activeShift) }}" class="hidden md:flex items-center gap-1.5 text-xs font-medium bg-white/10 text-white rounded-full px-3 py-1.5 hover:bg-white/15">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#16A34A] animate-pulse"></span>Shift Aktif
+            <a href="{{ route('shifts.show', $activeShift) }}" class="hidden md:flex items-center gap-1.5 text-xs font-medium bg-white/15 text-white rounded-full px-3 py-1.5 hover:bg-white/15">
+                <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Shift Aktif
             </a>
             @endif
 
@@ -187,7 +187,7 @@
                 </div>
             </div>
 
-            <span class="hidden sm:block w-px h-6 bg-[#31486B]"></span>
+            <span class="hidden sm:block w-px h-6 bg-white/25"></span>
 
             {{-- Profil --}}
             <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
@@ -195,9 +195,9 @@
                     <span class="w-8 h-8 rounded-full bg-emerald-100 text-[#0B8F5B] flex items-center justify-center text-sm font-bold">{{ strtoupper(substr($me->name, 0, 1)) }}</span>
                     <span class="hidden md:block text-left leading-tight max-w-[150px]">
                         <span class="block text-sm font-semibold truncate">{{ $me->name }}</span>
-                        <span class="block text-xs text-[#A7B0C2] capitalize">{{ $me->role }}</span>
+                        <span class="block text-xs text-white/75 capitalize">{{ $me->role }}</span>
                     </span>
-                    <svg class="w-4 h-4 text-[#A7B0C2] transition-transform" :class="menu ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <svg class="w-4 h-4 text-white/75 transition-transform" :class="menu ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div x-show="menu" x-cloak x-transition.opacity.duration.100ms class="absolute right-0 mt-2 w-52 rounded-lg bg-white text-gray-800 border border-[#E5E7EB] shadow-xl py-1 z-50">
                     <a href="{{ route('profile') }}" class="flex items-center gap-2.5 px-3 py-2 text-sm font-medium hover:bg-[#F4F6F8]">
