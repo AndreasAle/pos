@@ -8,7 +8,77 @@ dan `vendor/` **tidak bisa diakses lewat browser sama sekali**.
 
 ```
 ~/pos_app/                          ← seluruh source code (hasil git clone)
+~/domains/yokapos.com/public_html  ← domain utama, hanya isi public/
 ~/domains/conweb.id/public_html/pos ← hanya isi public/ (index.php, build/, dll)
+```
+
+## Domain utama: yokapos.com + domain lama
+
+`yokapos.com` adalah domain utama. `pos.conweb.id` tetap aktif selama masa
+transisi, tetapi **keduanya harus menunjuk ke source yang sama**, yaitu
+`/home/u598194357/pos_app`. Jangan pelihara dua clone Laravel karena view,
+migration, queue, dan asetnya akan mudah berbeda versi.
+
+### Sekali saja: satukan document root
+
+Pastikan domain `yokapos.com` sudah dibuat di hPanel, lalu jalankan:
+
+```bash
+YOKA_ROOT=/home/u598194357/domains/yokapos.com/public_html
+LEGACY_ROOT=/home/u598194357/domains/conweb.id/public_html/pos
+
+cp "$YOKA_ROOT/index.php" "$YOKA_ROOT/index.php.before-yoka-pos"
+cp "$LEGACY_ROOT/index.php" "$YOKA_ROOT/index.php"
+
+if [ ! -e "$YOKA_ROOT/storage" ]; then
+  ln -s /home/u598194357/pos_app/storage/app/public "$YOKA_ROOT/storage"
+fi
+php -l "$YOKA_ROOT/index.php"
+```
+
+Verifikasi bahwa kedua front controller benar-benar menunjuk ke source yang sama:
+
+```bash
+grep -n '/home/u598194357/pos_app' \
+  /home/u598194357/domains/yokapos.com/public_html/index.php \
+  /home/u598194357/domains/conweb.id/public_html/pos/index.php
+```
+
+Ubah `.env` aplikasi utama:
+
+```ini
+APP_NAME="Yoka POS"
+APP_URL=https://yokapos.com
+SESSION_DOMAIN=null
+SESSION_SECURE_COOKIE=true
+```
+
+`APP_URL` hanya boleh memiliki satu nilai. Menjadikan `yokapos.com` sebagai
+nilai canonical memastikan tautan email, struk, dan callback baru memakai
+brand domain yang baru. `pos.conweb.id` tetap dapat dibuka dan memiliki cookie
+sesi host-nya sendiri.
+
+Setelah mengubah `.env`, daftarkan ulang webhook Telegram agar mengarah ke
+domain utama:
+
+```bash
+cd /home/u598194357/pos_app
+php artisan config:clear
+php artisan config:cache
+php artisan telegram:webhook
+```
+
+Di dashboard Midtrans, ubah payment notification URL menjadi:
+
+```text
+https://yokapos.com/midtrans/callback
+```
+
+Deploy rutin berikutnya cukup satu perintah. Skrip akan menyalin dan
+memverifikasi aset di **kedua** document root:
+
+```bash
+cd /home/u598194357/pos_app && ./deploy.sh
 ```
 
 ---
@@ -84,10 +154,10 @@ nano .env
 Isi yang wajib diubah:
 
 ```ini
-APP_NAME="FNB POS System"
+APP_NAME="Yoka POS"
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://pos.conweb.id
+APP_URL=https://yokapos.com
 
 DB_CONNECTION=mysql
 DB_HOST=localhost
@@ -221,7 +291,7 @@ rekap harian. Yang kedua mengirim email dan struk WhatsApp yang mengantre —
 
 ## 13. Buka aplikasinya
 
-**https://pos.conweb.id**
+**https://yokapos.com** (utama) dan **https://pos.conweb.id** (domain lama)
 
 Login pakai akun yang kamu buat lewat halaman registrasi. Database masih
 kosong (hanya berisi paket langganan), jadi bisnis pertama dibuat dari
@@ -301,7 +371,7 @@ symlink storage tetap sama.
 
 - [ ] `APP_DEBUG=false` — cek dengan `php artisan about | grep -i debug`
 - [ ] HTTPS aktif (hPanel → SSL, aktifkan juga Force HTTPS)
-- [ ] Buka `https://pos.conweb.id/.env` di browser — **harus 404**. Kalau isinya terbaca, hentikan dan perbaiki struktur folder.
+- [ ] Buka `https://yokapos.com/.env` dan `https://pos.conweb.id/.env` di browser — **keduanya harus 404**. Kalau isinya terbaca, hentikan dan perbaiki struktur folder.
 - [ ] Kedua cron job sudah terdaftar dan tercatat berjalan
 - [ ] Backup database pertama sudah dibuat (hPanel → Backups)
 - [ ] Registrasi akun owner berhasil dan bisa masuk dashboard

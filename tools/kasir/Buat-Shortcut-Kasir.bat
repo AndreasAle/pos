@@ -11,7 +11,7 @@ REM (Settings > Printers & scanners > matikan "Let Windows manage my default
 REM printer" > pilih printer > Set as default).
 
 setlocal
-set "URL=https://pos.conweb.id/kasir"
+set "URL=https://yokapos.com/kasir"
 
 set "CHROME=%ProgramFiles%\Google\Chrome\Application\chrome.exe"
 if not exist "%CHROME%" set "CHROME=%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"
