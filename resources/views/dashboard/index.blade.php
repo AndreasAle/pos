@@ -60,7 +60,7 @@
 </style>
 @endpush
 
-<div class="dash text-[#0B1B3F]">
+<div class="dash text-[#0B1B3F] pt-5">
 
 {{-- Banner trial --}}
 @if(config('pos.features.subscription') && $sub && $sub->status === 'trial' && $sub->ends_at)
