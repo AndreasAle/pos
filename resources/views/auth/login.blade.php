@@ -8,6 +8,12 @@
 <h3 class="text-xl font-bold text-gray-900 mb-1 text-center lg:text-left">Masuk ke Akun Anda</h3>
 <p class="text-sm text-gray-500 mb-6 text-center lg:text-left">Kelola transaksi dan pantau bisnis Anda kapan saja.</p>
 
+@error('google')
+<div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+    {{ $message }}
+</div>
+@enderror
+
 <form method="POST" action="{{ route('login.post') }}" class="space-y-4">
     @csrf
     <div>
@@ -46,6 +52,23 @@
         Masuk
     </button>
 </form>
+
+<div class="my-4 flex items-center gap-3" aria-hidden="true">
+    <span class="h-px flex-1 bg-gray-200"></span>
+    <span class="text-xs font-medium text-gray-400">atau</span>
+    <span class="h-px flex-1 bg-gray-200"></span>
+</div>
+
+<a href="{{ route('auth.google') }}"
+   class="flex w-full items-center justify-center gap-3 rounded-full border border-gray-300 bg-white px-4 py-3 text-[15px] font-bold text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2">
+    <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.92h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.41Z"/>
+        <path fill="#34A853" d="M12 22c2.7 0 4.98-.9 6.64-2.43l-3.24-2.54c-.9.6-2.05.96-3.4.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"/>
+        <path fill="#FBBC05" d="M6.39 13.86A6.02 6.02 0 0 1 6.07 12c0-.65.11-1.28.32-1.86V7.52H3.04A10 10 0 0 0 2 12c0 1.61.38 3.13 1.04 4.48l3.35-2.62Z"/>
+        <path fill="#EA4335" d="M12 6.01c1.47 0 2.79.5 3.83 1.5l2.88-2.88A9.65 9.65 0 0 0 12 2a10 10 0 0 0-8.96 5.52l3.35 2.62C7.18 7.77 9.39 6 12 6Z"/>
+    </svg>
+    Masuk dengan Google
+</a>
 
 <a href="{{ route('pin.show') }}"
    class="mt-4 flex items-center justify-center gap-2 w-full py-3 rounded-full border border-gray-300 text-[15px] font-bold text-gray-700 hover:bg-gray-50 transition-colors">

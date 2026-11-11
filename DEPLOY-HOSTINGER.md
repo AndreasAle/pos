@@ -74,6 +74,38 @@ Di dashboard Midtrans, ubah payment notification URL menjadi:
 https://yokapos.com/midtrans/callback
 ```
 
+### Sekali saja: aktifkan Login dengan Google
+
+Di [Google Cloud Console](https://console.cloud.google.com/auth/clients), buat
+OAuth Client dengan tipe **Web application**. Tambahkan Authorized redirect URI
+berikut secara persis (scheme, domain, path, dan trailing slash harus sama):
+
+```text
+https://yokapos.com/auth/google/callback
+```
+
+Kemudian tambahkan kredensialnya ke `.env` server. Jangan pernah commit nilainya
+ke Git:
+
+```ini
+GOOGLE_CLIENT_ID=client-id-dari-google
+GOOGLE_CLIENT_SECRET=client-secret-dari-google
+GOOGLE_REDIRECT_URI=https://yokapos.com/auth/google/callback
+```
+
+Terakhir, muat ulang cache konfigurasi:
+
+```bash
+cd /home/u598194357/pos_app
+php artisan config:clear
+php artisan config:cache
+```
+
+Pengguna yang membuka login dari `pos.conweb.id` tetap aman: aplikasi memulai
+OAuth dari `yokapos.com` agar cookie sesi dan parameter `state` kembali ke domain
+yang sama. Login Google hanya menghubungkan email yang sudah terdaftar di Yoka;
+pendaftaran bisnis baru tetap melalui form registrasi.
+
 Deploy rutin berikutnya cukup satu perintah. Skrip akan menyalin dan
 memverifikasi aset di **kedua** document root:
 
