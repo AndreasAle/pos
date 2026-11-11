@@ -21,6 +21,19 @@
     }">
     <x-page-loader/>
 
+    @if(session('platform_impersonating') && auth('platform')->check())
+        <div class="fixed bottom-4 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-4 border border-amber-300 bg-amber-50 px-5 py-3 shadow-xl">
+            <div>
+                <p class="text-sm font-bold text-amber-950">Mode bantuan tim Yoka</p>
+                <p class="text-xs text-amber-800">Anda sedang melihat dashboard sebagai toko ini. Seluruh sesi tercatat.</p>
+            </div>
+            <form method="POST" action="{{ route('platform.impersonate.stop') }}">
+                @csrf
+                <button class="whitespace-nowrap bg-amber-900 px-4 py-2 text-xs font-bold text-white hover:bg-amber-950">Kembali ke Platform</button>
+            </form>
+        </div>
+    @endif
+
     {{-- Mobile sidebar backdrop --}}
     <div x-show="sidebarOpen" x-cloak
          @click="sidebarOpen = false"
@@ -105,13 +118,12 @@
             @endif
 
             @if($role === 'owner' && (config('pos.features.subscription') || config('pos.features.balance')))
-            <x-nav-group title="Langganan & Saldo" :routes="['saas.*','balance.*','admin.withdrawals.*']">
+            <x-nav-group title="Langganan & Saldo" :routes="['saas.*','balance.*']">
                 @if(config('pos.features.subscription'))
                 <x-nav-item route="saas.plans" icon="credit-card">Paket Langganan</x-nav-item>
                 @endif
                 @if(config('pos.features.balance'))
                 <x-nav-item route="balance.index" icon="banknotes">Saldo & Penarikan</x-nav-item>
-                <x-nav-item route="admin.withdrawals.index" icon="queue-list">Kelola WD</x-nav-item>
                 @endif
             </x-nav-group>
             @endif

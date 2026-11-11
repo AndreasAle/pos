@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Business extends Model
 {
@@ -19,10 +19,10 @@ class Business extends Model
     protected function casts(): array
     {
         return [
-            'is_active'       => 'boolean',
-            'settings'        => 'array',
-            'balance'         => 'decimal:2',
-            'total_earned'    => 'decimal:2',
+            'is_active' => 'boolean',
+            'settings' => 'array',
+            'balance' => 'decimal:2',
+            'total_earned' => 'decimal:2',
             'total_withdrawn' => 'decimal:2',
         ];
     }
@@ -35,6 +35,11 @@ class Business extends Model
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function owner()
+    {
+        return $this->hasOne(User::class)->where('role', 'owner')->oldestOfMany();
     }
 
     public function products()
@@ -76,6 +81,40 @@ class Business extends Model
             ->latest('id');
     }
 
+    public function latestSubscription()
+    {
+        return $this->hasOne(BusinessSubscription::class)->latestOfMany();
+    }
+
+    public function platformStatus(): string
+    {
+        if (! $this->is_active) {
+            return 'disabled';
+        }
+
+        $subscription = $this->relationLoaded('latestSubscription')
+            ? $this->latestSubscription
+            : $this->latestSubscription()->with('plan')->first();
+
+        if (! $subscription) {
+            return 'stopped';
+        }
+
+        if ($subscription->status === 'pending') {
+            return 'overdue';
+        }
+
+        if ($subscription->status === 'trial' && $subscription->isActive()) {
+            return 'trial';
+        }
+
+        if ($subscription->status === 'active' && $subscription->isActive()) {
+            return 'active';
+        }
+
+        return 'stopped';
+    }
+
     /**
      * A shop that sells goods off the shelf (clothing, bags) rather than food.
      * It has no kitchen, recipes or dine-in, so those parts of the app hide.
@@ -93,17 +132,22 @@ class Business extends Model
 
     public function telegramLinked(): bool
     {
-        return !empty($this->telegram()['chat_id']);
+        return ! empty($this->telegram()['chat_id']);
     }
 
     /** Preferensi notifikasi: daily & alerts default aktif; kabar order baru selalu aktif. */
     public function telegramWants(string $key): bool
     {
-        if (!$this->telegramLinked()) return false;
+        if (! $this->telegramLinked()) {
+            return false;
+        }
         // Kabar order baru wajib: tidak bisa dimatikan, supaya owner tidak pernah ketinggalan transaksi.
-        if ($key === 'orders') return true;
+        if ($key === 'orders') {
+            return true;
+        }
 
         $defaults = ['daily' => true, 'alerts' => true];
+
         return (bool) ($this->telegram()['prefs'][$key] ?? $defaults[$key] ?? false);
     }
 
@@ -115,7 +159,9 @@ class Business extends Model
             // Preferensi tetap disimpan agar tidak hilang saat tersambung ulang.
             $prefs = $settings['telegram']['prefs'] ?? null;
             unset($settings['telegram']);
-            if ($prefs) $settings['telegram'] = ['prefs' => $prefs];
+            if ($prefs) {
+                $settings['telegram'] = ['prefs' => $prefs];
+            }
         } else {
             $settings['telegram'] = $data;
         }
@@ -140,7 +186,7 @@ class Business extends Model
     public function getLogoUrlAttribute(): string
     {
         return $this->logo
-            ? asset('storage/' . $this->logo)
+            ? asset('storage/'.$this->logo)
             : asset('images/default-logo.png');
     }
 }

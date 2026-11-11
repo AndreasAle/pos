@@ -26,7 +26,6 @@ class FeatureFlagViewGuardTest extends TestCase
     private const GATED = [
         "route('saas."               => 'saas',
         "route('balance."            => 'balance',
-        "route('admin.withdrawals."  => 'admin/withdrawals',
         "route('audit."              => 'audit',
         "route('subscription.expired" => 'saas',
     ];

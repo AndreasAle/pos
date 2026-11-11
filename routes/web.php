@@ -19,6 +19,11 @@ use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutletController;
+use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
+use App\Http\Controllers\Platform\AuthController as PlatformAuthController;
+use App\Http\Controllers\Platform\BusinessController as PlatformBusinessController;
+use App\Http\Controllers\Platform\DashboardController as PlatformDashboardController;
+use App\Http\Controllers\Platform\ImpersonationController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductBundleController;
 use App\Http\Controllers\ProductCategoryController;
@@ -77,6 +82,43 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+// ── Backoffice tim Yoka ──────────────────────────────────────────────────────
+// Guard dan session-nya terpisah dari akun toko. Semua halaman internal wajib
+// melewati verifikasi dua langkah sebelum data lintas tenant dapat dibuka.
+Route::prefix('platform')->name('platform.')->group(function () {
+    Route::get('login', [PlatformAuthController::class, 'showLogin'])->name('login');
+    Route::post('login', [PlatformAuthController::class, 'login'])
+        ->middleware('throttle:5,1')->name('login.store');
+
+    Route::middleware('auth:platform')->group(function () {
+        Route::get('two-factor', [PlatformAuthController::class, 'showTwoFactor'])->name('two-factor');
+        Route::post('two-factor', [PlatformAuthController::class, 'verifyTwoFactor'])
+            ->middleware('throttle:10,1')->name('two-factor.verify');
+        Route::post('two-factor/resend', [PlatformAuthController::class, 'resendTwoFactor'])
+            ->middleware('throttle:2,1')->name('two-factor.resend');
+        Route::post('logout', [PlatformAuthController::class, 'logout'])->name('logout');
+
+        Route::middleware('platform.2fa')->group(function () {
+            Route::get('/', PlatformDashboardController::class)->name('dashboard');
+            Route::get('businesses', [PlatformBusinessController::class, 'index'])->name('businesses.index');
+            Route::get('businesses/{business}', [PlatformBusinessController::class, 'show'])->name('businesses.show');
+            Route::patch('businesses/{business}/status', [PlatformBusinessController::class, 'updateStatus'])->name('businesses.status');
+            Route::post('businesses/{business}/subscription', [PlatformBusinessController::class, 'updateSubscription'])->name('businesses.subscription');
+            Route::post('businesses/{business}/trial', [PlatformBusinessController::class, 'extendTrial'])->name('businesses.trial');
+            Route::post('businesses/{business}/impersonate', [ImpersonationController::class, 'start'])->name('impersonate.start');
+            Route::post('impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
+            Route::get('activity', PlatformActivityController::class)->name('activity');
+
+            Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
+                Route::get('/', [WithdrawalAdminController::class, 'index'])->name('index');
+                Route::patch('{wd}/approve', [WithdrawalAdminController::class, 'approve'])->name('approve');
+                Route::patch('{wd}/complete', [WithdrawalAdminController::class, 'complete'])->name('complete');
+                Route::patch('{wd}/reject', [WithdrawalAdminController::class, 'reject'])->name('reject');
+            });
+        });
+    });
+});
 
 // ── Kasir: masuk dengan PIN (tablet) ─────────────────────────────────────────
 // Sengaja di luar grup 'business': perangkat belum punya sesi sampai PIN benar.
@@ -266,13 +308,6 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
             Route::delete('withdraw/{wd}', [BalanceController::class, 'cancelWithdrawal'])->name('cancel-withdrawal');
         });
 
-        // Admin: Withdrawal Management
-        Route::prefix('admin/withdrawals')->name('admin.withdrawals.')->middleware('role:owner')->group(function () {
-            Route::get('/', [WithdrawalAdminController::class, 'index'])->name('index');
-            Route::patch('{wd}/approve', [WithdrawalAdminController::class, 'approve'])->name('approve');
-            Route::patch('{wd}/complete', [WithdrawalAdminController::class, 'complete'])->name('complete');
-            Route::patch('{wd}/reject', [WithdrawalAdminController::class, 'reject'])->name('reject');
-        });
     }
 });
 

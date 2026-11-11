@@ -113,6 +113,32 @@ memverifikasi aset di **kedua** document root:
 cd /home/u598194357/pos_app && ./deploy.sh
 ```
 
+### Sekali saja: buat akun backoffice tim Yoka
+
+Dashboard platform terpisah dari akun owner toko dan berada di:
+
+```text
+https://yokapos.com/platform/login
+```
+
+Setelah deploy yang membawa migrasi `platform_admins`, buat akun pertama lewat
+SSH. Password diminta secara tersembunyi dan minimal 12 karakter:
+
+```bash
+cd /home/u598194357/pos_app
+php artisan platform:admin admin@yokapos.com --role=super_admin
+```
+
+Role yang tersedia:
+
+- `super_admin`: status tenant, paket/trial, impersonasi, dan data finansial.
+- `support`: profil tenant dan impersonasi; tanpa omzet atau perubahan paket.
+- `finance`: ringkasan finansial dan antrean penarikan; tanpa impersonasi.
+
+Login platform selalu mengirim kode 2FA enam digit ke email akun. Karena itu
+konfigurasi `MAIL_*` di `.env` wajib aktif. Semua login, impersonasi, perubahan
+status/paket, dan tindakan penarikan dicatat di menu **Aktivitas Tim**.
+
 ---
 
 ## ⚠️ Baca ini dulu: subdomain vs subfolder

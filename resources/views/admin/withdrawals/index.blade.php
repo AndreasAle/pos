@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.platform')
 @section('title', 'Kelola Penarikan')
 @section('page-title', 'Kelola Penarikan Merchant')
 
@@ -31,7 +31,7 @@
     {{-- Filter tabs --}}
     <div class="flex gap-2 flex-wrap">
         @foreach([''=>'Semua','pending'=>'Pending','processing'=>'Diproses','completed'=>'Selesai','rejected'=>'Ditolak'] as $val => $label)
-            <a href="{{ route('admin.withdrawals.index', $val ? ['status'=>$val] : []) }}"
+            <a href="{{ route('platform.withdrawals.index', $val ? ['status'=>$val] : []) }}"
                class="px-4 py-1.5 rounded-full text-sm font-medium border transition
                 {{ request('status', '') === $val ? 'bg-gray-800 text-white border-gray-800' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400' }}">
                 {{ $label }}
@@ -90,7 +90,7 @@
                         </td>
                         <td class="px-4 py-3 text-center" x-data="{ showReject: false }">
                             @if($wd->status === 'pending')
-                                <form method="POST" action="{{ route('admin.withdrawals.approve', $wd) }}" class="inline">
+                                <form method="POST" action="{{ route('platform.withdrawals.approve', $wd) }}" class="inline">
                                     @csrf @method('PATCH')
                                     <button class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition">
                                         Proses
@@ -100,7 +100,7 @@
                                     Tolak
                                 </button>
                                 <div x-show="showReject" x-cloak class="mt-2 text-left">
-                                    <form method="POST" action="{{ route('admin.withdrawals.reject', $wd) }}">
+                                    <form method="POST" action="{{ route('platform.withdrawals.reject', $wd) }}">
                                         @csrf @method('PATCH')
                                         <textarea name="admin_notes" rows="2" required placeholder="Alasan penolakan..."
                                             class="w-full text-xs border border-red-200 rounded-lg p-2 focus:outline-none"></textarea>
@@ -118,7 +118,7 @@
                                         Tolak
                                     </button>
                                     <div x-show="showComplete" x-cloak class="mt-2 text-left">
-                                        <form method="POST" action="{{ route('admin.withdrawals.complete', $wd) }}">
+                                        <form method="POST" action="{{ route('platform.withdrawals.complete', $wd) }}">
                                             @csrf @method('PATCH')
                                             <textarea name="admin_notes" rows="2" placeholder="Bukti transfer / catatan (opsional)"
                                                 class="w-full text-xs border border-green-200 rounded-lg p-2 focus:outline-none"></textarea>
@@ -126,7 +126,7 @@
                                         </form>
                                     </div>
                                     <div x-show="showReject" x-cloak class="mt-2 text-left">
-                                        <form method="POST" action="{{ route('admin.withdrawals.reject', $wd) }}">
+                                        <form method="POST" action="{{ route('platform.withdrawals.reject', $wd) }}">
                                             @csrf @method('PATCH')
                                             <textarea name="admin_notes" rows="2" required placeholder="Alasan penolakan..."
                                                 class="w-full text-xs border border-red-200 rounded-lg p-2 focus:outline-none"></textarea>
