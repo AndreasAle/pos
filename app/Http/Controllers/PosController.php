@@ -254,6 +254,8 @@ class PosController extends Controller
             'paid_amount'    => $order->grand_total,
         ]);
 
+        \App\Services\TelegramNotifier::orderPaid($order);
+
         // Credit the merchant now. Without this the balance was lost for good:
         // the webhook that arrives later skips crediting because the order is
         // already marked paid. Idempotent, so the later webhook is harmless.

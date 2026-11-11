@@ -207,7 +207,6 @@ class SettingController extends Controller
         $tg['prefs'] = [
             'daily'  => $request->boolean('daily'),
             'alerts' => $request->boolean('alerts'),
-            'orders' => $request->boolean('orders'),
         ];
         $business->setTelegram($tg);
 

@@ -87,6 +87,7 @@ class MidtransController extends Controller
         if (in_array($txStatus, ['capture', 'settlement'])) {
             if ($order->payment_status !== 'paid') {
                 $order->update(['payment_status' => 'paid', 'status' => 'paid']);
+                \App\Services\TelegramNotifier::orderPaid($order);
                 try {
                     $this->balanceService->creditFromQris($order->load('business'));
                 } catch (\Exception $e) {
@@ -209,6 +210,7 @@ class MidtransController extends Controller
             if ($order && in_array($txStatus, ['capture', 'settlement'])) {
                 if ($order->payment_status !== 'paid') {
                     $order->update(['payment_status' => 'paid', 'status' => 'paid']);
+                    \App\Services\TelegramNotifier::orderPaid($order);
                 }
 
                 // Always attempt the credit, even when the cashier already confirmed

@@ -108,12 +108,38 @@ class TelegramNotifier
     {
         // Dikirim setelah respons kasir selesai, jadi tidak memperlambat checkout.
         dispatch(function () use ($order) {
-            $biz = $order->business()->first();
-            if (!$biz || !$biz->telegramWants('orders')) return;
-            self::guard(fn () => self::deliver($biz,
-                '🧾 <b>Order baru</b> ' . TelegramService::esc($order->order_number) . "\n"
-                . TelegramService::rp($order->grand_total) . ' · ' . TelegramService::esc(ucfirst((string) $order->payment_method)) . "\n"
-                . 'Kasir: ' . TelegramService::esc($order->user->name ?? '-')));
+            self::guard(function () use ($order) {
+                $biz = $order->business()->first();
+                if (!$biz || !$biz->telegramWants('orders')) return;
+
+                // Order QRIS bisa terkonfirmasi lewat polling, webhook, dan konfirmasi manual; kirim sekali saja.
+                if (!Cache::add("tg:order:{$order->id}", 1, now()->addDay())) return;
+
+                $order->loadMissing(['items.addons', 'user', 'outlet', 'customer']);
+                $lines = ['🧾 <b>Transaksi baru</b> · ' . TelegramService::esc($order->order_number), ''];
+
+                foreach ($order->items as $it) {
+                    $add = $it->addons->isNotEmpty() ? ' (+' . $it->addons->pluck('addon_name')->map(fn ($x) => TelegramService::esc($x))->join(', ') . ')' : '';
+                    $lines[] = '• ' . (int) $it->qty . '× ' . TelegramService::esc($it->product_name) . $add;
+                }
+
+                $lines[] = '';
+                $lines[] = 'Total: <b>' . TelegramService::rp($order->grand_total) . '</b>';
+                if ((float) $order->discount_amount > 0) $lines[] = 'Diskon: ' . TelegramService::rp($order->discount_amount);
+                $lines[] = 'Bayar: ' . ($order->is_split_payment ? 'Terpisah' : TelegramService::esc(strtoupper((string) $order->payment_method)));
+
+                $meta = [str_replace('_', ' ', ucfirst((string) $order->order_type))];
+                if ($order->table_number) $meta[] = 'Meja ' . TelegramService::esc($order->table_number);
+                if ($order->customer) $meta[] = TelegramService::esc($order->customer->name);
+                $lines[] = implode(' · ', $meta);
+                $lines[] = 'Kasir: ' . TelegramService::esc($order->user->name ?? '-') . ($order->outlet ? ' · ' . TelegramService::esc($order->outlet->name) : '');
+
+                $today = Order::forBusiness($biz->id)->paid()->whereDate('created_at', today());
+                $lines[] = '';
+                $lines[] = '📈 Hari ini: ' . (clone $today)->count() . ' transaksi · ' . TelegramService::rp((float) (clone $today)->sum('grand_total'));
+
+                self::deliver($biz, implode("\n", $lines));
+            });
         })->afterResponse();
     }
 

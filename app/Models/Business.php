@@ -96,11 +96,14 @@ class Business extends Model
         return !empty($this->telegram()['chat_id']);
     }
 
-    /** Preferensi notifikasi: daily & alerts default aktif, orders default mati. */
+    /** Preferensi notifikasi: daily & alerts default aktif; kabar order baru selalu aktif. */
     public function telegramWants(string $key): bool
     {
         if (!$this->telegramLinked()) return false;
-        $defaults = ['daily' => true, 'alerts' => true, 'orders' => false];
+        // Kabar order baru wajib: tidak bisa dimatikan, supaya owner tidak pernah ketinggalan transaksi.
+        if ($key === 'orders') return true;
+
+        $defaults = ['daily' => true, 'alerts' => true];
         return (bool) ($this->telegram()['prefs'][$key] ?? $defaults[$key] ?? false);
     }
 

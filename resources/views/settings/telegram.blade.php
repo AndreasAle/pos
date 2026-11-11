@@ -11,7 +11,7 @@
                      'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', 'from-emerald-500 to-teal-500'],
         'alerts' => ['Peringatan', 'Stok menipis, shift lupa ditutup, serta order yang di-void atau di-refund.',
                      'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', 'from-amber-400 to-orange-500'],
-        'orders' => ['Order baru', 'Kabar tiap transaksi yang masuk. Bisa ramai di toko yang sibuk.',
+        'orders' => ['Transaksi baru', 'Setiap transaksi yang masuk langsung dikabari lengkap dengan menu, total, dan kasirnya. Selalu aktif.',
                      'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5h6m-6 7l2 2 4-4', 'from-sky-500 to-blue-500'],
     ];
 @endphp
@@ -136,16 +136,20 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 @foreach($feature as $key => [$label, $desc, $icon, $grad])
                 @php $on = $business->telegramWants($key); @endphp
-                <label class="group relative rounded-xl border bg-white p-5 transition-all {{ $linked ? 'cursor-pointer hover:shadow-md border-[#E5E7EB]' : 'border-[#E5E7EB] opacity-80' }}"
-                       x-data="{ on: {{ $on ? 'true' : 'false' }} }" :class="on && {{ $linked ? 'true' : 'false' }} ? '!border-[#16A34A] ring-1 ring-[#16A34A]/30' : ''">
+                <label class="group relative rounded-xl border bg-white p-5 transition-all {{ $linked && $key !== 'orders' ? 'cursor-pointer hover:shadow-md border-[#E5E7EB]' : 'border-[#E5E7EB]' }} {{ !$linked ? 'opacity-80' : '' }}"
+                       x-data="{ on: {{ $on ? 'true' : 'false' }} }" :class="on && {{ $linked ? 'true' : 'false' }} || {{ ($linked && $key === 'orders') ? 'true' : 'false' }} ? '!border-[#16A34A] ring-1 ring-[#16A34A]/30' : ''">
                     <div class="flex items-start justify-between gap-3">
                         <span class="w-11 h-11 rounded-xl bg-gradient-to-br {{ $grad }} text-white flex items-center justify-center shadow-sm">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}"/></svg>
                         </span>
+                        @if($key === 'orders')
+                        <span class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[#16A34A] text-white text-xs font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Selalu aktif</span>
+                        @else
                         <input type="checkbox" name="{{ $key }}" value="1" class="sr-only" x-model="on" {{ $on ? 'checked' : '' }} {{ $linked ? '' : 'disabled' }}>
                         <span class="relative w-11 h-6 rounded-full transition-colors shrink-0" :class="on ? 'bg-[#16A34A]' : 'bg-slate-300'">
                             <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform" :class="on ? 'translate-x-5' : ''"></span>
                         </span>
+                        @endif
                     </div>
                     <p class="mt-4 text-base font-semibold">{{ $label }}</p>
                     <p class="mt-1 text-sm text-[#64748B]">{{ $desc }}</p>
