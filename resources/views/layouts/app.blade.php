@@ -166,8 +166,10 @@
 
         {{-- Pencarian global (menu & laporan) --}}
         <div class="group relative flex-1 min-w-0 max-w-xl"
+             :class="mob ? 'max-sm:!fixed max-sm:inset-x-0 max-sm:top-0 max-sm:h-14 max-sm:z-[60] max-sm:bg-[#0A5C3A] max-sm:px-3 max-sm:flex max-sm:items-center max-sm:!max-w-none' : 'max-sm:hidden'"
+             @open-search.window="mob = true; $nextTick(() => $refs.q.focus())"
              x-data="{
-                q: '', open: false, sel: 0, items: [],
+                q: '', open: false, sel: 0, items: [], mob: false,
                 load() { this.items = [...document.querySelectorAll('aside nav a[href]')].map(a => ({ label: a.textContent.trim(), href: a.href })) },
                 get results() { const t = this.q.trim().toLowerCase(); return t ? this.items.filter(i => i.label.toLowerCase().includes(t)).slice(0, 8) : [] },
                 go() { const r = this.results[this.sel]; if (r) window.location = r.href }
@@ -176,11 +178,12 @@
             <input x-ref="q" type="text" x-model="q" autocomplete="off"
                    @focus="load(); open = true" @input="sel = 0; open = true"
                    @keydown.arrow-down.prevent="sel = Math.min(sel + 1, results.length - 1)" @keydown.arrow-up.prevent="sel = Math.max(sel - 1, 0)"
-                   @keydown.enter.prevent="go()" @keydown.escape="open = false; $refs.q.blur()"
+                   @keydown.enter.prevent="go()" @keydown.escape="open = false; mob = false; $refs.q.blur()"
                    placeholder="Cari menu, produk, atau laporan..."
                    class="w-full h-10 pl-10 pr-12 rounded-xl bg-black/20 text-sm font-normal text-white placeholder:text-white/60 border border-white/10 shadow-inner transition-all duration-200 hover:bg-black/25 focus:outline-none focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-400 focus:border-white focus:ring-4 focus:ring-white/20">
             <kbd class="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-md border border-white/20 bg-white/10 text-[11px] font-semibold text-white/70 pointer-events-none group-focus-within:hidden">/</kbd>
-            <div x-show="open && q.trim()" x-cloak class="absolute left-0 right-0 mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
+            <button type="button" x-show="mob" x-cloak @click="mob = false; open = false; q = ''" class="sm:hidden ml-2 px-2 h-9 text-sm font-semibold text-white/90 shrink-0">Batal</button>
+            <div x-show="open && q.trim()" x-cloak class="absolute left-3 right-3 sm:left-0 sm:right-0 top-full mt-1 sm:mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
                 <template x-for="(r, i) in results" :key="r.href">
                     <a :href="r.href" class="block px-3 py-2 text-sm font-medium" :class="i === sel ? 'bg-[#E8F7EF] text-[#0B8F5B]' : 'hover:bg-[#F4F6F8]'" x-text="r.label"></a>
                 </template>
@@ -189,6 +192,9 @@
         </div>
 
         <div class="flex items-center gap-2 sm:gap-4 shrink-0 ml-auto">
+            <button type="button" @click="$dispatch('open-search')" class="sm:hidden w-10 h-10 rounded-lg flex items-center justify-center text-white hover:bg-white/10" aria-label="Cari">
+                <svg class="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+            </button>
             @if($activeShift)
             <a href="{{ route('shifts.show', $activeShift) }}" class="hidden md:flex items-center gap-1.5 text-xs font-medium bg-white/15 text-white rounded-full px-3 py-1.5 hover:bg-white/15">
                 <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Shift Aktif
@@ -196,7 +202,7 @@
             @endif
 
             {{-- Notifikasi --}}
-            <div class="relative" x-data="{ n: false }" @click.outside="n = false" @keydown.escape.window="n = false">
+            <div class="relative max-sm:hidden" x-data="{ n: false }" @click.outside="n = false" @keydown.escape.window="n = false">
                 <button @click="n = !n" class="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:bg-white/10 transition-colors" :class="n ? 'bg-white/10' : ''" aria-label="Notifikasi">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
                 </button>
@@ -210,13 +216,13 @@
 
             {{-- Profil --}}
             <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
-                <button @click="menu = !menu" class="flex items-center gap-3 h-10 pl-1 pr-2 rounded-lg hover:bg-white/10 transition-colors" :class="menu ? 'bg-white/10' : ''" aria-label="Menu akun" :aria-expanded="menu">
+                <button @click="menu = !menu" class="flex items-center gap-3 h-10 pl-1 pr-2 max-sm:pr-1 rounded-lg hover:bg-white/10 transition-colors" :class="menu ? 'bg-white/10' : ''" aria-label="Menu akun" :aria-expanded="menu">
                     <span class="w-8 h-8 rounded-full bg-emerald-100 text-[#0B8F5B] flex items-center justify-center text-sm font-bold">{{ strtoupper(substr($me->name, 0, 1)) }}</span>
                     <span class="hidden md:block text-left leading-tight max-w-[150px]">
                         <span class="block text-sm font-semibold truncate">{{ $me->name }}</span>
                         <span class="block text-xs text-white/75 capitalize">{{ $me->role }}</span>
                     </span>
-                    <svg class="w-4 h-4 text-white/75 transition-transform" :class="menu ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                    <svg class="max-sm:hidden w-4 h-4 text-white/75 transition-transform" :class="menu ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <div x-show="menu" x-cloak x-transition.opacity.duration.100ms class="absolute right-0 mt-2 w-52 rounded-lg bg-white text-gray-800 border border-[#E5E7EB] shadow-xl py-1 z-50">
                     <a href="{{ route('profile') }}" class="flex items-center gap-2.5 px-3 py-2 text-sm font-medium hover:bg-[#F4F6F8]">
