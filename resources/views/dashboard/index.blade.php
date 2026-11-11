@@ -278,10 +278,24 @@
             @endif
         </div>
 
-        {{-- Mini card: Total Penjualan --}}
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5 hover:shadow-md transition-shadow" style="--i:2">
-            <div class="flex items-start justify-between gap-2">
-                <p class="text-sm font-semibold">Total Penjualan</p>
+        {{-- Kartu bertab: Penjualan / Transaksi / Pembayaran --}}
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:2"
+                 x-data="{ tab: 'sales', set(t) { this.tab = t; this.$nextTick(() => window.dispatchEvent(new Event('resize'))) } }">
+            <div class="p-1.5 bg-slate-50 border-b border-[#E5E7EB]">
+                <div class="grid grid-cols-3 gap-1 relative" role="tablist">
+                    @foreach(['sales' => 'Penjualan', 'orders' => 'Transaksi', 'pay' => 'Pembayaran'] as $k => $lbl)
+                    <button type="button" role="tab" @click="set('{{ $k }}')" :aria-selected="tab === '{{ $k }}'"
+                            class="h-9 rounded-lg text-[13px] font-semibold transition-all duration-200"
+                            :class="tab === '{{ $k }}' ? 'bg-white text-[#16A34A] shadow-sm ring-1 ring-[#E5E7EB]' : 'text-[#64748B] hover:text-[#0B1B3F] hover:bg-white/60'">{{ $lbl }}</button>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="p-5">
+                {{-- Penjualan --}}
+                <div x-show="tab === 'sales'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+                    <div class="flex items-start justify-between gap-2">
+                        <p class="text-sm font-semibold">Total Penjualan</p>
                 @if($revDelta !== null)
                 <span class="inline-flex items-center gap-0.5 text-xs font-semibold {{ $revDelta >= 0 ? 'text-[#16A34A]' : 'text-red-600' }}">
                     <svg class="w-3 h-3 {{ $revDelta >= 0 ? '' : 'rotate-180' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>{{ abs($revDelta) }}%
@@ -292,13 +306,13 @@
                 @endif
             </div>
             <p class="mt-1 text-[32px] leading-10 font-semibold tracking-tight">{{ $rp($summary['todayRevenue']) }}</p>
-            <div class="mt-3" style="position:relative;height:120px"><canvas id="miniRevenue"></canvas></div>
-        </section>
+                    <div class="mt-3" style="position:relative;height:150px"><canvas id="miniRevenue"></canvas></div>
+                </div>
 
-        {{-- Mini card: Total Transaksi --}}
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5 hover:shadow-md transition-shadow" style="--i:3">
-            <div class="flex items-start justify-between gap-2">
-                <p class="text-sm font-semibold">Total Transaksi</p>
+                {{-- Transaksi --}}
+                <div x-show="tab === 'orders'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+                    <div class="flex items-start justify-between gap-2">
+                        <p class="text-sm font-semibold">Total Transaksi</p>
                 @if($ordDelta !== null)
                 <span class="inline-flex items-center gap-0.5 text-xs font-semibold {{ $ordDelta >= 0 ? 'text-[#16A34A]' : 'text-red-600' }}">
                     <svg class="w-3 h-3 {{ $ordDelta >= 0 ? '' : 'rotate-180' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/></svg>{{ abs($ordDelta) }}%
@@ -309,13 +323,13 @@
                 @endif
             </div>
             <p class="mt-1 text-[32px] leading-10 font-semibold tracking-tight">{{ number_format($summary['todayOrders']) }}</p>
-            <div class="mt-3" style="position:relative;height:120px"><canvas id="miniOrders"></canvas></div>
-        </section>
+                    <div class="mt-3" style="position:relative;height:150px"><canvas id="miniOrders"></canvas></div>
+                </div>
 
-        {{-- Metode pembayaran --}}
-        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white p-5" style="--i:4">
-            <h3 class="text-base font-semibold">Metode Pembayaran</h3>
-            <p class="text-xs text-[#64748B] mt-0.5 mb-4">Hari ini</p>
+                {{-- Pembayaran --}}
+                <div x-show="tab === 'pay'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+                    <p class="text-sm font-semibold">Metode Pembayaran</p>
+                    <p class="text-xs text-[#64748B] mt-0.5 mb-4">Hari ini</p>
             @if(count($paymentBreakdown) > 0)
             @php $payTotal = collect($paymentBreakdown)->sum('total'); $dots = ['bg-[#16A34A]','bg-blue-500','bg-[#A855F7]','bg-amber-500','bg-red-500','bg-slate-500']; @endphp
             <div class="relative mx-auto" style="height:160px;max-width:220px">
@@ -341,6 +355,8 @@
                 <p class="text-sm">Belum ada transaksi hari ini</p>
             </div>
             @endif
+                </div>
+            </div>
         </section>
 
         {{-- Produk terlaris --}}
