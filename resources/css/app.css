@@ -48,8 +48,15 @@ main div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 @keyframes page-spin { to { transform: rotate(360deg) } }
 @keyframes page-coin { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
 @keyframes page-ring { 0% { box-shadow: 0 0 0 0 rgba(22,163,74,.45) } 70%,100% { box-shadow: 0 0 0 9px rgba(22,163,74,0) } }
+/* Gelembung chat (mockup Telegram) muncul bergantian lalu mengulang */
+.page .pop-in { opacity: 0; transform: translateY(8px) scale(.97); transform-origin: left bottom; animation: page-pop 9s ease-out infinite; animation-delay: calc(var(--d, 0) * 1s); }
+@keyframes page-pop { 0%,2% { opacity: 0; transform: translateY(8px) scale(.97) } 6%,88% { opacity: 1; transform: none } 96%,100% { opacity: 0; transform: translateY(-4px) } }
+.page .typing i { display: inline-block; width: 5px; height: 5px; margin: 0 1.5px; border-radius: 9999px; background: #94A3B8; animation: page-typing 1.2s ease-in-out infinite }
+.page .typing i:nth-child(2) { animation-delay: .15s } .page .typing i:nth-child(3) { animation-delay: .3s }
+@keyframes page-typing { 0%,60%,100% { transform: translateY(0); opacity: .5 } 30% { transform: translateY(-3px); opacity: 1 } }
 @media (prefers-reduced-motion: reduce) {
     .page *, .page svg * { animation: none !important }
+    .page .pop-in { opacity: 1; transform: none }
     .page .fade-up { opacity: 1; transform: none }
     .page .line-draw { stroke-dashoffset: 0 }
 }
