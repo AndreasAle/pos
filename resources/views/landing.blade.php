@@ -34,6 +34,8 @@
         }
         .hover-card { transition: transform .25s ease, box-shadow .25s ease; }
         .hover-card:hover { transform: translateY(-4px); box-shadow: 0 20px 45px -15px rgba(5,150,105,.25); }
+        .testimonial-track { scrollbar-width: none; }
+        .testimonial-track::-webkit-scrollbar { display: none; }
     </style>
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
@@ -479,39 +481,84 @@
     </section>
 
     {{-- ================= TESTIMONIALS ================= --}}
-    <section id="testimoni" class="py-24 px-6 bg-slate-50">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center max-w-2xl mx-auto mb-14">
-                <span class="text-emerald-600 font-semibold text-sm uppercase tracking-wide">Apa Kata Mereka</span>
-                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Dipercaya Pelaku Usaha F&B</h2>
+    @php
+        $testimonials = [
+            [
+                'name' => 'Putri Azahra',
+                'role' => 'Pemilik Brewcool Ice Cream',
+                'brand' => 'Brewcool',
+                'category' => 'Ice Cream & Dessert',
+                'quote' => 'Yoka bikin operasional Brewcool jauh lebih rapi. Transaksi lebih cepat, stok bahan mudah dipantau, dan saya tidak perlu lagi menunggu rekap manual untuk tahu kondisi toko.',
+                'image' => asset('images/testimonials/putri-azahra.webp'),
+                'alt' => 'Putri Azahra, pemilik Brewcool Ice Cream',
+                'photoBg' => 'bg-[#d9eee5]',
+                'accent' => 'text-emerald-700',
+            ],
+            [
+                'name' => 'Rizal Putra Mahardika',
+                'role' => 'Founder Base Capella Studio',
+                'brand' => 'Base Capella',
+                'category' => 'Creative Studio',
+                'quote' => 'Pencatatan transaksi sekarang jauh lebih cepat dan rapi. Dashboard Yoka memudahkan saya memantau performa usaha kapan saja tanpa harus membongkar catatan satu per satu.',
+                'image' => asset('images/testimonials/rizal-putra-mahardika.webp'),
+                'alt' => 'Rizal Putra Mahardika, founder Base Capella Studio',
+                'photoBg' => 'bg-[#dce7ef]',
+                'accent' => 'text-sky-700',
+            ],
+        ];
+    @endphp
+    <section id="testimoni" class="py-20 md:py-28 bg-[#f3f6f8] overflow-hidden"
+             x-data="{ move(direction) { this.$refs.track.scrollBy({ left: direction * this.$refs.track.clientWidth * .82, behavior: 'smooth' }) } }">
+        <div class="max-w-[1200px] mx-auto px-6">
+            <div class="flex items-end justify-between gap-8 mb-10 md:mb-14">
+                <div class="max-w-[780px]">
+                    <span class="text-emerald-600 font-bold text-sm uppercase tracking-[.14em]">Cerita Pengguna Yoka</span>
+                    <h2 class="mt-3 text-[32px] md:text-[46px] font-extrabold leading-[1.14] text-slate-950">
+                        Dipercaya orang-orang di balik usaha hebat
+                    </h2>
+                </div>
+                <div class="hidden md:flex items-center gap-3 shrink-0" aria-label="Navigasi testimoni">
+                    <button type="button" @click="move(-1)" aria-label="Testimoni sebelumnya"
+                            class="w-12 h-12 rounded-full border border-slate-300 bg-white text-slate-700 flex items-center justify-center hover:border-emerald-600 hover:text-emerald-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>
+                    </button>
+                    <button type="button" @click="move(1)" aria-label="Testimoni berikutnya"
+                            class="w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center hover:bg-emerald-700 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                    </button>
+                </div>
             </div>
-            <div class="grid lg:grid-cols-3 gap-6">
-                @foreach ([
-                    ['Sejak pakai sistem ini, tutup kasir jadi jauh lebih cepat dan selisih kas hampir tidak pernah terjadi lagi.', 'Andri Saputra', 'Owner Coffee Shop — Kopi Pagi', 'Tutup kasir lebih cepat'],
-                    ['Laporan stok bahan baku sangat membantu, kami jadi tahu lebih awal kalau tepung atau mentega mau habis.', 'Sri Wulandari', 'Owner Bakery — Roti & Kue Bu Sri', 'Stok terpantau'],
-                    ['Bagian yang paling kami suka adalah laporan profitnya — jadi tahu menu mana yang sebenarnya paling menguntungkan.', 'Bayu Pratama', 'Owner Resto — Warung Nasi Bayu', 'Profit per menu'],
-                ] as [$quote, $name, $role, $tag])
-                    <figure class="relative flex flex-col rounded-2xl bg-white border border-slate-200 p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/70">
-                        <svg class="absolute top-6 right-6 w-10 h-10 text-emerald-100" fill="currentColor" viewBox="0 0 32 32"><path d="M10 8C5.6 9.4 3 13 3 18v6h9v-9H7.5c.2-2.6 1.6-4.4 4-5.2L10 8zm15 0c-4.4 1.4-7 5-7 10v6h9v-9h-4.5c.2-2.6 1.6-4.4 4-5.2L25 8z"/></svg>
-                        <div class="flex gap-0.5 text-amber-400 mb-4">
-                            @for ($s = 0; $s < 5; $s++)
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L10 14.9 4.8 17.7l1-5.9L1.5 7.7l5.9-.8L10 1.5z"/></svg>
-                            @endfor
-                        </div>
-                        <blockquote class="text-slate-700 leading-relaxed mb-6 flex-1">{{ $quote }}</blockquote>
-                        <span class="self-start mb-6 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-1">{{ $tag }}</span>
-                        <figcaption class="flex items-center gap-3 pt-5 border-t border-slate-100">
-                            <div class="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold flex items-center justify-center text-sm">
-                                {{ collect(explode(' ', $name))->map(fn($w) => $w[0])->take(2)->implode('') }}
+
+            <div x-ref="track"
+                 class="testimonial-track flex gap-5 md:gap-7 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-2 -mr-6 pr-6"
+                 tabindex="0" aria-label="Testimoni pengguna Yoka POS">
+                @foreach ($testimonials as $testimonial)
+                    <figure class="snap-start shrink-0 w-[92%] md:w-[84%] lg:w-[88%] min-h-[620px] md:min-h-[470px] grid md:grid-cols-[42%_58%] overflow-hidden rounded-[28px] bg-white shadow-[0_20px_55px_rgba(15,23,42,.08)]">
+                        <div class="relative min-h-[300px] md:min-h-full {{ $testimonial['photoBg'] }} overflow-hidden">
+                            <div class="absolute top-5 left-5 z-10 px-3 py-1.5 rounded-full bg-white/85 backdrop-blur-sm text-[11px] font-bold uppercase tracking-wider text-slate-700 shadow-sm">
+                                {{ $testimonial['category'] }}
                             </div>
-                            <div>
-                                <p class="font-semibold text-sm text-slate-900">{{ $name }}</p>
-                                <p class="text-xs text-slate-500">{{ $role }}</p>
+                            <img src="{{ $testimonial['image'] }}" alt="{{ $testimonial['alt'] }}"
+                                 class="absolute inset-x-0 bottom-0 w-full h-[94%] object-contain object-bottom transition-transform duration-500 hover:scale-[1.02]"
+                                 loading="lazy">
+                        </div>
+
+                        <figcaption class="relative flex flex-col justify-center px-7 py-9 sm:px-10 md:px-12 lg:px-16 md:py-12">
+                            <svg class="absolute top-8 right-8 w-14 h-14 text-emerald-100" fill="currentColor" viewBox="0 0 32 32" aria-hidden="true"><path d="M10 8C5.6 9.4 3 13 3 18v6h9v-9H7.5c.2-2.6 1.6-4.4 4-5.2L10 8zm15 0c-4.4 1.4-7 5-7 10v6h9v-9h-4.5c.2-2.6 1.6-4.4 4-5.2L25 8z"/></svg>
+                            <p class="text-xl md:text-2xl font-extrabold italic {{ $testimonial['accent'] }}">{{ $testimonial['brand'] }}</p>
+                            <blockquote class="mt-7 text-[17px] md:text-[20px] leading-[1.75] text-slate-700">
+                                “{{ $testimonial['quote'] }}”
+                            </blockquote>
+                            <div class="mt-8 pt-6 border-t border-slate-100">
+                                <p class="text-lg font-extrabold text-slate-950">{{ $testimonial['name'] }}</p>
+                                <p class="mt-1 text-sm md:text-[15px] font-semibold text-slate-500">{{ $testimonial['role'] }}</p>
                             </div>
                         </figcaption>
                     </figure>
                 @endforeach
             </div>
+
+            <p class="mt-5 text-sm text-slate-500 md:hidden">Geser untuk melihat cerita berikutnya <span aria-hidden="true">→</span></p>
         </div>
     </section>
 
