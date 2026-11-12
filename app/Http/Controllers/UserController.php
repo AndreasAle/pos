@@ -143,6 +143,32 @@ class UserController extends Controller
         return view('users.profile', ['user' => auth()->user()]);
     }
 
+    /** Kirim tautan ganti password ke email akun. Password baru hanya bisa dibuat lewat tautan itu. */
+    public function sendPasswordLink(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+        try {
+            $status = \Illuminate\Support\Facades\Password::sendResetLink(['email' => $user->email]);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json(['message' => 'Email gagal dikirim. Coba lagi beberapa saat.'], 503);
+        }
+        if ($status === \Illuminate\Support\Facades\Password::RESET_THROTTLED) {
+            return response()->json(['message' => 'Tautan baru saja dikirim. Tunggu sekitar satu menit sebelum meminta lagi.'], 429);
+        }
+        if ($status !== \Illuminate\Support\Facades\Password::RESET_LINK_SENT) {
+            return response()->json(['message' => 'Tautan tidak bisa dikirim untuk akun ini.'], 422);
+        }
+        [$local, $domain] = explode('@', $user->email, 2) + [1 => ''];
+
+        return response()->json([
+            'message' => 'Tautan sudah dikirim. Buka email lalu klik tombol di dalamnya untuk membuat password baru.',
+            'email' => mb_substr($local, 0, 1).str_repeat('*', max(2, mb_strlen($local) - 1)).'@'.$domain,
+            'expires_minutes' => (int) config('auth.passwords.users.expire', 60),
+        ]);
+    }
+
     public function updateProfile(Request $request)
     {
         $user = auth()->user();
@@ -150,16 +176,10 @@ class UserController extends Controller
         $request->validate([
             'name'     => 'required|string|max:255',
             'phone'    => 'nullable|string|max:20',
-            'password' => 'nullable|string|min:8|confirmed',
         ]);
 
-        $data = $request->only('name', 'phone');
-
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
-
-        $user->update($data);
+        // Password sengaja tidak bisa diganti dari sini; harus lewat tautan konfirmasi di email (sendPasswordLink).
+        $user->update($request->only('name', 'phone'));
 
         return back()->with('success', 'Profil berhasil diperbarui.');
     }

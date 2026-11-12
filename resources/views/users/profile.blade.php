@@ -73,21 +73,28 @@
             </div>
         </section>
 
-        <section class="rounded-xl border border-[#E5E7EB] bg-white">
-            <div class="border-b border-[#E5E7EB] px-6 py-4"><h3 class="text-[16px] font-extrabold text-[#0B1B3F]">Keamanan</h3><p class="text-[13px] font-semibold text-slate-500">{{ $user->hasGoogle() ? 'Kamu masuk dengan Google. Password bersifat opsional, isi hanya jika ingin masuk dengan email.' : 'Kosongkan bila tidak ingin mengganti password.' }}</p></div>
-            <div class="grid grid-cols-1 gap-5 p-6 sm:grid-cols-2">
-                <div>
-                    <label class="mb-1.5 block text-[13px] font-bold text-slate-600" for="password">Password baru</label>
-                    <input id="password" type="password" name="password" autocomplete="new-password" placeholder="Minimal 8 karakter" class="{{ $input }}">
-                    @error('password')<p class="mt-1 text-[13px] font-semibold text-red-600">{{ $message }}</p>@enderror
+        <section class="rounded-xl border border-[#E5E7EB] bg-white" x-data="passwordLink(@js(route('profile.password.link')))">
+            <div class="border-b border-[#E5E7EB] px-6 py-4"><h3 class="text-[16px] font-extrabold text-[#0B1B3F]">Keamanan</h3><p class="text-[13px] font-semibold text-slate-500">Ganti password dikonfirmasi lewat email, seperti di aplikasi lain.</p></div>
+            <div class="p-6">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-start gap-3">
+                        <span class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#ECFDF3] text-[#16A34A]"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/></svg></span>
+                        <div>
+                            <p class="text-[15px] font-bold text-[#0B1B3F]">Password</p>
+                            <p class="text-[13px] font-semibold text-slate-500">Kami kirim tautan ke <span class="font-bold text-slate-700">{{ \Illuminate\Support\Str::mask($user->email, '*', 1, max(2, mb_strpos($user->email, '@') - 1)) }}</span>. Klik tautan itu untuk membuat password baru.{{ $user->hasGoogle() ? ' Kamu masuk dengan Google, jadi password hanya perlu jika ingin masuk memakai email.' : '' }}</p>
+                        </div>
+                    </div>
+                    <button type="button" @click="send()" :disabled="busy || cooldown > 0" class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-5 text-[14px] font-bold text-[#0B1B3F] transition hover:border-[#16A34A] hover:bg-[#F4FBF7] disabled:cursor-not-allowed disabled:opacity-60">
+                        <span x-text="busy ? 'Mengirim…' : (cooldown > 0 ? 'Kirim ulang (' + cooldown + 's)' : (sent ? 'Kirim ulang tautan' : 'Kirim tautan ke email'))"></span>
+                    </button>
                 </div>
-                <div>
-                    <label class="mb-1.5 block text-[13px] font-bold text-slate-600" for="password_confirmation">Konfirmasi password baru</label>
-                    <input id="password_confirmation" type="password" name="password_confirmation" autocomplete="new-password" class="{{ $input }}">
+                <div x-show="sent" x-cloak class="mt-4 rounded-lg border border-[#16A34A]/25 bg-[#ECFDF3] px-4 py-3 text-[14px] font-semibold text-[#066B45]">
+                    <p x-text="message"></p>
+                    <p class="mt-1 text-[13px] font-semibold text-[#087A4E]">Dikirim ke <span x-text="email"></span>. Berlaku <span x-text="minutes"></span> menit. Belum ada? Cek folder spam.</p>
                 </div>
+                <p x-show="error" x-cloak x-text="error" class="mt-4 rounded-lg bg-red-50 px-4 py-3 text-[14px] font-bold text-red-700"></p>
             </div>
         </section>
-
         <div class="flex justify-end">
             <button type="submit" class="inline-flex h-11 items-center rounded-lg bg-[#16A34A] px-6 text-[14px] font-bold text-white shadow-sm transition hover:bg-[#15803D]">Simpan perubahan</button>
         </div>
@@ -111,6 +118,22 @@
 
 @push('scripts')
 <script>
+function passwordLink(url) {
+    const token = document.querySelector('meta[name="csrf-token"]').content;
+    return {
+        busy: false, sent: false, message: '', email: '', minutes: 60, error: '', cooldown: 0,
+        async send() {
+            if (this.busy || this.cooldown > 0) return; this.busy = true; this.error = '';
+            try {
+                const r = await fetch(url, { method: 'POST', headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': token } });
+                const d = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(d.message || 'Tautan gagal dikirim.');
+                this.sent = true; this.message = d.message; this.email = d.email; this.minutes = d.expires_minutes;
+                this.cooldown = 60; const t = setInterval(() => { if (--this.cooldown <= 0) clearInterval(t); }, 1000);
+            } catch (e) { this.error = e.message; } finally { this.busy = false; }
+        },
+    };
+}
 function profilePhoto(userId, storeUrl, destroyUrl, hasUpload) {
     const token = document.querySelector('meta[name="csrf-token"]').content;
     return {

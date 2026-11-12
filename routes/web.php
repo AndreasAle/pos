@@ -72,10 +72,12 @@ Route::middleware('guest')->group(function () {
     Route::get('/forgot-password', [PasswordResetController::class, 'showForgot'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])
         ->middleware('throttle:5,1')->name('password.email');
-    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
-    Route::post('/reset-password', [PasswordResetController::class, 'reset'])
-        ->middleware('throttle:10,1')->name('password.update');
 });
+
+// Tautan reset dari email harus bisa dibuka juga oleh pengguna yang sedang login (ganti password dari Profil).
+Route::get('/reset-password/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'reset'])
+    ->middleware('throttle:10,1')->name('password.update');
 
 // ── Konfirmasi email ─────────────────────────────────────────────────────────
 // Tautan di email bertanda tangan dan bisa dibuka dari perangkat lain,
@@ -190,6 +192,7 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::patch('users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
     Route::get('profile', [UserController::class, 'profile'])->name('profile');
     Route::post('profile', [UserController::class, 'updateProfile'])->name('profile.update');
+    Route::post('profile/password-link', [UserController::class, 'sendPasswordLink'])->middleware('throttle:4,10')->name('profile.password.link');
     Route::post('profile/avatar', [\App\Http\Controllers\ProfileAvatarController::class, 'store'])->middleware('throttle:10,1')->name('profile.avatar.store');
     Route::delete('profile/avatar', [\App\Http\Controllers\ProfileAvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profile.avatar.destroy');
     Route::get('avatars/{user}', [\App\Http\Controllers\ProfileAvatarController::class, 'show'])->name('avatar.show');

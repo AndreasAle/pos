@@ -65,6 +65,10 @@ class PasswordResetController extends Controller
         );
 
         if ($status === Password::PASSWORD_RESET) {
+            if (auth()->check()) {
+                return redirect()->route('profile')->with('success', 'Password berhasil diubah.');
+            }
+
             return redirect()->route('login')->with('success', 'Password berhasil diubah. Silakan masuk dengan password baru.');
         }
 
