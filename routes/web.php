@@ -18,8 +18,8 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\IntelligenceController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MidtransController;
-use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutletController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\AuthController as PlatformAuthController;
@@ -171,6 +171,11 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::get('history', [IntelligenceController::class, 'history'])->name('history');
         Route::post('insights/{insight}/read', [IntelligenceController::class, 'read'])->name('insights.read');
         Route::post('insights/{insight}/dismiss', [IntelligenceController::class, 'dismiss'])->name('insights.dismiss');
+        Route::post('insights/{insight}/acknowledge', [IntelligenceController::class, 'acknowledge'])->name('insights.acknowledge');
+        Route::post('insights/{insight}/snooze', [IntelligenceController::class, 'snooze'])->name('insights.snooze');
+        Route::post('actions/{proposal}/approve', [IntelligenceController::class, 'approveAction'])->middleware('throttle:10,1')->name('actions.approve');
+        Route::post('actions/{proposal}/execute', [IntelligenceController::class, 'executeAction'])->middleware('throttle:10,1')->name('actions.execute');
+        Route::patch('agents/{agent}/toggle', [IntelligenceController::class, 'toggleAgent'])->middleware('throttle:20,1')->name('agents.toggle');
         Route::delete('conversations/{conversation}', [IntelligenceController::class, 'destroyConversation'])->name('conversations.destroy');
     });
     Route::post('intelligence/refresh', [IntelligenceController::class, 'refresh'])

@@ -1,11 +1,15 @@
 <?php
 
+use App\Jobs\RunIntelligenceAgent;
 use App\Jobs\SendDailySummary;
 use App\Jobs\SendLowStockAlert;
 use App\Jobs\SendShiftUnclosedAlert;
 use App\Models\Business;
-use App\Services\TelegramNotifier;
+use App\Models\IntelligenceAgent;
 use App\Services\InsightService;
+use App\Services\Intelligence\AgentService;
+use App\Services\TelegramNotifier;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Schedule;
 
 // ── Cek stok menipis — setiap 6 jam ──────────────────────────────────────────
@@ -41,3 +45,16 @@ Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => Te
 
 Schedule::call(fn () => Business::where('is_active', true)->each(fn ($b) => app(InsightService::class)->refresh($b)))
     ->hourly()->name('yoka-insights')->withoutOverlapping();
+
+Schedule::call(function () {
+    if (! config('pos.features.intelligence_agents')) {
+        return;
+    }
+    Business::where('is_active', true)->each(fn (Business $business) => app(AgentService::class)->ensureDefaults($business));
+    IntelligenceAgent::where('enabled', true)->each(function (IntelligenceAgent $agent) {
+        $now = CarbonImmutable::now($agent->timezone);
+        if (app(AgentService::class)->due($agent, $now)) {
+            RunIntelligenceAgent::dispatch($agent->id, $now->toIso8601String());
+        }
+    });
+})->everyMinute()->name('yoka-intelligence-agents')->withoutOverlapping();

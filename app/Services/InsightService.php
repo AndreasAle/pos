@@ -22,10 +22,7 @@ class InsightService
         );
 
         foreach ($insights as $insight) {
-            BusinessInsight::updateOrCreate(
-                ['business_id' => $business->id, 'fingerprint' => $insight['fingerprint']],
-                $insight + ['business_id' => $business->id, 'detected_at' => now(), 'expires_at' => now()->addHours(26)]
-            );
+            $this->persist($business, $insight);
         }
 
         return count($insights);
@@ -33,28 +30,53 @@ class InsightService
 
     public function visible(Business $business, int $limit = 6)
     {
-        $this->refresh($business);
-
         return $business->insights()->visible()
             ->orderByRaw("CASE severity WHEN 'critical' THEN 1 WHEN 'warning' THEN 2 WHEN 'positive' THEN 3 ELSE 4 END")
             ->latest('detected_at')->limit($limit)->get();
+    }
+
+    private function persist(Business $business, array $insight): void
+    {
+        $existing = BusinessInsight::where('business_id', $business->id)->where('fingerprint', $insight['fingerprint'])->first();
+        $sample = (int) ($insight['sample_size'] ?? data_get($insight, 'data.orders', data_get($insight, 'data.count', 1)));
+        $now = now();
+        $values = $insight + [
+            'business_id' => $business->id,
+            'detected_at' => $now,
+            'first_detected_at' => $existing?->first_detected_at ?? $now,
+            'last_detected_at' => $now,
+            'expires_at' => $now->copy()->addHours(26),
+            'sample_size' => $sample,
+            'confidence' => $insight['confidence'] ?? ($sample >= 10 ? 90 : 60),
+            'evidence' => $insight['evidence'] ?? [
+                'source' => 'yoka_pos', 'detector' => $insight['type'],
+                'metrics' => $insight['data'] ?? [], 'generated_at' => $now->toIso8601String(),
+            ],
+            'occurrence_count' => ($existing?->occurrence_count ?? 0) + 1,
+        ];
+        BusinessInsight::updateOrCreate(['business_id' => $business->id, 'fingerprint' => $insight['fingerprint']], $values);
     }
 
     private function salesTrend(Business $b): array
     {
         $today = $this->revenue($b, now()->startOfDay(), now());
         $previous = $this->revenue($b, now()->subDay()->startOfDay(), now()->subDay());
-        if ($previous['revenue'] < 1 || $today['orders'] < 1) return [];
+        if ($previous['revenue'] < 1 || $today['orders'] < 1) {
+            return [];
+        }
         $delta = round(($today['revenue'] - $previous['revenue']) / $previous['revenue'] * 100);
-        if (abs($delta) < 10) return [];
+        if (abs($delta) < 10) {
+            return [];
+        }
         $down = $delta < 0;
 
         return [[
             'fingerprint' => 'sales-trend:'.today(), 'type' => 'sales_trend',
             'severity' => $down ? 'warning' : 'positive',
-            'title' => $down ? 'Omzet hari ini menurun' : 'Omzet hari ini bertumbuh',
-            'summary' => 'Omzet '.($down ? 'turun ' : 'naik ').abs($delta).'% dibanding waktu yang sama kemarin.',
-            'data' => ['current' => $today['revenue'], 'previous' => $previous['revenue'], 'change_percent' => $delta],
+            'title' => $down ? 'Penjualan bersih hari ini menurun' : 'Penjualan bersih hari ini bertumbuh',
+            'summary' => 'Penjualan bersih '.($down ? 'turun ' : 'naik ').abs($delta).'% dibanding waktu yang sama kemarin.',
+            'data' => ['current' => $today['revenue'], 'previous' => $previous['revenue'], 'change_percent' => $delta, 'orders' => $today['orders']],
+            'sample_size' => $today['orders'],
             'action_label' => 'Buka laporan', 'action_route' => 'reports.sales',
         ]];
     }
@@ -63,10 +85,15 @@ class InsightService
     {
         $current = $this->revenue($b, now()->subDays(6)->startOfDay(), now());
         $previous = $this->revenue($b, now()->subDays(13)->startOfDay(), now()->subDays(7)->endOfDay());
-        if (!$current['orders'] || !$previous['orders']) return [];
-        $a = $current['revenue'] / $current['orders']; $p = $previous['revenue'] / $previous['orders'];
+        if (! $current['orders'] || ! $previous['orders']) {
+            return [];
+        }
+        $a = $current['revenue'] / $current['orders'];
+        $p = $previous['revenue'] / $previous['orders'];
         $delta = round(($a - $p) / max($p, 1) * 100);
-        if ($delta > -12) return [];
+        if ($delta > -12) {
+            return [];
+        }
 
         return [[
             'fingerprint' => 'aov:'.now()->format('o-W'), 'type' => 'average_order', 'severity' => 'warning',
@@ -86,7 +113,9 @@ class InsightService
         foreach (Ingredient::forBusiness($b->id)->where('is_active', true)->get() as $ingredient) {
             $daily = (float) ($usage[$ingredient->id] ?? 0) / 14;
             $days = $daily > 0 ? (float) $ingredient->current_stock / $daily : null;
-            if (!$ingredient->isLowStock() && ($days === null || $days > 3)) continue;
+            if (! $ingredient->isLowStock() && ($days === null || $days > 3)) {
+                continue;
+            }
             $label = $days === null ? 'sudah mencapai batas minimum' : 'diperkirakan habis dalam '.max(1, (int) ceil($days)).' hari';
             $rows[] = [
                 'fingerprint' => 'stock:'.$ingredient->id.':'.today(), 'type' => 'stock_forecast',
@@ -96,6 +125,7 @@ class InsightService
                 'action_label' => 'Kelola stok', 'action_route' => 'ingredients.index',
             ];
         }
+
         return array_slice($rows, 0, 3);
     }
 
@@ -107,7 +137,10 @@ class InsightService
             ->selectRaw('SUM((order_items.price-order_items.cost_price)*order_items.qty)/SUM(order_items.price*order_items.qty)*100 margin')
             ->selectRaw('SUM(order_items.qty) qty')->groupBy('order_items.product_name')->having('qty', '>=', 3)
             ->orderBy('margin')->first();
-        if (!$row || $row->margin >= 20) return [];
+        if (! $row || $row->margin >= 20) {
+            return [];
+        }
+
         return [[
             'fingerprint' => 'margin:'.md5($row->product_name).':'.now()->format('Y-m'), 'type' => 'low_margin', 'severity' => 'warning',
             'title' => 'Margin '.$row->product_name.' rendah',
@@ -121,12 +154,15 @@ class InsightService
     {
         $all = Order::forBusiness($b->id)->where('created_at', '>=', now()->subDays(7))->count();
         $bad = Order::forBusiness($b->id)->where('created_at', '>=', now()->subDays(7))->whereIn('status', ['cancelled', 'refunded'])->count();
-        if ($all < 10 || $bad / $all < .08) return [];
+        if ($all < 10 || $bad / $all < .08) {
+            return [];
+        }
         $rate = round($bad / $all * 100, 1);
+
         return [[
             'fingerprint' => 'reversal:'.now()->format('o-W'), 'type' => 'reversal_rate', 'severity' => 'critical',
             'title' => 'Void dan refund lebih tinggi dari normal', 'summary' => "{$bad} dari {$all} order ({$rate}%) dibatalkan atau di-refund dalam 7 hari terakhir.",
-            'data' => ['count' => $bad, 'rate' => $rate], 'action_label' => 'Periksa order', 'action_route' => 'orders.index',
+            'data' => ['count' => $bad, 'rate' => $rate], 'sample_size' => $all, 'action_label' => 'Periksa order', 'action_route' => 'orders.index',
         ]];
     }
 
@@ -134,26 +170,37 @@ class InsightService
     {
         $row = Order::forBusiness($b->id)->paid()->where('created_at', '>=', now()->subDays(30))
             ->selectRaw($this->hourExpression('created_at').' hour, COUNT(*) total')->groupBy('hour')->orderByDesc('total')->first();
-        if (!$row || $row->total < 5) return [];
+        if (! $row || $row->total < 5) {
+            return [];
+        }
         $end = ((int) $row->hour + 1) % 24;
+
         return [[
             'fingerprint' => 'peak-hour:'.now()->format('Y-m'), 'type' => 'peak_hour', 'severity' => 'info',
             'title' => 'Jam tersibuk teridentifikasi',
             'summary' => sprintf('Pukul %02d.00–%02d.00 adalah jam paling ramai berdasarkan 30 hari terakhir (%d transaksi).', $row->hour, $end, $row->total),
-            'data' => ['hour' => (int) $row->hour, 'orders' => (int) $row->total],
+            'data' => ['hour' => (int) $row->hour, 'orders' => (int) $row->total], 'sample_size' => (int) $row->total,
             'action_label' => 'Lihat laporan', 'action_route' => 'reports.sales',
         ]];
     }
 
     private function outletPerformance(Business $b): array
     {
-        if ($b->outlets()->where('is_active', true)->count() < 2) return [];
+        if ($b->outlets()->where('is_active', true)->count() < 2) {
+            return [];
+        }
         $rows = Order::forBusiness($b->id)->paid()->where('orders.created_at', '>=', now()->subDays(7))
             ->join('outlets', 'outlets.id', '=', 'orders.outlet_id')->select('outlets.id', 'outlets.name')
-            ->selectRaw('SUM(orders.grand_total) revenue')->groupBy('outlets.id', 'outlets.name')->orderBy('revenue')->get();
-        if ($rows->count() < 2 || $rows->last()->revenue <= 0) return [];
-        $low = $rows->first(); $gap = round((1 - $low->revenue / $rows->last()->revenue) * 100);
-        if ($gap < 30) return [];
+            ->selectRaw('SUM(orders.subtotal-orders.discount_amount) revenue')->groupBy('outlets.id', 'outlets.name')->orderBy('revenue')->get();
+        if ($rows->count() < 2 || $rows->last()->revenue <= 0) {
+            return [];
+        }
+        $low = $rows->first();
+        $gap = round((1 - $low->revenue / $rows->last()->revenue) * 100);
+        if ($gap < 30) {
+            return [];
+        }
+
         return [[
             'fingerprint' => 'outlet-gap:'.$low->id.':'.now()->format('o-W'), 'type' => 'outlet_performance', 'severity' => 'warning',
             'title' => 'Performa '.$low->name.' tertinggal', 'summary' => 'Omzet 7 hari terakhir '.$gap.'% di bawah outlet teratas.',
@@ -165,10 +212,14 @@ class InsightService
     private function revenue(Business $b, $from, $to): array
     {
         $q = Order::forBusiness($b->id)->paid()->whereBetween('created_at', [$from, $to]);
-        return ['revenue' => (float) (clone $q)->sum('grand_total'), 'orders' => (int) $q->count()];
+
+        return ['revenue' => (float) (clone $q)->sum(DB::raw('subtotal-discount_amount')), 'orders' => (int) $q->count()];
     }
 
-    private function rp(float $value): string { return 'Rp '.number_format($value, 0, ',', '.'); }
+    private function rp(float $value): string
+    {
+        return 'Rp '.number_format($value, 0, ',', '.');
+    }
 
     private function hourExpression(string $column): string
     {

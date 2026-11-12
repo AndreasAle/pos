@@ -54,6 +54,7 @@
                         @foreach($businessInsights->take(3) as $insight)
                         <div class="rounded-lg bg-slate-50 px-2.5 py-2">
                             <p class="text-[11px] font-semibold text-slate-700 line-clamp-2">{{ $insight->title }}</p>
+                            <p class="mt-1 text-[9px] text-slate-400">{{ $insight->confidence ?? 0 }}% confidence · {{ $insight->sample_size ?? 0 }} sampel</p>
                         </div>
                         @endforeach
                     </div>
@@ -61,6 +62,16 @@
                     <p class="mt-2 text-[11px] leading-relaxed text-slate-500">Tidak ada anomali penting saat ini.</p>
                     @endif
                 </div>
+                @if(config('pos.features.intelligence_agents') && $intelligenceAgents->isNotEmpty())
+                <details class="mt-2 rounded-xl border border-[#E5E7EB] bg-white p-3">
+                    <summary class="cursor-pointer text-xs font-bold text-[#0B1B3F]">Agen terjadwal</summary>
+                    <div class="mt-3 space-y-2">
+                        @foreach($intelligenceAgents as $agent)
+                        <div class="flex items-center justify-between gap-2 text-[11px]"><span>{{ str($agent->agent_key)->replace('_', ' ')->title() }}</span><button type="button" @click="toggleAgent({{ $agent->id }}, $event)" class="rounded-full px-2 py-1 font-semibold {{ $agent->enabled ? 'bg-[#E1F5EA] text-[#087A4E]' : 'bg-slate-100 text-slate-500' }}">{{ $agent->enabled ? 'Aktif' : 'Nonaktif' }}</button></div>
+                        @endforeach
+                    </div>
+                </details>
+                @endif
             </div>
         </aside>
 
@@ -112,6 +123,7 @@
                                                 <div x-show="block.type === 'bar_chart'" class="p-4"><p class="mb-4 text-[10px] text-slate-400"><span x-text="block.y_label"></span> · <span x-text="block.x_label"></span></p><div class="space-y-3"><template x-for="item in (block.items || [])" :key="item.label"><div class="grid grid-cols-[90px_minmax(0,1fr)_auto] items-center gap-3 text-[11px]"><span class="truncate font-semibold text-slate-600" x-text="item.label" :title="item.label"></span><div class="h-2.5 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-gradient-to-r from-[#0B8F5B] to-[#34C67F]" :style="`width:${barWidth(item.value, block.items)}%`"></div></div><span class="min-w-[76px] text-right font-bold text-[#0B1B3F]" x-text="item.formatted"></span></div></template></div></div>
                                                 <div x-show="block.type === 'line_chart'" class="p-4"><p class="mb-2 text-[10px] text-slate-400"><span x-text="block.x_label"></span> · <span x-text="block.y_label"></span></p><div x-show="block.points?.length" class="relative h-44 rounded-xl bg-gradient-to-b from-[#F4FBF7] to-white p-3"><svg viewBox="0 0 100 50" preserveAspectRatio="none" class="h-32 w-full overflow-visible" role="img" :aria-label="block.title"><polyline :points="linePoints(block.points)" fill="none" stroke="#0B8F5B" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"></polyline></svg><div class="mt-1 flex justify-between text-[9px] text-slate-400"><span x-text="block.points?.[0]?.date"></span><span x-text="block.points?.[block.points.length-1]?.date"></span></div></div></div>
                                                 <div x-show="block.type === 'table'" class="overflow-x-auto"><table class="w-full min-w-[500px] text-left text-xs"><thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400"><tr><template x-for="column in (block.columns || [])" :key="column.key"><th class="px-4 py-2.5 font-bold" x-text="column.label"></th></template></tr></thead><tbody class="divide-y divide-slate-100"><template x-for="(row, rowIndex) in (block.rows || [])" :key="rowIndex"><tr><template x-for="(column, cellIndex) in (block.columns || [])" :key="column.key"><td class="px-4 py-3 text-slate-600" :class="cellIndex === 0 ? 'font-semibold text-[#0B1B3F]' : ''" x-text="row[column.key] ?? '—'"></td></template></tr></template></tbody></table></div>
+                                                <div x-show="block.type === 'action_preview'" class="p-4"><p class="text-sm font-bold text-[#0B1B3F]" x-text="block.target"></p><div class="mt-3 space-y-2"><template x-for="change in (block.changes || [])"><div class="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs"><span x-text="change.field"></span><span><span class="text-slate-400 line-through" x-text="change.before"></span><span class="mx-1">→</span><strong x-text="change.after"></strong></span></div></template></div><p class="mt-3 text-[10px] text-amber-700">Perubahan belum diterapkan. Persetujuan akan divalidasi ulang sebelum eksekusi.</p><button x-show="block.status === 'pending'" type="button" @click="approveAndExecute(block)" :disabled="actionLoading" class="mt-3 rounded-lg bg-[#0B8F5B] px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Setujui & jalankan</button><p x-show="block.status === 'executed'" class="mt-3 text-xs font-bold text-[#087A4E]">Perubahan berhasil diterapkan dan tercatat di audit.</p></div>
                                             </section>
                                         </template>
                                     </div>
@@ -150,7 +162,7 @@
 <script>
 function yokaChat(initialConversation, initialMessages) {
     return {
-        historyOpen: false, loading: false, question: '', conversationId: initialConversation, messages: initialMessages || [],
+        historyOpen: false, loading: false, actionLoading: false, question: '', conversationId: initialConversation, messages: initialMessages || [],
         prompts: [
             {icon:'↗',title:'Ringkasan penjualan',text:'Bagaimana omzet hari ini?'},
             {icon:'★',title:'Produk unggulan',text:'Produk paling laris bulan ini'},
@@ -173,6 +185,17 @@ function yokaChat(initialConversation, initialMessages) {
         barWidth(value, items){const max=Math.max(...(items||[]).map(i=>Number(i.value)||0),1);return Math.max(3,Math.round((Number(value)||0)/max*100))},
         linePoints(points){const rows=points||[];if(!rows.length)return '';const max=Math.max(...rows.map(p=>Number(p.value)||0),1);return rows.map((p,i)=>`${rows.length===1?50:i/(rows.length-1)*100},${48-(Number(p.value)||0)/max*44}`).join(' ')},
         formatAsOf(value){try{return new Intl.DateTimeFormat('id-ID',{dateStyle:'medium',timeStyle:'short'}).format(new Date(value))}catch{return value}},
+        async approveAndExecute(block){
+            if(this.actionLoading||!confirm(`Terapkan perubahan pada ${block.target}?`))return;this.actionLoading=true;
+            try{
+                const headers={'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'};
+                let response=await fetch(`{{ url('/intelligence/actions') }}/${block.proposal_id}/approve`,{method:'POST',headers,body:JSON.stringify({confirmation:'SETUJUI'})});
+                let data=await response.json();if(!response.ok)throw new Error(data.message||'Persetujuan gagal.');
+                response=await fetch(`{{ url('/intelligence/actions') }}/${block.proposal_id}/execute`,{method:'POST',headers});data=await response.json();if(!response.ok)throw new Error(data.message||'Eksekusi gagal.');
+                block.status='executed';
+            }catch(error){alert(error.message)}finally{this.actionLoading=false}
+        },
+        async toggleAgent(id,event){const response=await fetch(`{{ url('/intelligence/agents') }}/${id}/toggle`,{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'}});if(response.ok){const data=await response.json();event.currentTarget.textContent=data.enabled?'Aktif':'Nonaktif';window.location.reload()}},
         async deleteConversation(id){
             if(!confirm('Hapus percakapan ini?'))return;
             const response=await fetch('{{ url('/intelligence/conversations') }}/'+id,{method:'DELETE',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'}});

@@ -55,6 +55,13 @@ class ConversationContextManager
         return $state;
     }
 
+    public function setPendingAction(AssistantConversation $conversation, int $proposalId): void
+    {
+        $state = $this->state($conversation);
+        $state['pending_action_id'] = $proposalId;
+        $conversation->update(['context_version' => self::VERSION, 'context' => $state, 'summary' => $this->summary($state), 'last_message_at' => now()]);
+    }
+
     private function summary(array $state): string
     {
         $parts = array_filter([

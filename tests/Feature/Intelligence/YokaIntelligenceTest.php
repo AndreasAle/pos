@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\InsightService;
 use App\Services\YokaAssistantService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class YokaIntelligenceTest extends TestCase
@@ -45,6 +46,32 @@ class YokaIntelligenceTest extends TestCase
         $this->assertDatabaseHas('business_insights', [
             'business_id' => $business->id, 'type' => 'stock_forecast', 'severity' => 'critical',
         ]);
+        $insight = BusinessInsight::where('business_id', $business->id)->where('type', 'stock_forecast')->firstOrFail();
+        $this->assertNotEmpty($insight->evidence);
+        $this->assertNotNull($insight->confidence);
+        $this->assertNotNull($insight->first_detected_at);
+    }
+
+    public function test_insight_refresh_deduplicates_and_tracks_occurrences(): void
+    {
+        $business = Business::factory()->create();
+        Ingredient::factory()->create(['business_id' => $business->id, 'current_stock' => 1, 'minimum_stock' => 5]);
+        $service = app(InsightService::class);
+
+        $service->refresh($business);
+        $service->refresh($business);
+
+        $this->assertSame(1, BusinessInsight::where('business_id', $business->id)->where('type', 'stock_forecast')->count());
+        $this->assertSame(2, BusinessInsight::where('business_id', $business->id)->where('type', 'stock_forecast')->value('occurrence_count'));
+    }
+
+    public function test_reading_visible_insights_does_not_run_detectors_on_page_load(): void
+    {
+        $business = Business::factory()->create();
+        Ingredient::factory()->create(['business_id' => $business->id, 'current_stock' => 1, 'minimum_stock' => 5]);
+
+        $this->assertCount(0, app(InsightService::class)->visible($business));
+        $this->assertDatabaseCount('business_insights', 0);
     }
 
     public function test_sales_trend_uses_previous_revenue_value_without_type_error(): void
@@ -53,14 +80,14 @@ class YokaIntelligenceTest extends TestCase
         $yesterday = Order::create([
             'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
             'order_number' => 'TREND-YESTERDAY', 'status' => 'paid', 'payment_status' => 'paid',
-            'grand_total' => 100000, 'created_at' => now()->subDay(),
+            'subtotal' => 100000, 'grand_total' => 100000, 'created_at' => now()->subDay(),
         ]);
         $yesterday->timestamps = false;
         $yesterday->forceFill(['created_at' => now()->subDay(), 'updated_at' => now()->subDay()])->save();
         Order::create([
             'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
             'order_number' => 'TREND-TODAY', 'status' => 'paid', 'payment_status' => 'paid',
-            'grand_total' => 150000, 'created_at' => now(),
+            'subtotal' => 150000, 'grand_total' => 150000, 'created_at' => now(),
         ]);
 
         app(InsightService::class)->refresh($owner->business);
@@ -200,5 +227,20 @@ class YokaIntelligenceTest extends TestCase
         $cashier = User::factory()->create(['business_id' => $business->id, 'outlet_id' => Outlet::factory()->create(['business_id' => $business->id])->id, 'role' => 'cashier']);
 
         $this->actingAs($cashier)->get(route('intelligence.index'))->assertForbidden();
+    }
+
+    public function test_ai_planner_uses_closed_schema_and_persists_safe_trace_metadata(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        Http::fakeSequence()
+            ->push(['choices' => [['message' => ['content' => json_encode(['intent' => 'lookup', 'tool' => 'sales_summary', 'arguments' => ['period' => 'today', 'date_from' => null, 'date_to' => null, 'outlet_ids' => null, 'query' => null, 'limit' => null], 'visual' => 'metrics'])]]], 'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 5, 'total_tokens' => 25]], 200, ['x-request-id' => 'req-plan'])
+            ->push(['choices' => [['message' => ['content' => 'Belum ada transaksi hari ini, bro.']]], 'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 7, 'total_tokens' => 37]], 200, ['x-request-id' => 'req-answer']);
+
+        $answer = app(YokaAssistantService::class)->ask($this->owner(), 'Omzet hari ini berapa bro?');
+        $message = AssistantConversation::find($answer['conversation_id'])->messages()->findOrFail($answer['message_id']);
+
+        $this->assertSame(62, data_get($message->token_usage, 'total_tokens'));
+        $this->assertSame('req-plan,req-answer', $message->request_id);
+        Http::assertSent(fn ($request) => data_get($request->data(), 'response_format.type') === 'json_schema');
     }
 }
