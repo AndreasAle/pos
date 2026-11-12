@@ -95,6 +95,8 @@ class YokaAssistantService
         }
         $productTopic = Str::contains($q, ['produk', 'laris', 'margin']) || preg_match('/\bmenu\b/u', $q);
         $hasTopic = $productTopic || Str::contains($q, ['omzet', 'omset', 'profit', 'laba', 'penjualan', 'stok', 'stock', 'bahan', 'jam', 'pembayaran', 'qris', 'tunai', 'cash', 'debit', 'outlet', 'cabang', 'pelanggan', 'customer', 'member', 'shift', 'kasir', 'resep']);
+        $wantsSalesTrend = Str::contains($q, ['grafik penjualan', 'tren penjualan', 'trend penjualan'])
+            || (($state['last_tool'] ?? null) === 'sales_summary' && Str::contains($q, ['grafik', 'chart', 'tren', 'trend']));
         $tool = match (true) {
             Str::contains($q, ['stok', 'stock', 'bahan', 'habis']) => 'stock_status',
             Str::contains($q, ['resep', 'biaya menu', 'biaya produk']) => 'recipe_cost',
@@ -104,11 +106,14 @@ class YokaAssistantService
             Str::contains($q, ['outlet', 'cabang']) => 'outlet_performance',
             Str::contains($q, ['pelanggan', 'customer', 'member']) => 'customer_performance',
             Str::contains($q, ['shift', 'kasir', 'siapa jaga']) => 'shift_summary',
-            Str::contains($q, ['grafik penjualan', 'tren penjualan', 'trend penjualan']) => 'sales_series',
+            $wantsSalesTrend => 'sales_series',
             ! $hasTopic && $state['last_tool'] => $state['last_tool'],
             default => 'sales_summary',
         };
         $args = (! $hasTopic && $state['last_tool']) ? $state['last_arguments'] : ['period' => $this->fallbackPeriod($q)];
+        if ($wantsSalesTrend && ! empty($state['time_range'])) {
+            $args = array_replace($args, $state['time_range']);
+        }
         if (preg_match('/(?:dari|sejak)\s+tanggal\s+1\b/u', $q)) {
             $args = array_replace($args, ['period' => 'custom', 'date_from' => now()->startOfMonth()->toDateString(), 'date_to' => now()->toDateString()]);
         }
@@ -154,7 +159,10 @@ class YokaAssistantService
                 return null;
             }
             $plan['arguments'] = array_filter($plan['arguments'] ?? [], fn ($v) => $v !== null);
-            if (($state['last_tool'] ?? null) === $plan['tool'] && ! isset($plan['arguments']['period'])) {
+            $hasTimeRange = collect(['period', 'date_from', 'date_to'])->contains(fn ($key) => array_key_exists($key, $plan['arguments']));
+            if (! $hasTimeRange && ! empty($state['time_range'])) {
+                $plan['arguments'] = array_replace($state['time_range'], $plan['arguments']);
+            } elseif (($state['last_tool'] ?? null) === $plan['tool'] && ! isset($plan['arguments']['period'])) {
                 $plan['arguments'] = array_replace($state['last_arguments'] ?? [], $plan['arguments']);
             }
 

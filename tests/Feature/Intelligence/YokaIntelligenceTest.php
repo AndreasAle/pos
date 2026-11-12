@@ -160,6 +160,29 @@ class YokaIntelligenceTest extends TestCase
         $this->assertSame([], $reply['response']['blocks']);
     }
 
+    public function test_sales_trend_follow_up_reuses_the_previous_date_range(): void
+    {
+        $owner = $this->owner();
+        Order::create([
+            'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
+            'order_number' => 'TREND-RANGE', 'status' => 'paid', 'payment_status' => 'paid',
+            'payment_method' => 'cash', 'subtotal' => 100000, 'grand_total' => 100000, 'is_split_payment' => false,
+            'created_at' => now()->startOfMonth()->addDay(), 'updated_at' => now()->startOfMonth()->addDay(),
+        ]);
+
+        $first = app(YokaAssistantService::class)->ask($owner, 'Berapa omzet dari tanggal 1?');
+        $reply = app(YokaAssistantService::class)->ask($owner, 'Buat grafik trennya', $first['conversation_id']);
+        $message = AssistantConversation::find($first['conversation_id'])->messages()->findOrFail($reply['message_id']);
+
+        $this->assertSame('sales_series', $reply['tool']);
+        $this->assertSame('custom', data_get($message->meta, 'arguments.period'));
+        $this->assertSame(now()->startOfMonth()->toDateString(), data_get($message->meta, 'arguments.date_from'));
+        $this->assertSame(now()->toDateString(), data_get($message->meta, 'arguments.date_to'));
+        $this->assertSame('line_chart', data_get($reply, 'response.blocks.0.type'));
+        $expectedRange = now()->startOfMonth()->format('j M Y').'–'.now()->format('j M Y');
+        $this->assertSame('Tren penjualan '.$expectedRange, data_get($reply, 'response.blocks.0.title'));
+    }
+
     public function test_visual_type_follows_the_users_request(): void
     {
         $owner = $this->owner();
