@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Tanya Yoka')
 @section('page-title', 'Tanya Yoka')
+@section('focus', '1')
 
 @section('content')
 @php
@@ -12,8 +13,22 @@
     ])->values() ?? collect();
 @endphp
 
-<div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] {{ $hasTrialBanner ? 'h-[calc(100vh-112px)]' : 'h-[calc(100vh-64px)]' }} min-h-[620px] overflow-hidden"
+<div class="flex h-[100dvh] flex-col overflow-hidden bg-white"
      x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages), @js($reportPrompt ?? null))">
+    {{-- Bar mode fokus: keluar dari Yoka AI kembali ke dashboard --}}
+    <header class="relative z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-3 sm:px-5">
+        <a href="{{ route('dashboard') }}" data-yoka-exit class="inline-flex h-10 items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-3.5 text-sm font-bold text-[#0B1B3F] transition hover:border-[#16A34A] hover:bg-[#F4FBF7]">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            <span class="hidden sm:inline">Kembali ke Dashboard</span><span class="sm:hidden">Dashboard</span>
+        </a>
+        <div class="flex min-w-0 items-center gap-2.5">
+            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E1F5EA] text-[#0B8F5B]"><svg class="h-4.5 w-4.5" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg></span>
+            <span class="text-[16px] font-extrabold text-[#0B1B3F]">Yoka AI</span>
+            <span class="hidden max-w-[220px] truncate rounded-full bg-[#F1F5F9] px-2.5 py-1 text-[12px] font-bold text-slate-600 sm:inline">{{ $currentBusiness->name ?? '' }}</span>
+        </div>
+        <div class="w-10 sm:w-[190px]"></div>
+    </header>
+    <div class="relative min-h-0 flex-1">
     <div class="flex h-full min-w-0">
         {{-- Riwayat percakapan internal --}}
         <aside class="absolute lg:relative z-20 inset-y-0 left-0 w-[286px] shrink-0 border-r border-[#E5E7EB] bg-[#F8FAF9] flex flex-col transition-transform lg:translate-x-0"
@@ -152,6 +167,7 @@
                 <p class="mt-2 text-center text-[12px] text-slate-400">Yoka dapat melakukan kesalahan. Cocokkan keputusan penting dengan laporan utama.</p>
             </div>
         </section>
+    </div>
     </div>
 </div>
 @endsection

@@ -20,7 +20,9 @@
         tipShow(e, text) { if (!this.collapsed || window.innerWidth < 1024) return; const r = e.currentTarget.getBoundingClientRect(); this.tip = { show: true, text, y: r.top + r.height / 2 } },
         tipHide() { this.tip.show = false }
     }">
+    @php $focus = $__env->hasSection('focus'); @endphp
     <x-page-loader/>
+    <x-yoka-enter :arrive="$focus"/>
 
     @php
         $hasTopSubscriptionBar = $currentBusiness?->activeSubscription?->status === 'trial';
@@ -39,6 +41,7 @@
         </div>
     @endif
 
+    @unless($focus)
     {{-- Mobile sidebar backdrop --}}
     <div x-show="sidebarOpen" x-cloak
          @click="sidebarOpen = false"
@@ -73,7 +76,7 @@
             <x-nav-item route="dashboard" icon="home" data-tour="dashboard">Dashboard</x-nav-item>
             @if(in_array($role, ['owner','admin']))
             @if(config('pos.features.intelligence'))
-                <x-nav-item route="intelligence.index" icon="sparkles">Tanya Yoka</x-nav-item>
+                <x-nav-item route="intelligence.index" icon="sparkles" data-yoka-enter>Tanya Yoka</x-nav-item>
             @endif
             @endif
             @if(in_array($role, ['owner','admin','cashier']))
@@ -162,6 +165,7 @@
         </div>
 
     </aside>
+    @endunless
 
     {{-- Topbar --}}
     @php
@@ -170,6 +174,7 @@
         $canSettings = in_array($me->role, ['owner','admin']);
     @endphp
 
+    @unless($focus)
     {{-- Status langganan berada paling atas, di atas header utama. --}}
     @if($hasTopSubscriptionBar)
         <x-subscription-status-bar :current-business="$currentBusiness" />
@@ -278,9 +283,10 @@
             </div>
         </div>
     </header>
+    @endunless
 
     {{-- Main content --}}
-    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $hasTopSubscriptionBar ? 'pt-28' : 'pt-16' }}" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
+    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $focus ? '' : ($hasTopSubscriptionBar ? 'pt-28' : 'pt-16') }}" @if(!$focus) :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'" @endif>
 
         {{-- Flash messages --}}
         <div class="px-4 sm:px-6 @if(session('success') || session('error') || session('info') || $errors->any()) pt-4 @endif">
@@ -333,7 +339,7 @@
         </div>
 
         {{-- Page content --}}
-        <main class="flex-1 min-w-0 px-4 sm:px-6 pb-8">
+        <main class="flex-1 min-w-0 {{ $focus ? 'p-0' : 'px-4 sm:px-6 pb-8' }}">
             @unless(request()->routeIs('dashboard', 'intelligence.index'))
             <h1 class="pt-5 pb-0.5 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
             @hasSection('page-subtitle')<p class="mb-3 text-sm text-[#64748B]">@yield('page-subtitle')</p>@endif
