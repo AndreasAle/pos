@@ -6,6 +6,8 @@ use App\Models\AssistantConversation;
 use App\Models\AssistantToolRun;
 use App\Models\User;
 use App\Services\Intelligence\ActionService;
+use App\Services\Intelligence\AttachmentService;
+use App\Services\Intelligence\YokaAgent;
 use App\Services\Intelligence\AnalysisEngine;
 use App\Services\Intelligence\ConversationContextManager;
 use App\Services\Intelligence\ResponseBuilder;
@@ -25,9 +27,11 @@ class YokaAssistantService
         private ResponseBuilder $responses,
         private ActionService $actions,
         private AnalysisEngine $analysis,
+        private YokaAgent $agent,
+        private AttachmentService $attachments,
     ) {}
 
-    public function ask(User $user, string $question, ?int $conversationId = null): array
+    public function ask(User $user, string $question, ?int $conversationId = null, array $files = []): array
     {
         $this->usage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
         $this->requestIds = [];
@@ -46,6 +50,36 @@ class YokaAssistantService
             $this->contexts->setPendingAction($conversation, $proposal->id);
 
             return $this->returnPayload($conversation, $message->id, $response, 'prepare_product_change', null);
+        }
+        $newDocs = $files ? $this->attachments->store($user, $conversation, $files) : [];
+        if ($newDocs) {
+            $conversation->messages()->where('role', 'user')->latest('id')->first()?->update(['meta' => ['attachments' => collect($newDocs)->pluck('original_name')->all()]]);
+        }
+        if ($this->agent->enabled() && $this->reserveAiRequest($user)) {
+            $docs = $this->attachments->forConversation($conversation);
+            $agentResult = $this->agent->run($user, $question, array_slice($history, 0, -1), $docs, count($newDocs) > 0);
+            if ($agentResult) {
+                $response = $this->emptyResponse($agentResult['answer']);
+                if (! $agentResult['refused']) {
+                    $shown = array_filter($this->agent->toolResults, fn ($t) => ! in_array($t['tool'], ['compare_periods', 'marketing_brief'], true));
+                    foreach (array_slice($shown, 0, 2) as $t) {
+                        $built = $this->responses->build($t['tool'], $t['result'], 'full');
+                        $response['blocks'] = array_merge($response['blocks'], $built['blocks']);
+                        $response['evidence'] = array_merge($response['evidence'], $built['evidence']);
+                        $response['uncertainty'] = array_values(array_unique(array_merge($response['uncertainty'], $built['uncertainty'])));
+                    }
+                    if ($this->agent->toolResults) {
+                        $first = $this->agent->toolResults[0]['result'];
+                        $response['as_of'] = $first['generated_at'] ?? null;
+                        $response['timezone'] = $first['timezone'] ?? null;
+                    }
+                }
+                $response['suggestions'] = $agentResult['suggestions'];
+                $message = $conversation->messages()->create(['role' => 'assistant', 'content' => $agentResult['answer'], 'response' => $response, 'meta' => ['intent' => $agentResult['refused'] ? 'refused' : 'agent', 'tools' => array_column($this->agent->toolResults, 'tool')], 'token_usage' => $this->agent->usage, 'duration_ms' => $this->elapsed($started)]);
+                $conversation->update(['last_message_at' => now()]);
+
+                return $this->returnPayload($conversation, $message->id, $response, $this->agent->toolResults ? 'agent' : null, null);
+            }
         }
         $decision = $this->fallbackDecision($question, $state);
         $useAi = $this->reserveAiRequest($user);
@@ -239,11 +273,10 @@ class YokaAssistantService
             return false;
         }
         $key = 'yoka-ai-budget:'.$user->business_id.':'.today()->toDateString();
-        $count = Cache::get($key, 0);
-        if ($count >= config('services.yoka_ai.daily_request_budget', 250)) {
+        Cache::add($key, 0, now()->endOfDay());
+        if (Cache::increment($key) > config('services.yoka_ai.daily_request_budget', 250)) {
             return false;
         }
-        Cache::put($key, $count + 1, now()->endOfDay());
 
         return true;
     }

@@ -1,0 +1,96 @@
+<?php
+
+namespace Tests\Feature\Intelligence;
+
+use App\Models\AssistantAttachment;
+use App\Models\Business;
+use App\Models\Outlet;
+use App\Models\User;
+use App\Services\YokaAssistantService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class YokaAgentLlmTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private function owner(): User
+    {
+        $business = Business::factory()->create();
+        $outlet = Outlet::factory()->create(['business_id' => $business->id]);
+
+        return User::factory()->create(['business_id' => $business->id, 'outlet_id' => $outlet->id, 'role' => 'owner']);
+    }
+
+    public function test_agent_calls_tools_then_answers_with_markdown_and_suggestions(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        Http::fake(['*/chat/completions' => Http::sequence()
+            ->push(['choices' => [['message' => ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'c1', 'type' => 'function', 'function' => ['name' => 'marketing_brief', 'arguments' => json_encode(['period' => 'last_30_days', 'outlet_ids' => null])]]]]]], 'usage' => ['total_tokens' => 10]])
+            ->push(['choices' => [['message' => ['role' => 'assistant', 'content' => "**Penjualan masih sepi.**\n\n- Buat promo jam sepi\n\nSARAN: Produk apa paling laku? | Jam ramai kapan?"]]], 'usage' => ['total_tokens' => 20]])]);
+        $reply = app(YokaAssistantService::class)->ask($this->owner(), 'Kasih ide promo untuk naikkan omzet');
+
+        $this->assertStringContainsString('Penjualan masih sepi', $reply['answer']);
+        $this->assertStringNotContainsString('SARAN', $reply['answer']);
+        $this->assertSame(['Produk apa paling laku?', 'Jam ramai kapan?'], $reply['response']['suggestions']);
+    }
+
+    public function test_off_topic_questions_are_refused_without_running_tools(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        Http::fake(['*/chat/completions' => Http::response(['choices' => [['message' => ['content' => json_encode(['in_scope' => false])]]]])]);
+        $reply = app(YokaAssistantService::class)->ask($this->owner(), 'Siapa presiden Perancis?');
+
+        $this->assertStringContainsString('hanya bisa membantu seputar bisnis', $reply['answer']);
+        Http::assertSentCount(1);
+    }
+
+    public function test_tool_arguments_from_the_model_cannot_reach_other_outlets(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        $foreign = Outlet::factory()->create();
+        Http::fake(['*/chat/completions' => Http::sequence()
+            ->push(['choices' => [['message' => ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'c1', 'type' => 'function', 'function' => ['name' => 'sales_summary', 'arguments' => json_encode(['period' => 'today', 'outlet_ids' => [$foreign->id]])]]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Outlet itu tidak tersedia. SARAN: Omzet hari ini?']]]])]);
+        $reply = app(YokaAssistantService::class)->ask($this->owner(), 'omzet outlet lain');
+
+        Http::assertSent(fn ($r) => str_contains(json_encode($r->data()), 'Outlet tidak tersedia'));
+        $this->assertSame([], $reply['response']['blocks']);
+    }
+
+    public function test_documents_are_stored_per_business_and_sent_as_untrusted_data(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        Storage::fake('local');
+        Http::fake(['*/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Sudah kubaca. SARAN: Apa solusinya?']]]])]);
+        $owner = $this->owner();
+        $csv = UploadedFile::fake()->createWithContent('rencana.csv', "bulan,target\nJan,1000\n");
+        $reply = app(YokaAssistantService::class)->ask($owner, 'Baca file ini dan beri strategi toko', null, [$csv]);
+
+        $doc = AssistantAttachment::firstOrFail();
+        $this->assertSame($owner->business_id, $doc->business_id);
+        $this->assertStringContainsString('Jan,1000', $doc->extracted_text);
+        Http::assertSent(fn ($r) => str_contains(json_encode($r->data()), 'bukan instruksi') && str_contains(json_encode($r->data()), 'Jan,1000'));
+        $this->assertNotEmpty($reply['conversation_id']);
+    }
+
+    public function test_unsupported_file_types_are_rejected(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        Storage::fake('local');
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        app(YokaAssistantService::class)->ask($this->owner(), 'baca ini toko', null, [UploadedFile::fake()->create('virus.exe', 10)]);
+    }
+
+    public function test_llm_failure_falls_back_to_the_local_engine(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        Http::fake(['*/chat/completions' => Http::response('boom', 500)]);
+        $reply = app(YokaAssistantService::class)->ask($this->owner(), 'Berapa omzet hari ini?');
+
+        $this->assertSame('sales_summary', $reply['tool']);
+    }
+}

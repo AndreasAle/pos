@@ -245,7 +245,7 @@ class YokaIntelligenceTest extends TestCase
         }
 
         $first = app(YokaAssistantService::class)->ask($owner, 'Buatkan tabel pembayaran hari ini');
-        config(['services.yoka_ai.key' => 'test-key']);
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.agent' => false]);
         Http::fakeSequence()
             ->push(['choices' => [['message' => ['content' => json_encode([
                 'intent' => 'lookup', 'tool' => 'payment_breakdown',
@@ -320,7 +320,7 @@ class YokaIntelligenceTest extends TestCase
 
     public function test_ai_planner_uses_closed_schema_and_persists_safe_trace_metadata(): void
     {
-        config(['services.yoka_ai.key' => 'test-key']);
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.agent' => false]);
         Http::fakeSequence()
             ->push(['choices' => [['message' => ['content' => json_encode(['intent' => 'lookup', 'tool' => 'sales_summary', 'arguments' => ['period' => 'today', 'date_from' => null, 'date_to' => null, 'outlet_ids' => null, 'query' => null, 'limit' => null], 'visual' => 'metrics'])]]], 'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 5, 'total_tokens' => 25]], 200, ['x-request-id' => 'req-plan'])
             ->push(['choices' => [['message' => ['content' => 'Belum ada transaksi hari ini, bro.']]], 'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 7, 'total_tokens' => 37]], 200, ['x-request-id' => 'req-answer']);

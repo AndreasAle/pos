@@ -179,7 +179,7 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::delete('conversations/{conversation}', [IntelligenceController::class, 'destroyConversation'])->name('conversations.destroy');
     });
     Route::post('intelligence/refresh', [IntelligenceController::class, 'refresh'])
-        ->middleware('role:owner,admin')->name('intelligence.refresh');
+        ->middleware(['role:owner,admin', 'throttle:6,1'])->name('intelligence.refresh');
 
     // Outlets
     Route::resource('outlets', OutletController::class);

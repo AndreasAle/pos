@@ -54,7 +54,7 @@ Schedule::call(function () {
     IntelligenceAgent::where('enabled', true)->each(function (IntelligenceAgent $agent) {
         $now = CarbonImmutable::now($agent->timezone);
         if (app(AgentService::class)->due($agent, $now)) {
-            RunIntelligenceAgent::dispatch($agent->id, $now->toIso8601String());
+            RunIntelligenceAgent::dispatchSync($agent->id, $now->toIso8601String());
         }
     });
 })->everyMinute()->name('yoka-intelligence-agents')->withoutOverlapping();

@@ -9,6 +9,7 @@ use App\Models\IntelligenceAgent;
 use App\Services\InsightService;
 use App\Services\Intelligence\ActionService;
 use App\Services\Intelligence\AgentService;
+use App\Services\Intelligence\AttachmentService;
 use App\Services\YokaAssistantService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -41,9 +42,12 @@ class IntelligenceController extends Controller
     public function ask(Request $request, YokaAssistantService $assistant)
     {
         abort_unless(config('pos.features.intelligence'), 404);
-        $data = $request->validate(['question' => 'required|string|max:500', 'conversation_id' => 'nullable|integer']);
+        $data = $request->validate([
+            'question' => 'required|string|max:2000', 'conversation_id' => 'nullable|integer',
+            'files' => 'nullable|array|max:'.AttachmentService::MAX_FILES, 'files.*' => 'file|max:5120',
+        ]);
 
-        return response()->json(['success' => true] + $assistant->ask($request->user(), $data['question'], $data['conversation_id'] ?? null));
+        return response()->json(['success' => true] + $assistant->ask($request->user(), $data['question'], $data['conversation_id'] ?? null, $request->file('files', [])));
     }
 
     public function history(Request $request)
@@ -65,6 +69,7 @@ class IntelligenceController extends Controller
 
     public function refresh(Request $request, InsightService $insights)
     {
+        abort_unless(config('pos.features.intelligence'), 404);
         $count = $insights->refresh($request->user()->business);
 
         return back()->with('success', "Yoka memperbarui {$count} insight bisnis.");
