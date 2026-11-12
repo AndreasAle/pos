@@ -15,6 +15,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\IntelligenceController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\OrderController;
@@ -163,6 +164,14 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::middleware(['role:owner,admin', 'json'])->prefix('intelligence')->name('intelligence.')->group(function () {
+        Route::post('ask', [IntelligenceController::class, 'ask'])->middleware('throttle:30,1')->name('ask');
+        Route::get('history', [IntelligenceController::class, 'history'])->name('history');
+        Route::post('insights/{insight}/read', [IntelligenceController::class, 'read'])->name('insights.read');
+        Route::post('insights/{insight}/dismiss', [IntelligenceController::class, 'dismiss'])->name('insights.dismiss');
+    });
+    Route::post('intelligence/refresh', [IntelligenceController::class, 'refresh'])
+        ->middleware('role:owner,admin')->name('intelligence.refresh');
 
     // Outlets
     Route::resource('outlets', OutletController::class);

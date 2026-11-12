@@ -5,6 +5,7 @@ use App\Jobs\SendLowStockAlert;
 use App\Jobs\SendShiftUnclosedAlert;
 use App\Models\Business;
 use App\Services\TelegramNotifier;
+use App\Services\InsightService;
 use Illuminate\Support\Facades\Schedule;
 
 // ── Cek stok menipis — setiap 6 jam ──────────────────────────────────────────
@@ -37,3 +38,6 @@ Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => Te
 
 Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::shiftUnclosed($b)))
     ->everyTwoHours()->name('telegram-shift-unclosed')->withoutOverlapping();
+
+Schedule::call(fn () => Business::where('is_active', true)->each(fn ($b) => app(InsightService::class)->refresh($b)))
+    ->hourly()->name('yoka-insights')->withoutOverlapping();

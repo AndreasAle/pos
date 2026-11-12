@@ -2,6 +2,12 @@
 
 return [
 
+    'yoka_ai' => [
+        'key' => env('YOKA_AI_API_KEY'),
+        'url' => env('YOKA_AI_BASE_URL', 'https://api.openai.com/v1'),
+        'model' => env('YOKA_AI_MODEL', 'gpt-4.1-mini'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

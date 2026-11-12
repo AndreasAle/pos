@@ -47,6 +47,10 @@
 
 <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-6">
 
+    @if($isManager)
+        @include('dashboard._intelligence')
+    @endif
+
     {{-- ============ KOLOM KIRI ============ --}}
     <div class="space-y-4 min-w-0">
 

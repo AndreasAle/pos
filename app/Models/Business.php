@@ -186,6 +186,11 @@ class Business extends Model
         return $this->hasMany(WithdrawalRequest::class);
     }
 
+    public function insights()
+    {
+        return $this->hasMany(BusinessInsight::class);
+    }
+
     public function getLogoUrlAttribute(): string
     {
         return $this->logo
