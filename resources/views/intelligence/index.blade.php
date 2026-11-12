@@ -25,7 +25,7 @@
             <span class="text-[16px] font-extrabold text-[#0B1B3F]">Yoka AI</span>
             <span class="hidden max-w-[220px] truncate rounded-full bg-[#F1F5F9] px-2.5 py-1 text-[12px] font-bold text-slate-600 sm:inline">{{ $currentBusiness->name ?? '' }}</span>
         </div>
-        <div class="w-10"></div>
+        <div class="flex w-10 justify-end"><button type="button" @click="historyOpen = true" class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-slate-600 transition hover:bg-slate-50 lg:hidden" aria-label="Riwayat percakapan"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     </header>
     <div class="relative min-h-0 flex-1">
     <div class="flex h-full min-w-0">
@@ -97,9 +97,6 @@
 
         {{-- Chat utama --}}
         <section class="relative flex-1 min-w-0 flex flex-col bg-white">
-            <button @click="historyOpen=true" class="absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white/95 shadow-sm hover:bg-slate-50 lg:hidden" aria-label="Buka riwayat">
-                <svg class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            </button>
 
             <div x-ref="messages" x-show="messages.length > 0" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
                 <div class="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8 sm:py-12">
@@ -139,8 +136,8 @@
             </div>
 
             {{-- Composer --}}
-            <div class="px-3 sm:px-6" :class="messages.length === 0 ? 'flex flex-1 flex-col items-center justify-center pb-10' : 'shrink-0 bg-gradient-to-t from-white via-white to-white/70 pb-4 pt-2'">
-                <div x-show="messages.length === 0" class="mb-8 flex w-full max-w-3xl flex-col items-center text-center">
+            <div class="px-3 sm:px-6" :class="messages.length === 0 ? 'flex min-h-0 flex-1 flex-col items-center overflow-y-auto pb-6 pt-4 before:flex-1 before:content-[\'\'] after:flex-1 after:content-[\'\'] [&>*]:shrink-0' : 'shrink-0 bg-gradient-to-t from-white via-white to-white/70 pb-4 pt-2'">
+                <div x-show="messages.length === 0" class="mb-6 flex w-full max-w-3xl flex-col items-center text-center sm:mb-8">
                     <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka" class="h-14 w-14 object-contain">
                     <h2 class="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-[#0B1B3F] sm:text-[34px]" x-text="greeting"></h2>
                     <p class="mt-2 text-[15px] font-semibold text-slate-500">Apa yang ingin kamu ketahui tentang bisnismu hari ini?</p>
@@ -150,7 +147,7 @@
                     <div class="flex items-end gap-2">
                         <input type="file" x-ref="picker" multiple accept="{{ \App\Services\Intelligence\AttachmentService::ACCEPT }}" class="hidden" @change="pick($event)">
                         <button type="button" @click="$refs.picker.click()" class="mb-0.5 flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-[#0B8F5B]" aria-label="Lampirkan dokumen" title="Lampirkan dokumen (PDF, Excel, CSV, gambar)"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.5l-8.6 8.6a5 5 0 01-7.1-7.1l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.7 1.7 0 01-2.4-2.4l8.3-8.3"/></svg></button>
-                        <textarea x-model="question" x-ref="input" @keydown.enter="if(!$event.shiftKey){$event.preventDefault();ask()}" rows="1" maxlength="2000" placeholder="Tanya atau minta strategi untuk bisnis kamu..." class="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"></textarea>
+                        <textarea x-model="question" x-ref="input" @keydown.enter="if(!$event.shiftKey){$event.preventDefault();ask()}" rows="1" maxlength="2000" placeholder="Tanya apa saja soal bisnismu..." class="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"></textarea>
                         <button type="submit" :disabled="loading || !question.trim()" class="w-10 h-10 mb-0.5 rounded-xl bg-[#0B8F5B] hover:bg-[#087A4E] disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition" aria-label="Kirim">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-6 6l6-6 6 6"/></svg>
                         </button>
