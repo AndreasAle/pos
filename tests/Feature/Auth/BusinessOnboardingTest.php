@@ -50,7 +50,7 @@ class BusinessOnboardingTest extends TestCase
 
         $this->get(route('onboarding.business'))
             ->assertOk()
-            ->assertSee('Siapkan ruang kerja Anda');
+            ->assertSee('Siapkan profil bisnis');
     }
 
     public function test_business_setup_creates_tenant_outlet_and_trial_atomically(): void
