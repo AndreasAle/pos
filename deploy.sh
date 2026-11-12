@@ -2,7 +2,7 @@
 #
 # Deploy ke shared hosting Hostinger.
 #
-#   cd ~/pos_app && ./deploy.sh
+#   cd ~/yokapos_app && ./deploy.sh
 #
 # Dibuat karena menjalankan langkahnya satu per satu terlalu mudah salah:
 # lupa menyalin build/ membuat seluruh situs kehilangan CSS, lupa migrate
@@ -11,12 +11,12 @@
 
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/home/u598194357/pos_app}"
+# Default HANYA situs Yoka (yokapos.com). Situs klien lama (pos.conweb.id / ~/pos_app)
+# sengaja tidak termasuk: salah jalan di sana bisa mengubah toko yang sedang beroperasi.
+APP_DIR="${APP_DIR:-/home/u598194357/yokapos_app}"
 
-# Kedua domain melayani aplikasi Laravel yang sama. WEB_ROOT tetap didukung
-# untuk deploy satu target saat troubleshooting; WEB_ROOTS menerima daftar
-# path yang dipisahkan spasi. Tanpa override, domain utama dan domain lama
-# diperbarui bersama-sama.
+# WEB_ROOT mendukung satu target; WEB_ROOTS menerima daftar path dipisahkan spasi.
+# Tanpa override, hanya yokapos.com yang diperbarui.
 if [[ -n "${WEB_ROOTS:-}" ]]; then
     read -r -a WEB_ROOT_LIST <<< "$WEB_ROOTS"
 elif [[ -n "${WEB_ROOT:-}" ]]; then
@@ -24,8 +24,24 @@ elif [[ -n "${WEB_ROOT:-}" ]]; then
 else
     WEB_ROOT_LIST=(
         "/home/u598194357/domains/yokapos.com/public_html"
-        "/home/u598194357/domains/conweb.id/public_html/pos"
     )
+fi
+
+# Pengaman: tolak bila menyasar aplikasi atau domain klien, kecuali sengaja diizinkan.
+# Memakai skrip ini di ~/pos_app juga menjalankan migrasi pada database klien.
+if [[ "${ALLOW_CLIENT_SITE:-}" != "yes" ]]; then
+    if [[ "$APP_DIR" == *"/pos_app" ]]; then
+        echo "DIBATALKAN: APP_DIR=$APP_DIR adalah aplikasi situs klien (pos.conweb.id)." >&2
+        echo "Skrip ini tidak boleh dijalankan di sana. Pakai ~/yokapos_app." >&2
+        exit 1
+    fi
+    for ROOT in "${WEB_ROOT_LIST[@]}"; do
+        if [[ "$ROOT" == *"conweb.id"* ]]; then
+            echo "DIBATALKAN: $ROOT milik situs klien (pos.conweb.id)." >&2
+            echo "Untuk sengaja men-deploy ke sana, jalankan dengan ALLOW_CLIENT_SITE=yes." >&2
+            exit 1
+        fi
+    done
 fi
 
 cd "$APP_DIR"
@@ -63,7 +79,7 @@ for WEB_ROOT_ITEM in "${WEB_ROOT_LIST[@]}"; do
         exit 1
     fi
 
-    # Kedua domain harus bootstrap source yang sama. Kalau tidak, halaman bisa
+    # Domain harus bootstrap source yang sama dengan APP_DIR. Kalau tidak, halaman bisa
     # memakai view/controller lama walaupun CSS baru sudah disalin.
     if ! grep -q "$APP_DIR/bootstrap/app.php" "$WEB_ROOT_ITEM/index.php"; then
         echo "    GAGAL: $WEB_ROOT_ITEM/index.php belum menunjuk ke $APP_DIR" >&2
@@ -129,4 +145,3 @@ done
 echo
 echo "Selesai. Periksa:"
 echo "  - https://yokapos.com"
-echo "  - https://pos.conweb.id"
