@@ -90,3 +90,17 @@ h1, h2, h3, h4, h5, h6, .font-display,
 th:not(.font-mono) { font-family: var(--font-display); letter-spacing: -0.005em; }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 em, i, .italic { font-synthesis: none; }
+
+/* ── KETEBALAN & KONTRAS (keterbacaan usia 40+) ─────────────────────────────
+   Nunito Sans 400 terlalu tipis di layar, jadi seluruh skala bobot dinaikkan
+   satu tingkat dan teks abu-abu muda digelapkan. */
+body { font-weight: 500; color: #1E293B; }
+.font-normal { font-weight: 500; }
+.font-medium { font-weight: 600; }
+.font-semibold { font-weight: 700; }
+.font-bold:not(.font-mono) { font-weight: 800; }
+.text-gray-400, .text-slate-400, .text-gray-300, .text-slate-300 { color: #64748B; }
+.text-gray-500, .text-slate-500, .text-\[\#64748B\], .text-\[\#94A3B8\] { color: #475569; }
+.text-gray-600, .text-slate-600 { color: #334155; }
+input, select, textarea, button { font-weight: 600; }
+input::placeholder, textarea::placeholder { color: #64748B; opacity: 1; font-weight: 500; }
