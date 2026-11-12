@@ -2,7 +2,7 @@
 
 @section('report')
 @php
-    $card = 'rounded-lg border border-gray-200 bg-white';
+    $card = 'min-w-0 rounded-lg border border-gray-200 bg-white';
     $dims = \App\Services\Reporting\SalesMetricsService::DIMENSIONS;
     $metrics = \App\Services\Reporting\SalesMetricsService::METRICS;
     $isMoney = in_array($metric, ['net_sales', 'gross_item_sales', 'payment_collected']);

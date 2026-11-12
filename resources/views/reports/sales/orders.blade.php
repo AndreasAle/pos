@@ -1,7 +1,7 @@
 @extends('reports.sales.layout')
 
 @section('report')
-@php $card = 'rounded-lg border border-gray-200 bg-white'; @endphp
+@php $card = 'min-w-0 rounded-lg border border-gray-200 bg-white'; @endphp
 
 <form method="GET" action="{{ url()->current() }}" class="{{ $card }} mb-4 flex flex-wrap items-end gap-3 p-3">
     @foreach($queryString as $k => $v)

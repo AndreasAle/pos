@@ -490,6 +490,8 @@ class SalesMetricsService
     private function bucketKeys(SalesReportFilter $f): array
     {
         $out = [];
+        // Never invent buckets in the future: a running period stops at "now".
+        $limit = $f->asOf && $f->asOf->lt($f->end) ? $f->asOf->addSecond() : $f->end;
         switch ($f->grouping) {
             case 'hour':
                 foreach (range(0, 23) as $h) {
@@ -502,18 +504,18 @@ class SalesMetricsService
                 }
                 break;
             case 'week':
-                for ($d = $f->start->startOfWeek(); $d->lt($f->end); $d = $d->addWeek()) {
-                    $out[$d->toDateString()] = $d->format('d M');
+                for ($d = $f->start->startOfWeek(); $d->lt($limit); $d = $d->addWeek()) {
+                    $out[$d->toDateString()] = $d->locale('id')->isoFormat('D MMM');
                 }
                 break;
             case 'month':
-                for ($d = $f->start->startOfMonth(); $d->lt($f->end); $d = $d->addMonthNoOverflow()) {
-                    $out[$d->format('Y-m')] = $d->isoFormat('MMM YYYY');
+                for ($d = $f->start->startOfMonth(); $d->lt($limit); $d = $d->addMonthNoOverflow()) {
+                    $out[$d->format('Y-m')] = $d->locale('id')->isoFormat('MMM YYYY');
                 }
                 break;
             default:
-                for ($d = $f->start; $d->lt($f->end); $d = $d->addDay()) {
-                    $out[$d->toDateString()] = $d->isoFormat('ddd D MMM');
+                for ($d = $f->start; $d->lt($limit); $d = $d->addDay()) {
+                    $out[$d->toDateString()] = $d->locale('id')->isoFormat('ddd D MMM');
                 }
         }
 

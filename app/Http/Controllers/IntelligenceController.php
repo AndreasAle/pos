@@ -150,6 +150,6 @@ class IntelligenceController extends Controller
         $names = $user->business->outlets()->whereIn('id', $f->outletIds)->pluck('name')->all();
         $scope = count($f->outletIds) === count($f->allowedOutletIds) ? 'semua outlet' : 'outlet '.implode(', ', $names);
 
-        return 'Analisis laporan penjualan '.$f->start->isoFormat('D MMM Y').' sampai '.$f->end->subSecond()->isoFormat('D MMM Y').' untuk '.$scope.'. Apa temuan utama dan hal yang perlu saya perhatikan?';
+        return 'Analisis laporan penjualan '.$f->start->locale('id')->isoFormat('D MMM Y').' sampai '.$f->end->subSecond()->locale('id')->isoFormat('D MMM Y').' untuk '.$scope.'. Apa temuan utama dan hal yang perlu saya perhatikan?';
     }
 }

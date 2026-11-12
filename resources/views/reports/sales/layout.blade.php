@@ -139,7 +139,7 @@
             </div>
         </div>
         <p class="mt-2 text-xs text-gray-500">
-            {{ $f->start->isoFormat('D MMM Y') }} – {{ $f->end->subSecond()->isoFormat('D MMM Y') }} · zona waktu {{ $f->timezone }}
+            {{ $f->start->locale('id')->isoFormat('D MMM Y') }} – {{ $f->end->subSecond()->locale('id')->isoFormat('D MMM Y') }} · zona waktu {{ $f->timezone }}
             · {{ count($f->outletIds) === count($f->allowedOutletIds) ? 'semua outlet' : count($f->outletIds).' outlet' }}
         </p>
     </form>

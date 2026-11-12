@@ -2,7 +2,7 @@
 
 @section('report')
 @php
-    $card = 'rounded-lg border border-gray-200 bg-white';
+    $card = 'min-w-0 rounded-lg border border-gray-200 bg-white';
     $m = $summary['metrics'];
     $link = fn ($key) => route('reports.sales.products', array_merge($queryString, ['sort' => $key, 'dir' => $sort === $key && $dir === 'desc' ? 'asc' : 'desc']));
     $heads = ['name' => ['Produk', 'left'], 'quantity' => ['Qty', 'right'], 'gross_item_sales' => ['Kotor', 'right'], 'net_sales' => ['Bersih', 'right'], 'cogs' => ['HPP', 'right']];

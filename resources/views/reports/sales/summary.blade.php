@@ -7,14 +7,14 @@
     $drillKey = $f->grouping === 'hour' ? 'hour' : 'day';
     $hasHours = count($hours['points']) > 0;
     $maxPay = collect($summary['payments'])->max('amount') ?: 1;
-    $card = 'rounded-lg border border-gray-200 bg-white';
+    $card = 'min-w-0 rounded-lg border border-gray-200 bg-white';
 @endphp
 
 @if($empty)
 <div class="{{ $card }} px-6 py-14 text-center">
     <p class="text-base font-semibold text-gray-900">Belum ada transaksi pada filter ini</p>
     <p class="mx-auto mt-1 max-w-md text-sm text-gray-500">
-        Periode {{ $f->start->isoFormat('D MMM Y') }} – {{ $f->end->subSecond()->isoFormat('D MMM Y') }}
+        Periode {{ $f->start->locale('id')->isoFormat('D MMM Y') }} – {{ $f->end->subSecond()->locale('id')->isoFormat('D MMM Y') }}
         @if(count($f->outletIds) !== count($f->allowedOutletIds)) untuk outlet terpilih @endif.
         Grafik tidak ditampilkan karena tidak ada data.
     </p>

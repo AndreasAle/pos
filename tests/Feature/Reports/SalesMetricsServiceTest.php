@@ -191,6 +191,16 @@ class SalesMetricsServiceTest extends TestCase
         $this->assertSame(0, $points['8']['transactions']);
     }
 
+    public function test_running_period_has_no_future_buckets(): void
+    {
+        $this->order([['A', 10000, 1]], when: '2026-11-10 10:00:00');
+
+        $points = $this->svc()->trend($this->filter(['preset' => 'this_month']))['points'];
+
+        $this->assertSame('2026-11-12', end($points)['key'], 'the chart stops at today, it does not draw zeros for days that have not happened');
+        $this->assertCount(12, $points);
+    }
+
     public function test_empty_period_has_no_fabricated_chart_and_aov_is_na(): void
     {
         $s = $this->svc()->summary($this->filter());

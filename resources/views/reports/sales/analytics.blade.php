@@ -2,7 +2,7 @@
 
 @section('report')
 @php
-    $card = 'rounded-lg border border-gray-200 bg-white';
+    $card = 'min-w-0 rounded-lg border border-gray-200 bg-white';
     $rows = [
         ['gross_item_sales', 'Penjualan kotor item', 'rp'], ['discounts', 'Diskon', 'rp'], ['net_sales', 'Penjualan bersih', 'rp'],
         ['payment_collected', 'Pembayaran tercatat', 'rp'], ['transactions', 'Transaksi', 'num'], ['aov', 'Rata-rata transaksi', 'rp'], ['tax_amount', 'Pajak', 'rp'],
