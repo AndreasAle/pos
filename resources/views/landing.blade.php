@@ -353,32 +353,36 @@
     </section>
 
     {{-- ================= KASIR CEPAT ================= --}}
-    <section id="kasir" class="py-20 md:py-28 px-6 bg-[#f2f9f5]">
-        <div class="max-w-[1100px] mx-auto">
-            <div class="max-w-[680px]">
-                <p class="text-[17px] font-bold text-slate-900">Kasir</p>
-                <h2 class="mt-4 text-[34px] md:text-[44px] font-extrabold leading-[1.12] text-slate-900">
-                    Pelanggan terima pesanan, struk langsung <em class="font-black italic text-emerald-700">keluar</em>
-                </h2>
-                <p class="mt-5 text-[18px] leading-[1.7] text-slate-600">Tanpa antre menunggu kasir menghitung. Dari memilih menu sampai struk tercetak, semuanya dalam satu layar.</p>
+    <section id="kasir" class="py-12 md:py-24 px-5 sm:px-6 bg-[#f2f9f5]">
+        <div class="max-w-[1100px] mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-7 lg:gap-14 items-center">
+            <div class="relative order-2 lg:order-1">
+                <img src="{{ asset('images/photos/kasir-pelanggan.webp') }}" alt="Barista menyerahkan kopi ke pelanggan di depan kasir Yoka POS"
+                     class="w-full aspect-[4/3] lg:aspect-[5/4] object-cover object-[55%_40%] rounded-2xl md:rounded-3xl shadow-[0_14px_34px_rgba(15,23,42,.16)]" loading="lazy">
+                <span class="absolute left-3 bottom-3 md:left-5 md:bottom-5 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-xs md:text-sm font-bold text-emerald-800 shadow-md">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Struk tercetak
+                </span>
             </div>
 
-            <img src="{{ asset('images/photos/kasir-pelanggan.webp') }}" alt="Barista menyerahkan kopi ke pelanggan di depan kasir Yoka POS"
-                 class="mt-12 w-full aspect-[16/8] object-cover object-[50%_35%] rounded-[28px] shadow-[0_18px_40px_rgba(15,23,42,.18)]" loading="lazy">
+            <div class="order-1 lg:order-2">
+                <p class="text-xs md:text-sm font-bold uppercase tracking-wide text-emerald-700">Kasir</p>
+                <h2 class="mt-2 text-[26px] md:text-[36px] font-extrabold leading-[1.15] text-slate-900">Pesanan masuk, struk <em class="font-black italic text-emerald-700">langsung keluar</em></h2>
 
-            <ol class="mt-12 grid md:grid-cols-3 gap-x-10 gap-y-8">
-                @foreach ([
-                    ['01', 'Pilih menu', 'Ketuk menu, tentukan ukuran dan topping. Pesanan bisa ditahan atas nama pelanggan atau nomor meja.'],
-                    ['02', 'Terima pembayaran', 'Tunai atau QRIS. Kembalian langsung dihitung, tidak perlu kalkulator.'],
-                    ['03', 'Cetak struk', 'Struk keluar dari printer begitu pembayaran selesai, atau dikirim sebagai PDF.'],
-                ] as [$no, $title, $desc])
-                    <li class="border-t-2 border-emerald-700 pt-5">
-                        <span class="text-sm font-extrabold text-emerald-700">{{ $no }}</span>
-                        <h3 class="mt-2 text-xl font-bold text-slate-900">{{ $title }}</h3>
-                        <p class="mt-2 text-[15px] leading-relaxed text-slate-600">{{ $desc }}</p>
-                    </li>
-                @endforeach
-            </ol>
+                <ol class="mt-5 md:mt-7 grid grid-cols-3 lg:grid-cols-1 gap-2.5 lg:gap-3">
+                    @foreach ([
+                        ['1', 'Pilih menu', 'Ukuran, topping, nomor meja.'],
+                        ['2', 'Bayar', 'Tunai atau QRIS, kembalian otomatis.'],
+                        ['3', 'Cetak struk', 'Printer atau PDF.'],
+                    ] as [$no, $title, $desc])
+                        <li class="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4 rounded-xl bg-white p-3 lg:px-4 lg:py-3.5 ring-1 ring-emerald-900/10">
+                            <span class="flex h-7 w-7 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-extrabold text-white">{{ $no }}</span>
+                            <div class="min-w-0">
+                                <h3 class="text-[14px] lg:text-base font-bold leading-tight text-slate-900">{{ $title }}</h3>
+                                <p class="mt-0.5 hidden text-sm text-slate-500 sm:block">{{ $desc }}</p>
+                            </div>
+                        </li>
+                    @endforeach
+                </ol>
+            </div>
         </div>
     </section>
 
