@@ -26,7 +26,7 @@ class AdvancedTools
     public function definitions(): array
     {
         $periods = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'last_30_days'];
-        $def = fn (string $name, string $desc, array $props = [], array $req = []) => ['type' => 'function', 'function' => ['name' => $name, 'description' => $desc, 'strict' => true, 'parameters' => ['type' => 'object', 'additionalProperties' => false, 'properties' => $props ?: new stdClass, 'required' => $req ?: array_keys($props)]]];
+        $def = fn (string $name, string $desc, array $props = [], array $req = []) => ['type' => 'function', 'function' => ['name' => $name, 'description' => $desc, 'strict' => true, 'parameters' => ['type' => 'object', 'additionalProperties' => false, 'properties' => $props ?: new \stdClass, 'required' => $req ?: array_keys($props)]]];
         $period = ['period' => ['type' => 'string', 'enum' => $periods]];
 
         return [
