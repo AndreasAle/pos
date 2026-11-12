@@ -39,13 +39,13 @@ Baseline audited: `cfab013` on `main`, 12 November 2026. Source specification: *
 | Milestone | Baseline | Target / gate |
 |---|---|---|
 | M0 Audit | Partial | This report, feature flags, rollback and risks documented. |
-| M1 Chat engine | Partial | Structured context, primary LLM planner, bounded recent history, closed answer contract, 50+ eval cases. |
-| M2 Business tools | Partial | Trusted tenant/outlet scope, strict args, metric dictionary, split payments, evidence envelope and deterministic fixtures. |
-| M3 Renderer | Partial | Typed conditional blocks, evidence/as-of, uncertainty, mobile/accessibility and no fake empty charts. |
-| M4 Insight feed | Partial | Evidence/confidence/sample guards, dedup lifecycle and no page-load computation. |
-| M5 Safe actions | Missing | Product availability prepare/approve/execute via domain service, audit, expiry, version and replay tests. |
-| M6 Agents | Missing | Four feasible read-only agents with timezone/idempotent runs/suppression. |
-| M7 Advanced | Blocked/partial | Forecast may be feasible; files, suppliers, payroll, weather and auto-marketing remain off until data/security readiness. |
+| M1 Chat engine | Implemented | Versioned structured context, primary schema-constrained LLM planner, bounded history, budget and 50-case multi-turn eval. |
+| M2 Business tools | Implemented | Trusted tenant/outlet scope, strict args, metric dictionary, split payments, evidence envelope and deterministic fixtures. |
+| M3 Renderer | Implemented | Typed conditional KPI/line/bar/table/action blocks, evidence/as-of, uncertainty and no fake empty charts. |
+| M4 Insight feed | Implemented | Evidence/confidence/sample fields, dedup occurrence lifecycle, snooze/ack and no page-load computation. |
+| M5 Safe actions | Implemented behind flag | Product availability prepare/approve/execute, immutable hash, expiry, optimistic version, idempotency and audit. |
+| M6 Agents | Implemented behind flag | Four feasible read-only agents with timezone schedule, unique run keys, retries and owner toggles. |
+| M7 Advanced | Blocked by data | Files, suppliers, payroll, weather, physical counts/FIFO and delivery integrations remain off until data/security readiness. |
 
 ## Production risks and controls
 
