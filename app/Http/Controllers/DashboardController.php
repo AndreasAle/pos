@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Services\DashboardService;
-use App\Services\InsightService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __construct(protected DashboardService $dashboard, protected InsightService $insightService) {}
+    public function __construct(protected DashboardService $dashboard) {}
 
     public function index(Request $request)
     {
@@ -26,13 +25,10 @@ class DashboardController extends Controller
         $outletPerformance = $user->isOwner() || $user->isAdmin()
             ? $this->dashboard->getOutletPerformance($business)
             : [];
-        $insights = $user->isOwner() || $user->isAdmin()
-            ? $this->insightService->visible($business)
-            : collect();
 
         return view('dashboard.index', compact(
             'summary', 'topProducts', 'salesChart', 'paymentBreakdown',
-            'lowStock', 'recentOrders', 'outlets', 'outletId', 'outletPerformance', 'insights'
+            'lowStock', 'recentOrders', 'outlets', 'outletId', 'outletPerformance'
         ));
     }
 }

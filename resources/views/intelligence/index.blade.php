@@ -1,0 +1,164 @@
+@extends('layouts.app')
+@section('title', 'Tanya Yoka')
+@section('page-title', 'Tanya Yoka')
+
+@section('content')
+@php
+    $initialMessages = $activeConversation?->messages?->map(fn($m) => ['role' => $m->role, 'content' => $m->content])->values() ?? collect();
+@endphp
+
+<div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] h-[calc(100vh-98px)] min-h-[620px] overflow-hidden"
+     x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages))">
+    <div class="flex h-full min-w-0">
+        {{-- Riwayat percakapan internal --}}
+        <aside class="absolute lg:relative z-20 inset-y-0 left-0 w-[286px] shrink-0 border-r border-[#E5E7EB] bg-[#F8FAF9] flex flex-col transition-transform lg:translate-x-0"
+               :class="historyOpen ? 'translate-x-0 shadow-2xl lg:shadow-none' : '-translate-x-full'">
+            <div class="p-3 border-b border-[#E5E7EB]">
+                <a href="{{ route('intelligence.index') }}" class="h-11 px-3 rounded-xl bg-[#0B8F5B] hover:bg-[#087A4E] text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-sm">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+                    Percakapan baru
+                </a>
+            </div>
+
+            <div class="flex-1 min-h-0 overflow-y-auto px-2 py-3">
+                <p class="px-2 mb-2 text-[11px] uppercase tracking-wider font-bold text-slate-400">Riwayat</p>
+                @forelse($conversations as $conversation)
+                <div id="conversation-{{ $conversation->id }}" class="group relative mb-1">
+                    <a href="{{ route('intelligence.index', ['conversation' => $conversation->id]) }}"
+                       class="block rounded-lg py-2.5 pl-3 pr-9 text-[13px] leading-5 {{ $activeConversation?->id === $conversation->id ? 'bg-[#E1F5EA] text-[#087A4E] font-semibold' : 'text-slate-700 hover:bg-slate-100' }}">
+                        <span class="block truncate">{{ $conversation->title ?: 'Percakapan baru' }}</span>
+                        <span class="block text-[11px] font-normal text-slate-400">{{ $conversation->updated_at->diffForHumans() }}</span>
+                    </a>
+                    <button type="button" @click.prevent="deleteConversation({{ $conversation->id }})" title="Hapus percakapan"
+                            class="absolute right-2 top-3 w-7 h-7 rounded-md text-slate-400 hover:bg-red-50 hover:text-red-600 opacity-0 group-hover:opacity-100 focus:opacity-100">&times;</button>
+                </div>
+                @empty
+                <p class="px-3 py-5 text-xs leading-relaxed text-slate-400">Belum ada percakapan. Mulai dengan pertanyaan tentang penjualan atau operasional bisnis.</p>
+                @endforelse
+            </div>
+
+            <div class="border-t border-[#E5E7EB] p-3">
+                <div class="rounded-xl border border-[#D8EDE2] bg-white p-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-[#E1F5EA] text-[#0B8F5B] flex items-center justify-center">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                        </span>
+                        <div><p class="text-xs font-bold text-[#0B1B3F]">Insight aktif</p><p class="text-[11px] text-slate-500">{{ $businessInsights->count() }} perhatian bisnis</p></div>
+                    </div>
+                    @if($businessInsights->isNotEmpty())
+                    <div class="mt-3 space-y-2">
+                        @foreach($businessInsights->take(3) as $insight)
+                        <div class="rounded-lg bg-slate-50 px-2.5 py-2">
+                            <p class="text-[11px] font-semibold text-slate-700 line-clamp-2">{{ $insight->title }}</p>
+                        </div>
+                        @endforeach
+                    </div>
+                    @else
+                    <p class="mt-2 text-[11px] leading-relaxed text-slate-500">Tidak ada anomali penting saat ini.</p>
+                    @endif
+                </div>
+            </div>
+        </aside>
+
+        <div x-show="historyOpen" x-cloak @click="historyOpen=false" class="absolute inset-0 z-10 bg-black/30 lg:hidden"></div>
+
+        {{-- Chat utama --}}
+        <section class="relative flex-1 min-w-0 flex flex-col bg-white">
+            <header class="h-14 shrink-0 px-3 sm:px-5 border-b border-[#E5E7EB] flex items-center justify-between bg-white/95">
+                <div class="flex items-center gap-2 min-w-0">
+                    <button @click="historyOpen=true" class="lg:hidden w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center" aria-label="Buka riwayat">
+                        <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                    <div class="w-8 h-8 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                    </div>
+                    <div class="min-w-0"><h1 class="text-sm font-bold text-[#0B1B3F]">Tanya Yoka</h1><p class="text-[11px] text-slate-500 truncate">Asisten data {{ $currentBusiness->name }}</p></div>
+                </div>
+                <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#E8F7EF] px-2.5 py-1 text-[11px] font-semibold text-[#087A4E]"><span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>Data bisnis terhubung</span>
+            </header>
+
+            <div x-ref="messages" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
+                <div class="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
+                    <div x-show="messages.length === 0" class="min-h-[390px] flex flex-col items-center justify-center text-center">
+                        <div class="w-14 h-14 rounded-2xl bg-[#E1F5EA] text-[#0B8F5B] flex items-center justify-center ring-8 ring-[#F4FBF7]">
+                            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>
+                        </div>
+                        <h2 class="mt-6 text-2xl sm:text-3xl font-bold tracking-tight text-[#0B1B3F]">Apa yang ingin kamu ketahui?</h2>
+                        <p class="mt-2 max-w-md text-sm leading-relaxed text-slate-500">Tanyakan omzet, produk, stok, pelanggan, outlet, pembayaran, atau shift menggunakan bahasa sehari-hari.</p>
+                        <div class="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-xl text-left">
+                            <template x-for="prompt in prompts" :key="prompt.text">
+                                <button type="button" @click="question=prompt.text; ask()" class="group rounded-xl border border-[#E5E7EB] bg-white p-3.5 hover:border-[#9DD8BA] hover:bg-[#F4FBF7] transition">
+                                    <div class="flex items-start gap-3"><span class="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-[#E1F5EA] text-[#0B8F5B] flex items-center justify-center text-sm" x-text="prompt.icon"></span><div><p class="text-sm font-semibold text-[#0B1B3F]" x-text="prompt.title"></p><p class="mt-0.5 text-xs text-slate-500" x-text="prompt.text"></p></div></div>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div x-show="messages.length > 0" class="space-y-7">
+                        <template x-for="(message, i) in messages" :key="i">
+                            <div class="flex items-start gap-3 sm:gap-4" :class="message.role === 'user' ? 'justify-end' : ''">
+                                <div x-show="message.role !== 'user'" class="w-8 h-8 mt-0.5 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0"><span class="text-xs font-bold">Y</span></div>
+                                <div class="max-w-[88%] sm:max-w-[82%]">
+                                    <div class="text-sm sm:text-[15px] leading-7 whitespace-pre-wrap" :class="message.role === 'user' ? 'rounded-2xl rounded-br-md bg-[#E8F7EF] px-4 py-2.5 text-[#0B1B3F]' : 'text-slate-700'" x-text="message.content"></div>
+                                    <p x-show="message.role !== 'user'" class="mt-1.5 text-[10px] text-slate-400">Dihitung dari data bisnis kamu</p>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="loading" class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0"><span class="text-xs font-bold">Y</span></div>
+                            <div class="pt-2 flex gap-1"><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:120ms]"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:240ms]"></span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Composer --}}
+            <div class="shrink-0 bg-gradient-to-t from-white via-white to-white/70 px-3 sm:px-6 pb-4 pt-2">
+                <form @submit.prevent="ask" class="mx-auto max-w-3xl rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition">
+                    <div class="flex items-end gap-2">
+                        <textarea x-model="question" x-ref="input" @keydown.enter="if(!$event.shiftKey){$event.preventDefault();ask()}" rows="1" maxlength="500" placeholder="Tanya tentang bisnis kamu..." class="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"></textarea>
+                        <button type="submit" :disabled="loading || !question.trim()" class="w-10 h-10 mb-0.5 rounded-xl bg-[#0B8F5B] hover:bg-[#087A4E] disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition" aria-label="Kirim">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-6 6l6-6 6 6"/></svg>
+                        </button>
+                    </div>
+                </form>
+                <p class="mt-2 text-center text-[10px] text-slate-400">Yoka dapat melakukan kesalahan. Cocokkan keputusan penting dengan laporan utama.</p>
+            </div>
+        </section>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+function yokaChat(initialConversation, initialMessages) {
+    return {
+        historyOpen: false, loading: false, question: '', conversationId: initialConversation, messages: initialMessages || [],
+        prompts: [
+            {icon:'↗',title:'Ringkasan penjualan',text:'Bagaimana omzet hari ini?'},
+            {icon:'★',title:'Produk unggulan',text:'Produk paling laris bulan ini'},
+            {icon:'!',title:'Kondisi stok',text:'Stok apa yang perlu segera dibeli?'},
+            {icon:'◷',title:'Waktu operasional',text:'Jam berapa paling ramai bulan ini?'},
+        ],
+        init(){this.scroll()},
+        async ask(){
+            const text=this.question.trim(); if(!text||this.loading)return;
+            this.messages.push({role:'user',content:text}); this.question=''; this.loading=true; this.scroll();
+            try{
+                const response=await fetch('{{ route('intelligence.ask') }}',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:JSON.stringify({question:text,conversation_id:this.conversationId})});
+                const data=await response.json(); if(!response.ok)throw new Error(data.message||'Yoka gagal membaca data.');
+                const isNew=!this.conversationId; this.conversationId=data.conversation_id; this.messages.push({role:'assistant',content:data.answer});
+                if(isNew) history.replaceState({},'', '{{ route('intelligence.index') }}?conversation='+data.conversation_id);
+            }catch(error){this.messages.push({role:'assistant',content:'Maaf, '+error.message});}
+            finally{this.loading=false;this.scroll();this.$nextTick(()=>this.$refs.input.focus())}
+        },
+        scroll(){this.$nextTick(()=>{if(this.$refs.messages)this.$refs.messages.scrollTop=this.$refs.messages.scrollHeight})},
+        async deleteConversation(id){
+            if(!confirm('Hapus percakapan ini?'))return;
+            const response=await fetch('{{ url('/intelligence/conversations') }}/'+id,{method:'DELETE',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'}});
+            if(response.ok){document.getElementById('conversation-'+id)?.remove();if(this.conversationId===id)window.location='{{ route('intelligence.index') }}'}
+        }
+    }
+}
+</script>
+@endpush

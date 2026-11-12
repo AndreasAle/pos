@@ -87,4 +87,22 @@ class YokaIntelligenceTest extends TestCase
 
         $this->actingAs($cashier)->postJson(route('intelligence.ask'), ['question' => 'Omzet?'])->assertForbidden();
     }
+
+    public function test_owner_can_open_the_dedicated_chat_page(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)->get(route('intelligence.index'))
+            ->assertOk()
+            ->assertSee('Tanya Yoka')
+            ->assertSee('Apa yang ingin kamu ketahui?');
+    }
+
+    public function test_cashier_cannot_open_the_dedicated_chat_page(): void
+    {
+        $business = Business::factory()->create();
+        $cashier = User::factory()->create(['business_id' => $business->id, 'outlet_id' => Outlet::factory()->create(['business_id' => $business->id])->id, 'role' => 'cashier']);
+
+        $this->actingAs($cashier)->get(route('intelligence.index'))->assertForbidden();
+    }
 }

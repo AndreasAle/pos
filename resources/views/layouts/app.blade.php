@@ -66,6 +66,9 @@
 
             {{-- Utama --}}
             <x-nav-item route="dashboard" icon="home" data-tour="dashboard">Dashboard</x-nav-item>
+            @if(in_array($role, ['owner','admin']))
+            <x-nav-item route="intelligence.index" icon="sparkles">Tanya Yoka</x-nav-item>
+            @endif
             @if(in_array($role, ['owner','admin','cashier']))
             <x-nav-item route="pos.index" icon="shopping-cart" data-tour="pos">Kasir / POS</x-nav-item>
             <x-nav-item route="orders.index" icon="clipboard-list">Riwayat Order</x-nav-item>
@@ -310,7 +313,7 @@
 
         {{-- Page content --}}
         <main class="flex-1 min-w-0 px-4 sm:px-6 pb-8">
-            @unless(request()->routeIs('dashboard'))
+            @unless(request()->routeIs('dashboard', 'intelligence.index'))
             <h1 class="pt-5 pb-1 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
             @endunless
             @yield('content')

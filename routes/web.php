@@ -164,11 +164,14 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('intelligence', [IntelligenceController::class, 'index'])
+        ->middleware('role:owner,admin')->name('intelligence.index');
     Route::middleware(['role:owner,admin', 'json'])->prefix('intelligence')->name('intelligence.')->group(function () {
         Route::post('ask', [IntelligenceController::class, 'ask'])->middleware('throttle:30,1')->name('ask');
         Route::get('history', [IntelligenceController::class, 'history'])->name('history');
         Route::post('insights/{insight}/read', [IntelligenceController::class, 'read'])->name('insights.read');
         Route::post('insights/{insight}/dismiss', [IntelligenceController::class, 'dismiss'])->name('insights.dismiss');
+        Route::delete('conversations/{conversation}', [IntelligenceController::class, 'destroyConversation'])->name('conversations.destroy');
     });
     Route::post('intelligence/refresh', [IntelligenceController::class, 'refresh'])
         ->middleware('role:owner,admin')->name('intelligence.refresh');

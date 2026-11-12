@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Yoka POS — Kasir Modern untuk Cafe, Resto, Bakery & Bisnis F&B</title>
-    <meta name="description" content="Kelola transaksi, QRIS, stok, shift kasir, struk, dan laporan profit dalam satu sistem POS yang mudah digunakan untuk cafe, resto, bakery, dan UMKM F&B.">
+    <meta name="description" content="Kelola transaksi, QRIS, stok, shift kasir, laporan profit, dan insight bisnis Yoka Intelligence dalam satu sistem POS untuk cafe, resto, bakery, dan UMKM.">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800" rel="stylesheet" />
@@ -36,6 +36,15 @@
         .hover-card:hover { transform: translateY(-4px); box-shadow: 0 20px 45px -15px rgba(5,150,105,.25); }
         .testimonial-track { scrollbar-width: none; }
         .testimonial-track::-webkit-scrollbar { display: none; }
+        .ai-demo-enter { animation: aiDemoEnter .45s cubic-bezier(.2,.75,.3,1) both; }
+        .ai-demo-cursor::after { content: ''; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -.12em; background: #059669; animation: aiCursor .8s steps(1) infinite; }
+        .ai-demo-shimmer { background: linear-gradient(90deg,#f1f5f9 25%,#dcfce7 45%,#f1f5f9 65%); background-size: 240% 100%; animation: aiShimmer 1.5s linear infinite; }
+        @keyframes aiDemoEnter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes aiCursor { 50% { opacity: 0; } }
+        @keyframes aiShimmer { to { background-position: -240% 0; } }
+        @media (prefers-reduced-motion: reduce) {
+            .ai-demo-enter, .ai-demo-cursor::after, .ai-demo-shimmer { animation: none !important; }
+        }
     </style>
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
@@ -121,9 +130,9 @@
                                     </span>
                                     <span class="rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-950">Unggulan</span>
                                 </div>
-                                <p class="mt-5 text-lg font-extrabold">Asisten Bisnis Telegram</p>
-                                <p class="mt-2 text-xs font-medium leading-relaxed text-emerald-50/85">Tanya omzet, profit, stok, produk terlaris, dan shift langsung melalui chat.</p>
-                                <a href="{{ route('features.show', 'telegram') }}" @click="featureOpen = false" class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white hover:gap-3 transition-all">
+                                <p class="mt-5 text-lg font-extrabold">Yoka Intelligence</p>
+                                <p class="mt-2 text-xs font-medium leading-relaxed text-emerald-50/85">Tanya omzet, profit, stok, produk terlaris, dan dapatkan insight langsung dari data tokomu.</p>
+                                <a href="#yoka-intelligence" @click="featureOpen = false" class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white hover:gap-3 transition-all">
                                     Lihat cara kerjanya
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
                                 </a>
@@ -165,11 +174,11 @@
                     [route('features.show', 'pembayaran-qris'), 'Pembayaran & QRIS'],
                     [route('features.show', 'stok-resep'), 'Stok & Resep'],
                     [route('features.show', 'kitchen-display'), 'Kitchen Display'],
-                    [route('features.show', 'telegram'), 'Asisten Bisnis Telegram'],
+                    ['#yoka-intelligence', 'Yoka Intelligence'],
                     [route('features.show', 'laporan'), 'Laporan Penjualan & Profit'],
                 ] as [$href, $label])
                     <a @click="mobileOpen=false; mobileFeatures=false" href="{{ $href }}"
-                       class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {{ str_ends_with($href, '/telegram') ? 'bg-emerald-700 text-white' : 'text-slate-700 hover:bg-white' }}">
+                       class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {{ $label === 'Yoka Intelligence' ? 'bg-emerald-700 text-white' : 'text-slate-700 hover:bg-white' }}">
                         {{ $label }}
                         <span aria-hidden="true">→</span>
                     </a>
@@ -339,6 +348,145 @@
             </ol>
         </div>
     </section>
+
+    {{-- ================= YOKA INTELLIGENCE DEMO ================= --}}
+    <section id="yoka-intelligence" class="relative overflow-hidden bg-white px-6 py-20 md:py-28">
+        <div class="pointer-events-none absolute left-1/2 top-[46%] h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-100/55 blur-[100px]"></div>
+        <div class="relative mx-auto max-w-[1120px]" x-data="yokaAiDemo()" x-init="observe($el)">
+            <div class="mx-auto max-w-[850px] text-center">
+                <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-[.14em] text-emerald-700 ring-1 ring-emerald-100">
+                    <span class="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-600 text-white">
+                        <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                    </span>
+                    Yoka Intelligence
+                </span>
+                <h2 class="mt-6 text-[34px] font-extrabold leading-[1.12] tracking-[-.03em] text-slate-950 md:text-[50px]">
+                    Data bisnis bicara lebih jelas,<br class="hidden sm:block"> keputusan jadi lebih cepat
+                </h2>
+                <p class="mx-auto mt-5 max-w-[650px] text-[17px] leading-relaxed text-slate-600">Tanyakan kondisi toko dengan bahasa sehari-hari. Yoka membaca penjualan, produk, dan stok lalu mengubahnya menjadi jawaban yang mudah ditindaklanjuti.</p>
+            </div>
+
+            <div class="mt-14 grid items-center gap-10 lg:grid-cols-[600px_1fr] lg:gap-14">
+                {{-- Product demo --}}
+                <div class="relative mx-auto w-full max-w-[600px]">
+                    <div class="absolute -inset-5 rounded-[34px] bg-gradient-to-br from-emerald-200/55 via-sky-100/30 to-amber-100/50 blur-2xl"></div>
+                    <div class="relative overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-[0_28px_70px_rgba(15,23,42,.14)]">
+                        <div class="flex h-12 items-center border-b border-slate-200 bg-slate-50/80 px-3">
+                            <div class="flex items-center gap-1.5 pr-3"><span class="h-2.5 w-2.5 rounded-full bg-red-300"></span><span class="h-2.5 w-2.5 rounded-full bg-amber-300"></span><span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span></div>
+                            <template x-for="(item, index) in scenarios" :key="item.tab">
+                                <button type="button" @click="select(index)" class="relative flex h-9 items-center gap-1.5 rounded-t-lg px-3 text-xs font-bold transition-colors"
+                                        :class="active === index ? 'bg-white text-emerald-700 shadow-[0_-1px_0_#d1fae5,1px_0_0_#d1fae5,-1px_0_0_#d1fae5]' : 'text-slate-400 hover:text-slate-600'">
+                                    <span x-text="item.icon"></span><span x-text="item.tab"></span>
+                                </button>
+                            </template>
+                            <span class="ml-auto hidden items-center gap-1.5 text-[10px] font-semibold text-slate-400 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Data tersambung</span>
+                        </div>
+
+                        <div class="flex h-[500px] flex-col sm:h-[520px]">
+                            <div class="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 px-5">
+                                <div class="flex items-center gap-2"><span class="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-600 text-[10px] font-black text-white">Y</span><span class="text-xs font-bold text-slate-700" x-text="scenarios[active].mode"></span></div>
+                                <span class="text-[10px] font-medium text-slate-400">{{ config('app.name') }}</span>
+                            </div>
+
+                            <div class="relative flex-1 overflow-hidden px-5 py-5 sm:px-7">
+                                {{-- Empty/waiting state --}}
+                                <div x-show="phase === 0" x-transition.opacity class="flex h-full flex-col items-center justify-center text-center">
+                                    <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/50">
+                                        <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
+                                    </div>
+                                    <p class="mt-5 text-sm font-bold text-slate-800">Tanyakan apa pun tentang toko</p>
+                                    <p class="mt-1 max-w-[290px] text-xs leading-relaxed text-slate-400">Yoka akan memilih data yang tepat untuk menjawab pertanyaanmu.</p>
+                                </div>
+
+                                {{-- Analysis --}}
+                                <div x-show="phase >= 2" class="space-y-4">
+                                    <div class="ai-demo-enter rounded-2xl bg-[#E8F7EF] px-4 py-3 text-sm leading-relaxed text-[#0B1B3F]" x-text="scenarios[active].question"></div>
+                                    <div class="ai-demo-enter flex items-center gap-2 text-xs font-bold text-emerald-700"><span class="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white">Y</span><span x-text="phase < 4 ? 'Yoka sedang menganalisis...' : 'Analisis selesai'"></span></div>
+                                    <div x-show="phase === 2" class="space-y-2.5">
+                                        <template x-for="(line, index) in scenarios[active].analysis" :key="line">
+                                            <div x-show="analysisStep > index" x-transition class="ai-demo-enter flex items-start gap-3 rounded-xl border border-slate-100 bg-white px-3.5 py-3 shadow-sm">
+                                                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-black text-emerald-600" x-text="index + 1"></span>
+                                                <p class="text-xs leading-relaxed text-slate-600" x-text="line"></p>
+                                            </div>
+                                        </template>
+                                        <div x-show="analysisStep < 3" class="h-11 rounded-xl ai-demo-shimmer"></div>
+                                    </div>
+                                    <div x-show="phase >= 3" x-transition class="ai-demo-enter overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+                                        <div class="border-b border-emerald-100 bg-emerald-50/70 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700" x-text="scenarios[active].label"></div>
+                                        <div class="p-4">
+                                            <p class="text-[15px] font-extrabold leading-relaxed text-[#0B1B3F]" x-text="scenarios[active].answer"></p>
+                                            <p class="mt-2 text-xs leading-relaxed text-slate-500" x-text="scenarios[active].detail"></p>
+                                            <button x-show="phase >= 4" x-transition type="button" class="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm">Lihat detail <span>→</span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="shrink-0 border-t border-slate-100 bg-white p-3.5 sm:p-4">
+                                <div class="flex min-h-12 items-center gap-2 rounded-xl border px-3 transition-colors" :class="phase === 1 ? 'border-emerald-400 ring-4 ring-emerald-50' : 'border-slate-200'">
+                                    <p class="min-w-0 flex-1 text-xs text-slate-700" :class="phase === 1 ? 'ai-demo-cursor' : ''" x-text="typed || 'Tanya kondisi bisnis kamu...' "></p>
+                                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors" :class="typed ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-300'">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-6 6l6-6 6 6"/></svg>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Explanation and synced progress --}}
+                <div class="lg:pl-2">
+                    <p class="text-sm font-extrabold uppercase tracking-[.14em] text-emerald-600">Dari data menjadi tindakan</p>
+                    <h3 class="mt-3 text-[30px] font-extrabold leading-tight text-slate-950 md:text-[36px]">Bukan sekadar chatbot.<br>Yoka memahami operasionalmu.</h3>
+                    <p class="mt-5 text-[15px] leading-relaxed text-slate-600">Semua jawaban dihitung dari transaksi, produk, stok, pelanggan, shift, dan outlet milik bisnismu sendiri.</p>
+
+                    <ol class="mt-8 space-y-5">
+                        <template x-for="(step, index) in steps" :key="step">
+                            <li class="flex items-center gap-4 transition-all duration-500" :class="progress > index ? 'text-slate-900' : 'text-slate-400'">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-xs font-extrabold transition-all duration-500"
+                                      :class="progress > index ? 'border-emerald-600 bg-emerald-600 text-white shadow-[0_5px_15px_rgba(5,150,105,.25)]' : 'border-slate-200 bg-white'">
+                                    <svg x-show="progress > index" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+                                    <span x-show="progress <= index" x-text="index + 1"></span>
+                                </span>
+                                <span class="text-[15px] font-bold" x-text="step"></span>
+                            </li>
+                        </template>
+                    </ol>
+
+                    <a href="{{ route('register') }}" class="mt-9 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-700">Coba Yoka gratis <span>→</span></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        function yokaAiDemo() {
+            return {
+                active: 0, phase: 0, analysisStep: 0, typed: '', progress: 0, running: false, timers: [],
+                steps: ['Ajukan pertanyaan atau terima insight proaktif.', 'Yoka membaca data operasional yang relevan.', 'Dapatkan jawaban dan rekomendasi yang jelas.', 'Buka tindakan yang tepat dalam satu klik.'],
+                scenarios: [
+                    {tab:'Penjualan',icon:'↗',mode:'Pahami penjualan',question:'Bagaimana performa penjualan hari ini?',label:'Ringkasan penjualan',answer:'Omzet hari ini Rp4.860.000 dari 124 transaksi.',detail:'Naik 18% dibanding Kamis lalu. Puncak penjualan terjadi pukul 17.00–19.00.' ,analysis:['Membaca transaksi yang sudah dibayar hari ini.','Membandingkan dengan periode yang setara.','Mencari produk dan jam yang mendorong kenaikan.']},
+                    {tab:'Produk',icon:'★',mode:'Optimalkan produk',question:'Produk mana yang paling laris dan menguntungkan?',label:'Performa produk',answer:'Es Kopi Susu memimpin dengan 86 gelas dan margin 54%.',detail:'Roti Bakar paling cepat tumbuh. Pertimbangkan bundling keduanya pada jam sore.',analysis:['Mengelompokkan item dari seluruh transaksi.','Menghitung omzet, biaya modal, dan margin.','Membandingkan pertumbuhan setiap menu.']},
+                    {tab:'Stok',icon:'◫',mode:'Jaga ketersediaan stok',question:'Stok apa yang perlu saya beli besok?',label:'Prediksi stok',answer:'Susu diperkirakan habis dalam 2 hari.',detail:'Sisa 18 liter dengan penggunaan rata-rata 9,4 liter per hari. Saran pembelian: 30 liter.',analysis:['Membaca stok dan pergerakan bahan 14 hari.','Menghitung rata-rata pemakaian harian.','Memproyeksikan waktu habis dan kebutuhan belanja.']},
+                ],
+                later(fn, ms) { const id=setTimeout(fn,ms); this.timers.push(id); },
+                clear() { this.timers.forEach(clearTimeout); this.timers=[]; },
+                observe(el) { const start=()=>{if(!this.running){this.running=true;this.play()}}; if(!('IntersectionObserver' in window)){start();return} new IntersectionObserver((entries,observer)=>{if(entries[0].isIntersecting){start();observer.disconnect()}},{threshold:.25}).observe(el); },
+                select(index) { this.active=index; this.running=true; this.play(); },
+                play() {
+                    this.clear(); this.phase=0; this.analysisStep=0; this.typed=''; this.progress=0;
+                    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    if(reduced){this.phase=4;this.analysisStep=3;this.typed=this.scenarios[this.active].question;this.progress=4;return}
+                    this.later(()=>{this.phase=1;this.progress=1;this.typeQuestion(0)},650);
+                },
+                typeQuestion(index) {
+                    const text=this.scenarios[this.active].question;
+                    if(index<text.length){this.typed=text.slice(0,index+1);this.later(()=>this.typeQuestion(index+1),28);return}
+                    this.later(()=>{this.phase=2;this.progress=2;this.analysisStep=1;this.later(()=>this.analysisStep=2,650);this.later(()=>this.analysisStep=3,1300);this.later(()=>{this.phase=3;this.progress=3},2200);this.later(()=>{this.phase=4;this.progress=4},3050);this.later(()=>{this.active=(this.active+1)%this.scenarios.length;this.play()},6500)},350);
+                }
+            }
+        }
+    </script>
 
     {{-- ================= SOLUSI ================= --}}
     <section id="keunggulan" class="py-20 md:py-28 px-6 bg-white">
@@ -717,7 +865,7 @@
 
     {{-- ================= FOOTER ================= --}}
     @php
-        $companyName = 'PT Conwebid Indonesia Digital';
+        $companyName = 'Conwebid Indonesia Digital';
         $companyEmail = 'conwebid@gmail.com';
         $companyPhone = '08xx-xxxx-xxxx'; // TODO: isi nomor lengkap
         $companyPhoneDigits = '628xxxxxxxxxx'; // TODO: format 62..., tanpa + dan spasi
