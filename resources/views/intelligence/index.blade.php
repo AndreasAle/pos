@@ -6,6 +6,7 @@
 @php
     $initialMessages = $activeConversation?->messages?->map(fn($m) => [
         'role' => $m->role, 'content' => $m->content,
+        'hasData' => filled($m->tool_name),
         'presentation' => data_get($m->meta, 'presentation'),
     ])->values() ?? collect();
 @endphp
@@ -101,7 +102,7 @@
                         <template x-for="(message, i) in messages" :key="i">
                             <div class="flex items-start gap-3 sm:gap-4" :class="message.role === 'user' ? 'justify-end' : ''">
                                 <div x-show="message.role !== 'user'" class="w-8 h-8 mt-0.5 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0"><span class="text-xs font-bold">Y</span></div>
-                                <div class="max-w-[92%] sm:max-w-[86%] min-w-0" :class="message.role !== 'user' && message.presentation ? 'w-full' : ''">
+                                <div class="max-w-[92%] sm:max-w-[86%] min-w-0" :class="message.role !== 'user' && message.presentation && Object.keys(message.presentation).length ? 'w-full' : ''">
                                     <div class="text-sm sm:text-[15px] leading-7 whitespace-pre-wrap" :class="message.role === 'user' ? 'rounded-2xl rounded-br-md bg-[#E8F7EF] px-4 py-2.5 text-[#0B1B3F]' : 'text-slate-700'" x-text="message.content"></div>
                                     <div x-show="message.role !== 'user' && message.presentation && Object.keys(message.presentation).length" class="mt-4 overflow-hidden rounded-2xl border border-[#DDE9E2] bg-white shadow-sm">
                                         <div class="flex items-center justify-between border-b border-[#E5E7EB] bg-[#F8FBF9] px-4 py-3">
@@ -132,7 +133,7 @@
                                             </table>
                                         </div>
                                     </div>
-                                    <p x-show="message.role !== 'user'" class="mt-1.5 text-[10px] text-slate-400">Dihitung dari data bisnis kamu</p>
+                                    <p x-show="message.role !== 'user' && message.hasData" class="mt-1.5 text-[10px] text-slate-400">Dihitung dari data bisnis kamu</p>
                                 </div>
                             </div>
                         </template>
@@ -179,7 +180,7 @@ function yokaChat(initialConversation, initialMessages) {
             try{
                 const response=await fetch('{{ route('intelligence.ask') }}',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:JSON.stringify({question:text,conversation_id:this.conversationId})});
                 const data=await response.json(); if(!response.ok)throw new Error(data.message||'Yoka gagal membaca data.');
-                const isNew=!this.conversationId; this.conversationId=data.conversation_id; this.messages.push({role:'assistant',content:data.answer,presentation:data.presentation});
+                const isNew=!this.conversationId; this.conversationId=data.conversation_id; this.messages.push({role:'assistant',content:data.answer,hasData:!!data.tool,presentation:data.presentation});
                 if(isNew) history.replaceState({},'', '{{ route('intelligence.index') }}?conversation='+data.conversation_id);
             }catch(error){this.messages.push({role:'assistant',content:'Maaf, '+error.message});}
             finally{this.loading=false;this.scroll();this.$nextTick(()=>this.$refs.input.focus())}

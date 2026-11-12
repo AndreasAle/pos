@@ -27,6 +27,7 @@ class YokaIntelligenceTest extends TestCase
     private function owner(?Business $business = null): User
     {
         $business ??= Business::factory()->create();
+
         return User::factory()->create([
             'business_id' => $business->id,
             'outlet_id' => Outlet::factory()->create(['business_id' => $business->id])->id,
@@ -103,8 +104,46 @@ class YokaIntelligenceTest extends TestCase
         $message = AssistantConversation::find($answer['conversation_id'])->messages()->findOrFail($answer['message_id']);
         $this->assertSame('all_time', data_get($message->meta, 'arguments.period'));
         $this->assertCount(4, $answer['presentation']['metrics']);
-        $this->assertArrayHasKey('chart', $answer['presentation']);
+        $this->assertArrayNotHasKey('chart', $answer['presentation']);
         $this->assertSame('Ringkasan sejak transaksi pertama', $answer['presentation']['title']);
+    }
+
+    public function test_acknowledgement_does_not_repeat_the_previous_data_or_visual(): void
+    {
+        $owner = $this->owner();
+        $first = app(YokaAssistantService::class)->ask($owner, 'Tampilkan grafik pembayaran bulan ini');
+        $reply = app(YokaAssistantService::class)->ask($owner, 'Oke makasih bro', $first['conversation_id']);
+
+        $this->assertNull($reply['tool']);
+        $this->assertNull($reply['data']);
+        $this->assertSame([], $reply['presentation']);
+        $this->assertSame('Sama-sama, bro 🙌', $reply['answer']);
+    }
+
+    public function test_advice_follow_up_reuses_data_range_without_repeating_a_visual(): void
+    {
+        $owner = $this->owner();
+        $first = app(YokaAssistantService::class)->ask($owner, 'Tampilkan grafik pembayaran dari tanggal 1');
+        $reply = app(YokaAssistantService::class)->ask($owner, 'Ada saran gak bro?', $first['conversation_id']);
+        $message = AssistantConversation::find($first['conversation_id'])->messages()->findOrFail($reply['message_id']);
+
+        $this->assertSame('payment_breakdown', $reply['tool']);
+        $this->assertSame('analysis', data_get($message->meta, 'intent'));
+        $this->assertSame('custom', data_get($message->meta, 'arguments.period'));
+        $this->assertSame([], $reply['presentation']);
+    }
+
+    public function test_visual_type_follows_the_users_request(): void
+    {
+        $owner = $this->owner();
+
+        $chart = app(YokaAssistantService::class)->ask($owner, 'Buatkan grafik pembayaran bulan ini');
+        $this->assertArrayHasKey('chart', $chart['presentation']);
+        $this->assertArrayNotHasKey('table', $chart['presentation']);
+
+        $table = app(YokaAssistantService::class)->ask($owner, 'Buatkan tabel pembayaran bulan ini');
+        $this->assertArrayHasKey('table', $table['presentation']);
+        $this->assertArrayNotHasKey('chart', $table['presentation']);
     }
 
     public function test_user_cannot_continue_another_tenants_conversation(): void
@@ -120,7 +159,8 @@ class YokaIntelligenceTest extends TestCase
 
     public function test_insight_from_another_tenant_cannot_be_dismissed(): void
     {
-        $first = $this->owner(); $second = $this->owner();
+        $first = $this->owner();
+        $second = $this->owner();
         $insight = BusinessInsight::create([
             'business_id' => $first->business_id, 'fingerprint' => 'test', 'type' => 'sales_trend',
             'severity' => 'info', 'title' => 'Test', 'summary' => 'Test', 'detected_at' => now(),
