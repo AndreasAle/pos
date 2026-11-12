@@ -10,6 +10,8 @@ use App\Models\OrderPayment;
 use App\Models\User;
 use App\Services\Intelligence\MetricDictionary;
 use App\Services\Intelligence\PeriodResolver;
+use App\Services\Reporting\SalesMetricsService;
+use App\Services\Reporting\SalesReportFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -18,7 +20,7 @@ class YokaToolRegistry
 {
     public const SCHEMA_VERSION = '2.0';
 
-    public function __construct(private PeriodResolver $periods, private MetricDictionary $metrics) {}
+    public function __construct(private PeriodResolver $periods, private MetricDictionary $metrics, private SalesMetricsService $reporting) {}
 
     public function definitions(): array
     {
@@ -73,20 +75,21 @@ class YokaToolRegistry
         return $this->envelope($tool, $user, $period, $outlets, $payload);
     }
 
+    /** Totals come from the shared reporting layer so chat answers equal the Laporan Penjualan screen. */
     private function sales(User $u, array $p, array $o): array
     {
-        $t = $this->orders($u, $p, $o)->selectRaw('COUNT(*) transactions, COALESCE(SUM(subtotal),0) gross_item_sales, COALESCE(SUM(discount_amount),0) discounts, COALESCE(SUM(subtotal-discount_amount),0) net_sales, COALESCE(SUM(grand_total),0) recorded_order_total')->first();
-        $c = $this->within(OrderItem::query()->join('orders', 'orders.id', '=', 'order_items.order_id')->where('orders.business_id', $u->business_id)->whereIn('orders.outlet_id', $o)->where('orders.status', 'paid'), 'orders.created_at', $p)->selectRaw('COALESCE(SUM(order_items.subtotal-order_items.qty*order_items.cost_price),0) profit, COUNT(*) rows_count, SUM(CASE WHEN order_items.cost_price>0 THEN 1 ELSE 0 END) costed')->first();
-        $n = (int) $t->transactions;
-        $coverage = $c->rows_count ? round($c->costed / $c->rows_count * 100) : null;
+        $r = $this->reporting->summary(SalesReportFilter::forRange($u, $p['from'], $p['to'], $o));
+        $m = $r['metrics'];
+        $coverage = $m['cost_coverage_pct'] === null ? null : round($m['cost_coverage_pct']);
 
         return $this->payload([
-            'gross_item_sales' => (float) $t->gross_item_sales, 'discounts' => (float) $t->discounts,
-            'net_sales' => (float) $t->net_sales, 'recorded_order_total' => (float) $t->recorded_order_total,
-            'transactions' => $n, 'average_order' => $n ? round($t->net_sales / $n, 2) : null,
-            'estimated_gross_profit' => (float) $c->profit, 'cogs_coverage_percent' => $coverage,
-        ], ['gross_item_sales', 'discounts', 'net_sales', 'transactions', 'aov', 'gross_profit_estimate'], $coverage === 100 ? 'complete' : 'partial', array_values(array_filter([
-            $coverage !== null && $coverage < 100 ? "HPP hanya tersedia untuk {$coverage}% baris item." : null,
+            'gross_item_sales' => $m['gross_item_sales'], 'discounts' => $m['discounts'],
+            'net_sales' => $m['net_sales'], 'recorded_order_total' => $m['order_grand_total'],
+            'tax_amount' => $m['tax_amount'], 'payment_collected' => $m['payment_collected'],
+            'transactions' => $m['transactions'], 'average_order' => $m['aov'],
+            'estimated_gross_profit' => (float) $m['gross_profit_estimate'], 'cogs_coverage_percent' => $coverage,
+        ], ['gross_item_sales', 'discounts', 'net_sales', 'payment_collected', 'transactions', 'aov', 'gross_profit_estimate'], $coverage === 100.0 ? 'complete' : 'partial', array_values(array_filter([
+            $coverage !== null && $coverage < 100 ? "HPP hanya tersedia untuk {$coverage}% nilai item." : null,
             'Estimasi laba kotor bukan laba bersih; biaya operasional tidak tersedia.',
         ])));
     }
@@ -100,11 +103,10 @@ class YokaToolRegistry
 
     private function payments(User $u, array $p, array $o): array
     {
-        $single = $this->orders($u, $p, $o)->where('is_split_payment', false)->selectRaw('payment_method, COUNT(*) transactions, SUM(grand_total) amount')->groupBy('payment_method')->get()->keyBy('payment_method');
-        $split = $this->within(OrderPayment::query()->join('orders', 'orders.id', '=', 'order_payments.order_id')->where('orders.business_id', $u->business_id)->whereIn('orders.outlet_id', $o)->where('orders.status', 'paid')->where('orders.is_split_payment', true), 'orders.created_at', $p)->selectRaw('order_payments.payment_method, COUNT(DISTINCT orders.id) transactions, SUM(order_payments.amount) amount')->groupBy('order_payments.payment_method')->get()->keyBy('payment_method');
-        $rows = $single->keys()->merge($split->keys())->unique()->map(fn ($m) => ['payment_method' => $m, 'transactions' => (int) ($single[$m]->transactions ?? 0) + (int) ($split[$m]->transactions ?? 0), 'amount' => (float) ($single[$m]->amount ?? 0) + (float) ($split[$m]->amount ?? 0), 'payment_status' => 'recorded_on_paid_order'])->sortByDesc('amount')->values()->all();
+        $r = $this->reporting->payments(SalesReportFilter::forRange($u, $p['from'], $p['to'], $o));
+        $rows = array_map(fn ($x) => ['payment_method' => $x['method'], 'transactions' => $x['orders'], 'amount' => $x['amount'], 'payment_status' => 'recorded_on_paid_order'], $r['rows']);
 
-        return $this->payload(['payments' => $rows, 'total' => array_sum(array_column($rows, 'amount'))], ['payment_collected'], 'complete', ['Nilai adalah pembayaran tercatat, bukan settlement atau biaya gateway.']);
+        return $this->payload(['payments' => $rows, 'total' => $r['total']], ['payment_collected'], 'complete', ['Nilai adalah pembayaran tercatat, bukan settlement atau biaya gateway.']);
     }
 
     private function products(User $u, array $p, array $o, string $q, int $limit): array
