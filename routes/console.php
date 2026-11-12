@@ -61,3 +61,7 @@ Schedule::call(function () {
         }
     });
 })->everyMinute()->name('yoka-intelligence-agents')->withoutOverlapping();
+
+// Detak cron: halaman Platform > Sistem membaca ini untuk memastikan schedule:run benar-benar berjalan tiap menit.
+Schedule::call(fn () => \Illuminate\Support\Facades\Cache::put(\App\Services\PlatformHealth::HEARTBEAT_KEY, now()->timestamp, 3600))
+    ->everyMinute()->name('scheduler-heartbeat');

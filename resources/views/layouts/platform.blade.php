@@ -55,6 +55,11 @@
             <a href="{{ route('platform.activity') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.activity') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-violet-600"></span> Aktivitas Tim
             </a>
+            @if($platformAdmin->isSuperAdmin())
+            <a href="{{ route('platform.system') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.system*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
+                <span class="h-2 w-2 bg-rose-500"></span> Sistem &amp; Integrasi
+            </a>
+            @endif
         </nav>
 
         <div class="absolute bottom-5 left-4 right-4 border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">

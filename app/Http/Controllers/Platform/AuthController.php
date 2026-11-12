@@ -34,6 +34,7 @@ class AuthController extends Controller
         ]);
 
         if (! Auth::guard('platform')->attempt($credentials, false)) {
+            PlatformActivityLog::record('login.failed', 'Percobaan login platform gagal.', null, null, ['email' => mb_substr((string) $credentials['email'], 0, 120)]);
             throw ValidationException::withMessages([
                 'email' => 'Email atau password akun platform salah.',
             ]);

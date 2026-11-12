@@ -148,7 +148,7 @@ class PlatformBackofficeTest extends TestCase
         ]);
 
         $this->platformSession($admin)
-            ->post(route('platform.impersonate.start', $business))
+            ->post(route('platform.impersonate.start', $business), ['reason' => 'Membantu setup kategori produk'])
             ->assertRedirect(route('dashboard'));
 
         $this->assertAuthenticatedAs($owner, 'web');

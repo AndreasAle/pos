@@ -124,6 +124,8 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('businesses/{business}/impersonate', [ImpersonationController::class, 'start'])->name('impersonate.start');
             Route::post('impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
             Route::get('activity', PlatformActivityController::class)->name('activity');
+            Route::get('system', [\App\Http\Controllers\Platform\SystemController::class, 'index'])->name('system');
+            Route::post('system/test-mail', [\App\Http\Controllers\Platform\SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
 
             Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
                 Route::get('/', [WithdrawalAdminController::class, 'index'])->name('index');

@@ -14,6 +14,7 @@ class ImpersonationController extends Controller
     public function start(Request $request, Business $business): RedirectResponse
     {
         abort_unless(auth('platform')->user()->canImpersonate(), 403);
+        $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:200']], ['reason.required' => 'Alasan bantuan wajib diisi.', 'reason.min' => 'Alasan minimal 10 karakter.']);
         abort_unless($business->is_active, 422, 'Toko yang dinonaktifkan tidak dapat dimasuki.');
 
         $owner = $business->owner()->where('is_active', true)->first();
@@ -24,12 +25,13 @@ class ImpersonationController extends Controller
             'Masuk sebagai owner toko '.$business->name.'.',
             $owner,
             $business,
-            ['owner_email' => $owner->email]
+            ['owner_email' => $owner->email, 'reason' => $data['reason'], 'expires_in_minutes' => 60]
         );
 
         $request->session()->put([
             'platform_impersonating' => true,
             'platform_impersonated_business_id' => $business->id,
+            'platform_impersonation_expires_at' => now()->addMinutes(60)->timestamp,
         ]);
         Auth::guard('web')->login($owner);
         $request->session()->regenerate();
@@ -42,7 +44,7 @@ class ImpersonationController extends Controller
         $businessId = (int) $request->session()->get('platform_impersonated_business_id');
         $business = Business::find($businessId);
 
-        if ($request->session()->boolean('platform_impersonating')) {
+        if ((bool) $request->session()->get('platform_impersonating', false)) {
             PlatformActivityLog::record(
                 'impersonation.stopped',
                 'Mengakhiri sesi bantuan toko '.($business?->name ?? '#'.$businessId).'.',
@@ -52,7 +54,7 @@ class ImpersonationController extends Controller
         }
 
         Auth::guard('web')->logout();
-        $request->session()->forget(['platform_impersonating', 'platform_impersonated_business_id']);
+        $request->session()->forget(['platform_impersonating', 'platform_impersonated_business_id', 'platform_impersonation_expires_at']);
         $request->session()->regenerate();
 
         return $business
