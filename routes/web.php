@@ -56,6 +56,11 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/google/callback', [GoogleLoginController::class, 'callback'])
         ->middleware('throttle:20,1')
         ->name('auth.google.callback');
+    Route::get('/auth/google/daftar', [GoogleLoginController::class, 'showRegistration'])
+        ->name('auth.google.register');
+    Route::post('/auth/google/daftar', [GoogleLoginController::class, 'register'])
+        ->middleware('throttle:5,1')
+        ->name('auth.google.register.store');
     Route::get('/register', [RegisterController::class, 'showRegister'])->name('register');
     // Cap signups per IP so nobody can script thousands of throwaway tenants.
     Route::post('/register', [RegisterController::class, 'register'])

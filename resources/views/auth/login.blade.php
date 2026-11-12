@@ -8,12 +8,6 @@
 <h3 class="text-xl font-bold text-gray-900 mb-1 text-center lg:text-left">Masuk ke Akun Anda</h3>
 <p class="text-sm text-gray-500 mb-6 text-center lg:text-left">Kelola transaksi dan pantau bisnis Anda kapan saja.</p>
 
-@error('google')
-<div class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
-    {{ $message }}
-</div>
-@enderror
-
 <form method="POST" action="{{ route('login.post') }}" class="space-y-4">
     @csrf
     <div>

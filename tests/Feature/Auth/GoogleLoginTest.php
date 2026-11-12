@@ -60,20 +60,65 @@ class GoogleLoginTest extends TestCase
         $this->assertNotNull($owner->fresh()->email_verified_at);
     }
 
-    public function test_an_unknown_google_email_does_not_create_an_incomplete_tenant(): void
+    public function test_an_unknown_google_email_is_sent_to_the_google_registration_page(): void
     {
         Socialite::fake('google', GoogleUser::fake([
             'id' => 'unknown-google-user',
             'email' => 'unknown@yokapos.test',
             'email_verified' => true,
+            'name' => 'Rizal Putra',
         ]));
 
         $this->get(route('auth.google.callback'))
-            ->assertRedirect(route('login'))
-            ->assertSessionHasErrors('google');
+            ->assertRedirect(route('auth.google.register'))
+            ->assertSessionHas('auth.google_registration.email', 'unknown@yokapos.test');
 
         $this->assertGuest();
         $this->assertDatabaseMissing('users', ['email' => 'unknown@yokapos.test']);
+
+        $this->get(route('auth.google.register'))
+            ->assertOk()
+            ->assertSee('Satu langkah sebelum menyiapkan bisnis Anda')
+            ->assertSee('unknown@yokapos.test');
+    }
+
+    public function test_an_unknown_google_account_can_register_and_continue_to_business_setup(): void
+    {
+        Socialite::fake('google', GoogleUser::fake([
+            'id' => 'new-google-user',
+            'email' => 'rizal@yokapos.test',
+            'email_verified' => true,
+            'name' => 'Rizal Putra Mahardika',
+        ]));
+
+        $this->get(route('auth.google.callback'))
+            ->assertRedirect(route('auth.google.register'));
+
+        $this->post(route('auth.google.register.store'))
+            ->assertRedirect(route('onboarding.business'));
+
+        $user = User::query()->where('email', 'rizal@yokapos.test')->firstOrFail();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('new-google-user', $user->google_id);
+        $this->assertSame('Rizal Putra Mahardika', $user->name);
+        $this->assertTrue($user->requires_business_setup);
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertNull($user->business_id);
+    }
+
+    public function test_google_registration_page_rejects_an_expired_session(): void
+    {
+        $this->withSession([
+            'auth.google_registration' => [
+                'google_id' => 'expired-google-user',
+                'email' => 'expired@yokapos.test',
+                'name' => 'Expired User',
+                'expires_at' => now()->subMinute()->timestamp,
+            ],
+        ])->get(route('auth.google.register'))
+            ->assertRedirect(route('login'))
+            ->assertSessionHasErrors('google');
     }
 
     public function test_an_unverified_google_email_is_rejected(): void

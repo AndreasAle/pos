@@ -7,13 +7,18 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
 class GoogleLoginController extends Controller
 {
+    private const REGISTRATION_SESSION = 'auth.google_registration';
+
     public function redirect(Request $request): RedirectResponse
     {
         if (! $this->isConfigured()) {
@@ -68,10 +73,15 @@ class GoogleLoginController extends Controller
 
         $user = $userByGoogle ?: $userByEmail;
 
-        // Pendaftaran bisnis tetap melalui form registrasi agar nama bisnis,
-        // outlet, role, serta trial dibuat lengkap dan tidak menjadi tenant yatim.
         if (! $user) {
-            return $this->loginError('Email Google ini belum terdaftar di Yoka. Daftarkan bisnis Anda terlebih dahulu.');
+            $request->session()->put(self::REGISTRATION_SESSION, [
+                'google_id' => $googleId,
+                'email' => $email,
+                'name' => trim((string) $googleUser->getName()) ?: Str::before($email, '@'),
+                'expires_at' => now()->addMinutes(15)->timestamp,
+            ]);
+
+            return redirect()->route('auth.google.register');
         }
 
         if ($user->google_id && ! hash_equals($user->google_id, $googleId)) {
@@ -103,6 +113,98 @@ class GoogleLoginController extends Controller
             : route('dashboard');
 
         return redirect()->intended($destination);
+    }
+
+    public function showRegistration(Request $request): View|RedirectResponse
+    {
+        $pending = $this->pendingRegistration($request);
+
+        if (! $pending) {
+            return $this->loginError('Sesi Google telah berakhir. Pilih kembali akun Google yang ingin digunakan.');
+        }
+
+        return view('auth.google-register', compact('pending'));
+    }
+
+    public function register(Request $request): RedirectResponse
+    {
+        $pending = $this->pendingRegistration($request);
+
+        if (! $pending) {
+            return $this->loginError('Sesi Google telah berakhir. Pilih kembali akun Google yang ingin digunakan.');
+        }
+
+        $user = DB::transaction(function () use ($pending) {
+            $userByGoogle = User::query()->where('google_id', $pending['google_id'])->lockForUpdate()->first();
+            $userByEmail = User::query()->whereRaw('LOWER(email) = ?', [$pending['email']])->lockForUpdate()->first();
+
+            if ($userByGoogle && $userByEmail && ! $userByGoogle->is($userByEmail)) {
+                abort(409, 'Identitas Google bertabrakan dengan akun lain.');
+            }
+
+            $user = $userByGoogle ?: $userByEmail;
+
+            if ($user) {
+                if ($user->google_id && ! hash_equals($user->google_id, $pending['google_id'])) {
+                    abort(409, 'Email ini sudah terhubung ke akun Google lain.');
+                }
+
+                $user->forceFill([
+                    'google_id' => $pending['google_id'],
+                    'email_verified_at' => $user->email_verified_at ?: now(),
+                ])->save();
+
+                return $user;
+            }
+
+            $user = new User([
+                'business_id' => null,
+                'outlet_id' => null,
+                'name' => $pending['name'],
+                'email' => $pending['email'],
+                'google_id' => $pending['google_id'],
+                'password' => Str::random(64),
+                'role' => 'owner',
+                'is_active' => true,
+                'requires_business_setup' => true,
+            ]);
+            $user->forceFill(['email_verified_at' => now()]);
+            $user->save();
+
+            return $user;
+        });
+
+        if (! $user->is_active) {
+            return $this->loginError('Akun Anda tidak aktif. Hubungi administrator.');
+        }
+
+        $request->session()->forget(self::REGISTRATION_SESSION);
+        Auth::login($user, true);
+        $request->session()->regenerate();
+
+        $destination = $user->requires_business_setup && ! $user->business_id
+            ? route('onboarding.business')
+            : route('dashboard');
+
+        return redirect($destination)->with('success', 'Akun Google berhasil didaftarkan. Lanjutkan dengan informasi bisnis Anda.');
+    }
+
+    /** @return array{google_id:string,email:string,name:string,expires_at:int}|null */
+    private function pendingRegistration(Request $request): ?array
+    {
+        $pending = $request->session()->get(self::REGISTRATION_SESSION);
+
+        if (! is_array($pending)
+            || empty($pending['google_id'])
+            || empty($pending['email'])
+            || empty($pending['expires_at'])
+            || (int) $pending['expires_at'] < now()->timestamp) {
+            $request->session()->forget(self::REGISTRATION_SESSION);
+
+            return null;
+        }
+
+        return $pending;
     }
 
     private function hasVerifiedEmail(SocialiteUser $googleUser): bool
