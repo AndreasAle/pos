@@ -176,4 +176,27 @@ class YokaAgentLlmTest extends TestCase
         $this->assertSame('Omzet stabil.', $reply['answer']);
         $this->assertSame(['Jam ramai?'], $reply['response']['suggestions']);
     }
+
+    public function test_advanced_analysis_tools_run_on_a_business_without_data(): void
+    {
+        $owner = $this->owner();
+        $adv = app(\App\Services\Intelligence\AdvancedTools::class);
+        foreach ($adv->names() as $tool) {
+            $out = $adv->run($owner, $tool, ['period' => 'this_month']);
+            $this->assertSame($tool, $out['schema'], $tool);
+            $this->assertIsArray($out['data'], $tool);
+        }
+        $this->assertCount(5, $adv->definitions());
+    }
+
+    public function test_advanced_tools_only_see_the_users_own_business(): void
+    {
+        $mine = $this->owner();
+        $other = $this->owner();
+        $adv = app(\App\Services\Intelligence\AdvancedTools::class);
+        $out = $adv->run($mine, 'customer_retention', ['period' => 'last_30_days']);
+
+        $this->assertSame(0, $out['data']['customers_in_period']);
+        $this->assertNotContains($other->outlet_id, $out['scope']['outlet_ids']);
+    }
 }

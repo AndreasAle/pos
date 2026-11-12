@@ -6,6 +6,7 @@ return [
         'key' => env('YOKA_AI_API_KEY'),
         'url' => env('YOKA_AI_BASE_URL', 'https://api.openai.com/v1'),
         'model' => env('YOKA_AI_MODEL', 'gpt-4.1-mini'),
+        'deep_model' => env('YOKA_AI_MODEL_DEEP'),
         'timeout' => (int) env('YOKA_AI_TIMEOUT', 25),
         'max_history' => (int) env('YOKA_AI_MAX_HISTORY', 8),
         'daily_request_budget' => (int) env('YOKA_AI_DAILY_REQUEST_BUDGET', 250),

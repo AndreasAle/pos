@@ -63,7 +63,7 @@ class YokaAssistantService
             if ($agentResult) {
                 $response = $this->emptyResponse($agentResult['answer']);
                 if (! $agentResult['refused']) {
-                    $shown = array_filter($this->agent->toolResults, fn ($t) => ! in_array($t['tool'], ['compare_periods', 'marketing_brief', 'save_business_note'], true));
+                    $shown = array_filter($this->agent->toolResults, fn ($t) => ! in_array($t['tool'], ['compare_periods', 'marketing_brief', 'save_business_note', 'profit_and_loss', 'cash_position', 'menu_engineering', 'sales_forecast', 'customer_retention'], true));
                     foreach (array_slice($shown, 0, 2) as $t) {
                         $built = $this->responses->build($t['tool'], $t['result'], 'full');
                         $response['blocks'] = array_merge($response['blocks'], $built['blocks']);
