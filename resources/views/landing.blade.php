@@ -279,7 +279,11 @@
     </section>
 
     {{-- ================= BUMPER (video penuh lebar, tanpa suara) ================= --}}
-    <section aria-label="Video perkenalan Yoka POS" class="relative w-full bg-[#0a5a3f]">
+    <section aria-label="Video perkenalan Yoka POS" class="relative w-full bg-white pt-14 md:pt-20 pb-14 md:pb-20">
+        <div class="px-6 text-center mb-8 md:mb-10">
+            <p class="text-sm font-bold tracking-wide text-emerald-600 uppercase">Sekilas Yoka POS</p>
+            <h2 class="mt-2 text-[28px] md:text-[38px] font-extrabold leading-[1.15] text-emerald-800">Satu Aplikasi, Seluruh Toko Terkendali</h2>
+        </div>
         <video id="yoka-bumper" class="block w-full h-auto aspect-video object-cover"
                autoplay muted loop playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate"
                poster="{{ asset('images/video/yoka-bumper-poster.jpg') }}" aria-hidden="true" tabindex="-1">
