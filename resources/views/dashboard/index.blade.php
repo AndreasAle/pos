@@ -8,7 +8,6 @@
 
 @section('content')
 @php
-    $sub   = $currentBusiness->activeSubscription;
     $user  = auth()->user();
     $role  = $user->role;
     $hour  = (int) now()->format('G');
@@ -59,38 +58,6 @@
 @endpush
 
 <div class="dash page text-[#0B1B3F] pt-5">
-
-{{-- Banner trial --}}
-@if(config('pos.features.subscription') && $sub && $sub->status === 'trial' && $sub->ends_at)
-    <div x-data="{
-            endsAt: new Date('{{ $sub->ends_at->copy()->endOfDay()->toIso8601String() }}').getTime(),
-            remaining: '',
-            tick() {
-                const diff = this.endsAt - Date.now();
-                if (diff <= 0) { this.remaining = 'Masa trial telah berakhir'; return; }
-                const d = Math.floor(diff / 86400000);
-                const h = Math.floor((diff % 86400000) / 3600000);
-                const m = Math.floor((diff % 3600000) / 60000);
-                const s = Math.floor((diff % 60000) / 1000);
-                this.remaining = d + 'h ' + h + 'j ' + m + 'm ' + s + 'd';
-            }
-         }"
-         x-init="tick(); setInterval(() => tick(), 1000)"
-         class="fade-up mb-6 rounded-xl border border-[#BBF7D0] bg-[#ECFDF3] px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-            <span class="w-10 h-10 rounded-lg bg-[#16A34A] text-white flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            </span>
-            <div>
-                <p class="font-semibold text-sm">Trial gratis aktif, semua fitur terbuka penuh</p>
-                <p class="text-xs text-[#166534]">Sisa waktu: <span class="font-mono font-semibold" x-text="remaining"></span> &middot; berakhir {{ $sub->ends_at->format('d M Y') }}</p>
-            </div>
-        </div>
-        @if($user->isOwner())
-        <a href="{{ route('saas.current') }}" class="shrink-0 h-10 inline-flex items-center px-4 rounded-lg bg-[#16A34A] text-white text-sm font-semibold hover:bg-[#15803D] transition-colors">Upgrade Sekarang</a>
-        @endif
-    </div>
-@endif
 
 @php
     $hasSales    = (array_sum($rev) + array_sum($ord)) > 0;

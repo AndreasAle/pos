@@ -57,7 +57,11 @@ class SubscriptionAccessTest extends TestCase
         $this->setUpPos();
         $this->setSubscription('trial', now()->addDays(7)->toDateString());
 
-        $this->actingAs($this->owner())->get(route('dashboard'))->assertOk();
+        $this->actingAs($this->owner())
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Masa coba gratis')
+            ->assertSee('hari tersisa');
     }
 
     public function test_a_subscription_without_an_end_date_never_expires(): void
@@ -178,6 +182,21 @@ class SubscriptionAccessTest extends TestCase
         config(['pos.features.subscription' => false]);
 
         $this->actingAs($owner->fresh())->get(route('dashboard'))->assertOk();
+    }
+
+    public function test_trial_period_remains_visible_when_the_payment_module_is_off(): void
+    {
+        $this->setUpPos();
+        $owner = $this->owner();
+        $this->setSubscription('trial', now()->addDays(7)->toDateString());
+        config(['pos.features.subscription' => false]);
+
+        $this->actingAs($owner)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Masa coba gratis')
+            ->assertSee('hari tersisa')
+            ->assertSee('Hubungi Yoka');
     }
 
     // ── Role gate ────────────────────────────────────────────────────────────

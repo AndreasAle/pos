@@ -265,6 +265,9 @@
     {{-- Main content --}}
     <div class="transition-all duration-200 flex flex-col min-h-screen min-w-0 overflow-x-clip pt-14" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
 
+        {{-- Masa aktif selalu terlihat; tidak ikut dimatikan oleh modul pembayaran. --}}
+        <x-subscription-status-bar :current-business="$currentBusiness" />
+
         {{-- Flash messages --}}
         <div class="px-4 sm:px-6 @if(session('success') || session('error') || session('info') || $errors->any()) pt-4 @endif">
             @if(session('success'))
