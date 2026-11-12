@@ -32,6 +32,8 @@ class SalesReportItemsTest extends TestCase
         // The sheet classes live in SalesReportExport.php; load it so a test
         // run on its own can find them.
         class_exists(SalesReportExport::class);
+        // These tests pin the legacy (v1) report; v2 has its own suite in SalesReportV2Test.
+        config(['pos.features.reports_v2' => false]);
         $this->setUpPos();
 
         $this->espresso = $this->product(price: 25000);

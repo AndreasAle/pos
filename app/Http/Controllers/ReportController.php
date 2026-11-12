@@ -21,6 +21,10 @@ class ReportController extends Controller
 
     public function sales(Request $request)
     {
+        if (config('pos.features.reports_v2')) {
+            return app(SalesReportController::class)->summary($request);
+        }
+
         $data = $this->report->salesReport(auth()->user()->business, $request->all());
         return view('reports.sales', $data);
     }
@@ -59,6 +63,10 @@ class ReportController extends Controller
 
     public function exportSales(Request $request)
     {
+        if (config('pos.features.reports_v2')) {
+            return app(SalesReportController::class)->export($request->merge(['format' => 'xlsx']));
+        }
+
         $business  = auth()->user()->business;
         $filters   = $this->report->getFilters($request->all());
         $filename  = 'laporan-penjualan-' . $filters['date_from'] . '-sd-' . $filters['date_to'] . '.xlsx';
@@ -97,6 +105,10 @@ class ReportController extends Controller
 
     public function exportSalesPdf(Request $request)
     {
+        if (config('pos.features.reports_v2')) {
+            return app(SalesReportController::class)->export($request->merge(['format' => 'pdf']));
+        }
+
         $business = auth()->user()->business;
         $data     = $this->report->salesReport($business, $request->all());
         $data['business']  = $business;

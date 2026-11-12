@@ -276,8 +276,18 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::patch('promotions/{promotion}/toggle', [PromotionController::class, 'toggle'])->name('promotions.toggle');
 
     // Reports
-    Route::prefix('reports')->name('reports.')->group(function () {
+    // Financial reports are owner/admin only; the sidebar already hides them from other roles.
+    Route::prefix('reports')->name('reports.')->middleware('role:owner,admin')->group(function () {
         Route::get('sales', [ReportController::class, 'sales'])->name('sales');
+        // Sales Reporting v2 (flag: FEATURE_REPORTS_V2)
+        Route::get('sales/analytics', [\App\Http\Controllers\SalesReportController::class, 'analytics'])->name('sales.analytics');
+        Route::get('sales/breakdown', [\App\Http\Controllers\SalesReportController::class, 'breakdown'])->name('sales.breakdown');
+        Route::get('sales/products', [\App\Http\Controllers\SalesReportController::class, 'products'])->name('sales.products');
+        Route::get('sales/orders', [\App\Http\Controllers\SalesReportController::class, 'orders'])->name('sales.orders');
+        Route::get('sales/orders/{orderId}', [\App\Http\Controllers\SalesReportController::class, 'order'])->whereNumber('orderId')->name('sales.order');
+        Route::get('sales/summary', [\App\Http\Controllers\SalesReportController::class, 'summaryJson'])->name('sales.summary');
+        Route::get('sales/trends', [\App\Http\Controllers\SalesReportController::class, 'trendsJson'])->name('sales.trends');
+        Route::get('sales/ask', [\App\Http\Controllers\SalesReportController::class, 'ask'])->name('sales.ask');
         Route::get('products', [ReportController::class, 'products'])->name('products');
         Route::get('cashier', [ReportController::class, 'cashier'])->name('cashier');
         Route::get('shift', [ReportController::class, 'shift'])->name('shift');

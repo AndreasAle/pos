@@ -13,7 +13,7 @@
 @endphp
 
 <div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] {{ $hasTrialBanner ? 'h-[calc(100vh-98px)]' : 'h-[calc(100vh-54px)]' }} min-h-[620px] overflow-hidden"
-     x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages))">
+     x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages), @js($reportPrompt ?? null))">
     <div class="flex h-full min-w-0">
         {{-- Riwayat percakapan internal --}}
         <aside class="absolute lg:relative z-20 inset-y-0 left-0 w-[286px] shrink-0 border-r border-[#E5E7EB] bg-[#F8FAF9] flex flex-col transition-transform lg:translate-x-0"
@@ -152,9 +152,9 @@
 
 @push('scripts')
 <script>
-function yokaChat(initialConversation, initialMessages) {
+function yokaChat(initialConversation, initialMessages, initialQuestion) {
     return {
-        historyOpen: false, loading: false, actionLoading: false, question: '', conversationId: initialConversation, messages: initialMessages || [],
+        historyOpen: false, loading: false, actionLoading: false, question: initialQuestion || '', conversationId: initialConversation, messages: initialMessages || [],
         prompts: [
             {icon:'↗',title:'Ringkasan penjualan',text:'Bagaimana omzet hari ini?'},
             {icon:'★',title:'Produk unggulan',text:'Produk paling laris bulan ini'},

@@ -29,6 +29,10 @@ return [
         'intelligence_actions' => env('FEATURE_INTELLIGENCE_ACTIONS', false),
         'intelligence_agents' => env('FEATURE_INTELLIGENCE_AGENTS', false),
 
+        // Sales Reporting v2 (metric layer, analytics, breakdown, order drill-down).
+        // Set FEATURE_REPORTS_V2=false to fall back to the legacy sales report.
+        'reports_v2' => env('FEATURE_REPORTS_V2', true),
+
         // Staff activity trail. Useful on its own, off by default to keep the
         // sidebar focused; set FEATURE_AUDIT_LOG=true to bring it back.
         'audit_log' => env('FEATURE_AUDIT_LOG', false),

@@ -11,6 +11,7 @@ use App\Services\Intelligence\ActionService;
 use App\Services\Intelligence\AgentService;
 use App\Services\YokaAssistantService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 
 class IntelligenceController extends Controller
 {
@@ -32,7 +33,9 @@ class IntelligenceController extends Controller
             $intelligenceAgents = IntelligenceAgent::where('business_id', $user->business_id)->orderBy('agent_key')->get();
         }
 
-        return view('intelligence.index', compact('conversations', 'activeConversation', 'businessInsights', 'intelligenceAgents'));
+        $reportPrompt = $this->reportPrompt($request);
+
+        return view('intelligence.index', compact('conversations', 'activeConversation', 'businessInsights', 'intelligenceAgents', 'reportPrompt'));
     }
 
     public function ask(Request $request, YokaAssistantService $assistant)
@@ -121,5 +124,32 @@ class IntelligenceController extends Controller
         $agent->update(['enabled' => ! $agent->enabled]);
 
         return response()->json(['success' => true, 'enabled' => $agent->enabled]);
+    }
+
+    /**
+     * A report handed over by Laporan Penjualan. The reference is re-authenticated against the
+     * logged-in user and the question text is rebuilt on the server from allowlisted filters,
+     * so nothing in the URL can steer the assistant at another tenant or outlet.
+     */
+    private function reportPrompt(Request $request): ?string
+    {
+        if (! $request->filled('report_ref')) {
+            return null;
+        }
+        try {
+            $ref = json_decode(Crypt::decryptString((string) $request->query('report_ref')), true, 8, JSON_THROW_ON_ERROR);
+            $user = $request->user();
+            if (($ref['business_id'] ?? null) !== (int) $user->business_id || ($ref['user_id'] ?? null) !== $user->id
+                || ($ref['report_type'] ?? '') !== 'sales' || ($ref['exp'] ?? 0) < now()->timestamp) {
+                return null;
+            }
+            $f = \App\Services\Reporting\SalesReportFilter::fromRequest($user, (array) ($ref['filters'] ?? []));
+        } catch (\Throwable) {
+            return null;
+        }
+        $names = $user->business->outlets()->whereIn('id', $f->outletIds)->pluck('name')->all();
+        $scope = count($f->outletIds) === count($f->allowedOutletIds) ? 'semua outlet' : 'outlet '.implode(', ', $names);
+
+        return 'Analisis laporan penjualan '.$f->start->isoFormat('D MMM Y').' sampai '.$f->end->subSecond()->isoFormat('D MMM Y').' untuk '.$scope.'. Apa temuan utama dan hal yang perlu saya perhatikan?';
     }
 }
