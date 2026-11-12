@@ -57,7 +57,7 @@ class ProductController extends Controller
             'cost_price'          => 'nullable|numeric|min:0',
             'is_active'           => 'boolean',
             'is_stock_tracked'    => 'boolean',
-            'image'               => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'image'               => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240',
         ]);
 
         $businessId = auth()->user()->business_id;
@@ -122,7 +122,7 @@ class ProductController extends Controller
             'cost_price'          => 'nullable|numeric|min:0',
             'is_active'           => 'boolean',
             'is_stock_tracked'    => 'boolean',
-            'image'               => 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048',
+            'image'               => 'nullable|image|mimes:jpeg,jpg,png,webp|max:10240',
         ]);
 
         $data = $request->only(

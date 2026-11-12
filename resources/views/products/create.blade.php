@@ -66,7 +66,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Foto Produk</label>
                     <input type="file" name="image" accept="image/*"
                            class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
-                    <p class="text-xs text-gray-400 mt-1">JPEG, PNG, WebP — maks 2MB</p>
+                    <p class="text-xs text-gray-400 mt-1">JPEG, PNG, WebP — maks 10MB</p>
                 </div>
             </div>
             <div class="flex items-center gap-6">
