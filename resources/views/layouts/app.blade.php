@@ -59,7 +59,7 @@
                  @mouseenter="tipShow($event, @js(($currentBusiness->name ?? config('app.name')).' · '.$outletName))" @mouseleave="tipHide()">
                 <svg class="h-5 w-5 shrink-0 text-[#667085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 21v-6h6v6"/></svg>
                 <div class="min-w-0 flex-1" :class="collapsed ? 'lg:hidden' : ''">
-                    <p class="truncate text-[13px] font-medium leading-tight text-[#273244]">{{ $currentBusiness->name ?? config('app.name') }}</p>
+                    <p class="truncate text-[14px] font-bold leading-tight text-[#0B1B3F]">{{ $currentBusiness->name ?? config('app.name') }}</p>
                     <p class="mt-0.5 truncate text-[12px] text-[#7C8698]">{{ $outletName }}</p>
                 </div>
             </div>
@@ -208,14 +208,14 @@
                 get results() { const t = this.q.trim().toLowerCase(); return t ? this.items.filter(i => i.label.toLowerCase().includes(t)).slice(0, 8) : [] },
                 go() { const r = this.results[this.sel]; if (r) window.location = r.href }
              }" @click.outside="open = false" @keydown.window="if ($event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) { $event.preventDefault(); $refs.q.focus() }">
-            <svg class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-white/55 transition-colors group-focus-within:text-[#0A5C3A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.65"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+            <svg class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-500 transition-colors group-focus-within:text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.65"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
             <input x-ref="q" type="text" x-model="q" autocomplete="off"
                    @focus="load(); open = true" @input="sel = 0; open = true"
                    @keydown.arrow-down.prevent="sel = Math.min(sel + 1, results.length - 1)" @keydown.arrow-up.prevent="sel = Math.max(sel - 1, 0)"
                    @keydown.enter.prevent="go()" @keydown.escape="open = false; mob = false; $refs.q.blur()"
                    placeholder="Cari menu, produk, atau laporan..."
-                   class="h-10 w-full rounded-lg border border-white/10 bg-[#074E34] pl-10 pr-12 text-sm font-normal text-white shadow-inner shadow-black/5 transition-all duration-200 placeholder:text-white/55 hover:border-white/20 hover:bg-[#06482F] focus:border-white focus:bg-white focus:text-gray-900 focus:outline-none focus:ring-4 focus:ring-white/15 focus:placeholder:text-gray-400">
-            <kbd class="pointer-events-none absolute right-3 top-1/2 hidden h-5 min-w-[20px] -translate-y-1/2 items-center justify-center rounded border border-white/20 bg-white/10 px-1.5 text-[12px] font-medium text-white/65 group-focus-within:hidden sm:inline-flex">/</kbd>
+                   class="h-10 w-full rounded-xl border border-transparent bg-white pl-11 pr-14 text-[14px] font-semibold text-[#0B1B3F] shadow-sm transition-all duration-200 placeholder:font-medium placeholder:text-slate-500 hover:shadow-md focus:border-[#16A34A] focus:outline-none focus:ring-4 focus:ring-white/30">
+            <kbd class="pointer-events-none absolute right-3 top-1/2 hidden h-5 min-w-[20px] -translate-y-1/2 items-center justify-center rounded-md border border-slate-200 bg-slate-100 px-1.5 text-[12px] font-bold text-slate-500 group-focus-within:hidden sm:inline-flex">/</kbd>
             <button type="button" x-show="mob" x-cloak @click="mob = false; open = false; q = ''" class="sm:hidden ml-2 px-2 h-9 text-sm font-semibold text-white/90 shrink-0">Batal</button>
             <div x-show="open && q.trim()" x-cloak class="absolute left-3 right-3 sm:left-0 sm:right-0 top-full mt-1 sm:mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
                 <template x-for="(r, i) in results" :key="r.href">
@@ -251,7 +251,7 @@
             {{-- Profil --}}
             <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
                 <button @click="menu = !menu" class="flex h-11 items-center gap-2.5 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-white/10 max-sm:pr-1" :class="menu ? 'bg-white/10' : ''" aria-label="Menu akun" :aria-expanded="menu">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#DDF8E8] text-sm font-semibold text-[#087A4E] ring-1 ring-white/20">{{ strtoupper(substr($me->name, 0, 1)) }}</span>
+                    <x-avatar :user="$me" class="h-9 w-9 ring-2 ring-white/25" text="text-sm"/>
                     <span class="hidden max-w-[155px] text-left leading-tight md:block">
                         <span class="block truncate text-[13px] font-semibold">{{ $me->name }}</span>
                         <span class="mt-0.5 block text-[12px] capitalize text-white/65">{{ $me->role }}</span>

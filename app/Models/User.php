@@ -13,7 +13,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = [
         'business_id', 'outlet_id', 'name', 'email', 'google_id', 'password', 'pin',
-        'role', 'is_active', 'requires_business_setup', 'phone', 'avatar',
+        'role', 'is_active', 'requires_business_setup', 'phone', 'avatar', 'google_avatar',
     ];
 
     protected $hidden = ['password', 'pin', 'remember_token', 'google_id'];
@@ -94,5 +94,20 @@ class User extends Authenticatable implements MustVerifyEmail
     public function scopeForBusiness($query, $businessId)
     {
         return $query->where('business_id', $businessId);
+    }
+
+    /** Foto profil: unggahan sendiri lebih diutamakan, lalu foto akun Google, selain itu null (tampilkan inisial). */
+    public function avatarUrl(): ?string
+    {
+        if ($this->avatar) {
+            return route('avatar.show', ['user' => $this->id, 'v' => substr(md5($this->avatar), 0, 8)]);
+        }
+
+        return $this->google_avatar ?: null;
+    }
+
+    public function hasGoogle(): bool
+    {
+        return filled($this->google_id);
     }
 }

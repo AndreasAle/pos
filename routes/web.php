@@ -190,6 +190,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::patch('users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
     Route::get('profile', [UserController::class, 'profile'])->name('profile');
     Route::post('profile', [UserController::class, 'updateProfile'])->name('profile.update');
+    Route::post('profile/avatar', [\App\Http\Controllers\ProfileAvatarController::class, 'store'])->middleware('throttle:10,1')->name('profile.avatar.store');
+    Route::delete('profile/avatar', [\App\Http\Controllers\ProfileAvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profile.avatar.destroy');
+    Route::get('avatars/{user}', [\App\Http\Controllers\ProfileAvatarController::class, 'show'])->name('avatar.show');
 
     // Categories
     Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])

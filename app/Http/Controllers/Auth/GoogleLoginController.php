@@ -78,6 +78,7 @@ class GoogleLoginController extends Controller
                 'google_id' => $googleId,
                 'email' => $email,
                 'name' => trim((string) $googleUser->getName()) ?: Str::before($email, '@'),
+                'avatar' => $this->safeAvatar($googleUser->getAvatar()),
                 'expires_at' => now()->addMinutes(15)->timestamp,
             ]);
 
@@ -102,6 +103,7 @@ class GoogleLoginController extends Controller
 
         $user->forceFill([
             'google_id' => $googleId,
+            'google_avatar' => $this->safeAvatar($googleUser->getAvatar()) ?: $user->google_avatar,
             'email_verified_at' => $user->email_verified_at ?: now(),
         ])->save();
 
@@ -151,6 +153,7 @@ class GoogleLoginController extends Controller
 
                 $user->forceFill([
                     'google_id' => $pending['google_id'],
+                    'google_avatar' => $pending['avatar'] ?? $user->google_avatar,
                     'email_verified_at' => $user->email_verified_at ?: now(),
                 ])->save();
 
@@ -163,6 +166,7 @@ class GoogleLoginController extends Controller
                 'name' => $pending['name'],
                 'email' => $pending['email'],
                 'google_id' => $pending['google_id'],
+                'google_avatar' => $pending['avatar'] ?? null,
                 'password' => Str::random(64),
                 'role' => 'owner',
                 'is_active' => true,
@@ -205,6 +209,14 @@ class GoogleLoginController extends Controller
         }
 
         return $pending;
+    }
+
+    /** Hanya terima foto dari domain Google agar URL sembarang tidak bisa disimpan. */
+    private function safeAvatar(?string $url): ?string
+    {
+        $host = (string) parse_url((string) $url, PHP_URL_HOST);
+
+        return $url && str_starts_with($url, 'https://') && preg_match('/(^|\.)googleusercontent\.com$/', $host) ? mb_substr($url, 0, 500) : null;
     }
 
     private function hasVerifiedEmail(SocialiteUser $googleUser): bool

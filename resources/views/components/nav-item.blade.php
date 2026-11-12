@@ -39,10 +39,10 @@ $path = str_replace('stroke-width="2"', 'stroke-width="1.6"', $icons[$icon] ?? $
    {{ $attributes }}
    @mouseenter="tipShow($event, @js($label))" @mouseleave="tipHide()" @focus="tipShow($event, @js($label))" @blur="tipHide()"
    @if($active) aria-current="page" @endif
-   class="group flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] leading-none transition-colors duration-150
-          {{ $active ? 'bg-[#E8F5ED] font-medium text-[#078052]' : 'font-normal text-[#273244] hover:bg-[#F4F6F7] hover:text-[#111827]' }}"
+   class="group flex h-11 items-center gap-3 rounded-lg px-3 text-[15px] leading-none transition-colors duration-150
+          {{ $active ? 'bg-[#E8F5ED] font-extrabold text-[#066B45]' : 'font-bold text-[#0B1B3F] hover:bg-[#F4F6F7] hover:text-[#0B1B3F]' }}"
    :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
-    <svg class="h-5 w-5 flex-shrink-0 transition-colors {{ $active ? 'text-[#078F5C]' : 'text-[#667085] group-hover:text-[#4B5565]' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg class="h-5 w-5 flex-shrink-0 transition-colors {{ $active ? 'text-[#078F5C]' : 'text-[#475569] group-hover:text-[#0B1B3F]' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {!! $path !!}
     </svg>
     <span class="truncate" :class="collapsed ? 'lg:hidden' : ''">{{ $slot }}</span>
