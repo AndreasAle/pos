@@ -199,4 +199,13 @@ class YokaAgentLlmTest extends TestCase
         $this->assertSame(0, $out['data']['customers_in_period']);
         $this->assertNotContains($other->outlet_id, $out['scope']['outlet_ids']);
     }
+
+    public function test_every_tool_schema_encodes_properties_as_a_json_object(): void
+    {
+        $defs = array_merge(app(\App\Services\YokaToolRegistry::class)->definitions(), app(\App\Services\Intelligence\AdvancedTools::class)->definitions());
+        foreach ($defs as $d) {
+            $json = json_encode($d['function']['parameters']);
+            $this->assertStringContainsString('"properties":{', $json, $d['function']['name'].' must send properties as an object, not []');
+        }
+    }
 }
