@@ -4,7 +4,10 @@
 
 @section('content')
 @php
-    $initialMessages = $activeConversation?->messages?->map(fn($m) => ['role' => $m->role, 'content' => $m->content])->values() ?? collect();
+    $initialMessages = $activeConversation?->messages?->map(fn($m) => [
+        'role' => $m->role, 'content' => $m->content,
+        'presentation' => data_get($m->meta, 'presentation'),
+    ])->values() ?? collect();
 @endphp
 
 <div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] h-[calc(100vh-98px)] min-h-[620px] overflow-hidden"
@@ -78,7 +81,7 @@
             </header>
 
             <div x-ref="messages" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
-                <div class="mx-auto w-full max-w-3xl px-4 sm:px-6 py-8 sm:py-12">
+                <div class="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8 sm:py-12">
                     <div x-show="messages.length === 0" class="min-h-[390px] flex flex-col items-center justify-center text-center">
                         <div class="w-14 h-14 rounded-2xl bg-[#E1F5EA] text-[#0B8F5B] flex items-center justify-center ring-8 ring-[#F4FBF7]">
                             <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></svg>
@@ -98,8 +101,37 @@
                         <template x-for="(message, i) in messages" :key="i">
                             <div class="flex items-start gap-3 sm:gap-4" :class="message.role === 'user' ? 'justify-end' : ''">
                                 <div x-show="message.role !== 'user'" class="w-8 h-8 mt-0.5 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0"><span class="text-xs font-bold">Y</span></div>
-                                <div class="max-w-[88%] sm:max-w-[82%]">
+                                <div class="max-w-[92%] sm:max-w-[86%] min-w-0" :class="message.role !== 'user' && message.presentation ? 'w-full' : ''">
                                     <div class="text-sm sm:text-[15px] leading-7 whitespace-pre-wrap" :class="message.role === 'user' ? 'rounded-2xl rounded-br-md bg-[#E8F7EF] px-4 py-2.5 text-[#0B1B3F]' : 'text-slate-700'" x-text="message.content"></div>
+                                    <div x-show="message.role !== 'user' && message.presentation && Object.keys(message.presentation).length" class="mt-4 overflow-hidden rounded-2xl border border-[#DDE9E2] bg-white shadow-sm">
+                                        <div class="flex items-center justify-between border-b border-[#E5E7EB] bg-[#F8FBF9] px-4 py-3">
+                                            <p class="text-xs font-bold text-[#0B1B3F]" x-text="message.presentation?.title"></p>
+                                            <span class="rounded-full bg-[#E1F5EA] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#087A4E]">Data aktual</span>
+                                        </div>
+                                        <div x-show="message.presentation?.metrics?.length" class="grid grid-cols-2 gap-px bg-[#E5E7EB] sm:grid-cols-4">
+                                            <template x-for="metric in (message.presentation?.metrics || [])" :key="metric.label">
+                                                <div class="bg-white px-4 py-3"><p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400" x-text="metric.label"></p><p class="mt-1 text-sm font-extrabold text-[#0B1B3F]" x-text="metric.value"></p></div>
+                                            </template>
+                                        </div>
+                                        <div x-show="message.presentation?.chart?.items?.length" class="border-t border-[#E5E7EB] p-4">
+                                            <p class="mb-4 text-[11px] font-bold text-slate-500" x-text="message.presentation?.chart?.label"></p>
+                                            <div class="space-y-3">
+                                                <template x-for="item in (message.presentation?.chart?.items || [])" :key="item.label">
+                                                    <div class="grid grid-cols-[90px_minmax(0,1fr)_auto] items-center gap-3 text-[11px]">
+                                                        <span class="truncate font-semibold text-slate-600" x-text="item.label" :title="item.label"></span>
+                                                        <div class="h-2.5 overflow-hidden rounded-full bg-slate-100"><div class="h-full rounded-full bg-gradient-to-r from-[#0B8F5B] to-[#34C67F] transition-all duration-700" :style="`width:${barWidth(item.value, message.presentation.chart.items)}%`"></div></div>
+                                                        <span class="min-w-[76px] text-right font-bold text-[#0B1B3F]" x-text="item.formatted"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div x-show="message.presentation?.table?.rows?.length" class="overflow-x-auto border-t border-[#E5E7EB]">
+                                            <table class="w-full min-w-[500px] text-left text-xs">
+                                                <thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400"><tr><template x-for="column in (message.presentation?.table?.columns || [])"><th class="px-4 py-2.5 font-bold" x-text="column"></th></template></tr></thead>
+                                                <tbody class="divide-y divide-slate-100"><template x-for="(row, rowIndex) in (message.presentation?.table?.rows || [])" :key="rowIndex"><tr class="hover:bg-[#F8FBF9]"><template x-for="(cell, cellIndex) in row" :key="cellIndex"><td class="px-4 py-3 text-slate-600" :class="cellIndex === 0 ? 'font-semibold text-[#0B1B3F]' : ''" x-text="cell"></td></template></tr></template></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                     <p x-show="message.role !== 'user'" class="mt-1.5 text-[10px] text-slate-400">Dihitung dari data bisnis kamu</p>
                                 </div>
                             </div>
@@ -114,7 +146,7 @@
 
             {{-- Composer --}}
             <div class="shrink-0 bg-gradient-to-t from-white via-white to-white/70 px-3 sm:px-6 pb-4 pt-2">
-                <form @submit.prevent="ask" class="mx-auto max-w-3xl rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition">
+                <form @submit.prevent="ask" class="mx-auto max-w-4xl rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition">
                     <div class="flex items-end gap-2">
                         <textarea x-model="question" x-ref="input" @keydown.enter="if(!$event.shiftKey){$event.preventDefault();ask()}" rows="1" maxlength="500" placeholder="Tanya tentang bisnis kamu..." class="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"></textarea>
                         <button type="submit" :disabled="loading || !question.trim()" class="w-10 h-10 mb-0.5 rounded-xl bg-[#0B8F5B] hover:bg-[#087A4E] disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition" aria-label="Kirim">
@@ -147,12 +179,13 @@ function yokaChat(initialConversation, initialMessages) {
             try{
                 const response=await fetch('{{ route('intelligence.ask') }}',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:JSON.stringify({question:text,conversation_id:this.conversationId})});
                 const data=await response.json(); if(!response.ok)throw new Error(data.message||'Yoka gagal membaca data.');
-                const isNew=!this.conversationId; this.conversationId=data.conversation_id; this.messages.push({role:'assistant',content:data.answer});
+                const isNew=!this.conversationId; this.conversationId=data.conversation_id; this.messages.push({role:'assistant',content:data.answer,presentation:data.presentation});
                 if(isNew) history.replaceState({},'', '{{ route('intelligence.index') }}?conversation='+data.conversation_id);
             }catch(error){this.messages.push({role:'assistant',content:'Maaf, '+error.message});}
             finally{this.loading=false;this.scroll();this.$nextTick(()=>this.$refs.input.focus())}
         },
         scroll(){this.$nextTick(()=>{if(this.$refs.messages)this.$refs.messages.scrollTop=this.$refs.messages.scrollHeight})},
+        barWidth(value, items){const max=Math.max(...(items||[]).map(i=>Number(i.value)||0),1);return Math.max(3,Math.round((Number(value)||0)/max*100))},
         async deleteConversation(id){
             if(!confirm('Hapus percakapan ini?'))return;
             const response=await fetch('{{ url('/intelligence/conversations') }}/'+id,{method:'DELETE',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'}});

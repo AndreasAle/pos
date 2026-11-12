@@ -78,7 +78,33 @@ class YokaIntelligenceTest extends TestCase
 
         $this->assertSame('sales_summary', $answer['tool']);
         $this->assertStringContainsString('Belum ada transaksi', $answer['answer']);
+        $this->assertArrayHasKey('presentation', $answer);
+        $this->assertSame('Ringkasan hari ini', $answer['presentation']['title']);
         $this->assertDatabaseCount('assistant_messages', 2);
+    }
+
+    public function test_follow_up_keeps_previous_subject_and_changes_the_date_range(): void
+    {
+        $owner = $this->owner();
+        $first = app(YokaAssistantService::class)->ask($owner, 'Berapa pembayaran cash dan QRIS hari ini?');
+        $followUp = app(YokaAssistantService::class)->ask($owner, 'Kalau dari tanggal 1 bro?', $first['conversation_id']);
+
+        $this->assertSame('payment_breakdown', $followUp['tool']);
+        $message = AssistantConversation::find($first['conversation_id'])->messages()->findOrFail($followUp['message_id']);
+        $this->assertSame('custom', data_get($message->meta, 'arguments.period'));
+        $this->assertSame(now()->startOfMonth()->toDateString(), data_get($message->meta, 'arguments.date_from'));
+    }
+
+    public function test_from_first_transaction_uses_all_time_and_returns_real_visual_data(): void
+    {
+        $owner = $this->owner();
+        $answer = app(YokaAssistantService::class)->ask($owner, 'Berapa profit dari awal transaksi?');
+
+        $message = AssistantConversation::find($answer['conversation_id'])->messages()->findOrFail($answer['message_id']);
+        $this->assertSame('all_time', data_get($message->meta, 'arguments.period'));
+        $this->assertCount(4, $answer['presentation']['metrics']);
+        $this->assertArrayHasKey('chart', $answer['presentation']);
+        $this->assertSame('Ringkasan sejak transaksi pertama', $answer['presentation']['title']);
     }
 
     public function test_user_cannot_continue_another_tenants_conversation(): void

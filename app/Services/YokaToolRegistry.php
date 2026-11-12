@@ -28,7 +28,9 @@ class YokaToolRegistry
             'type' => 'function', 'function' => [
                 'name' => $name, 'description' => $description,
                 'parameters' => ['type' => 'object', 'properties' => [
-                    'period' => ['type' => 'string', 'enum' => ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'last_30_days']],
+                    'period' => ['type' => 'string', 'enum' => ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'last_30_days', 'all_time', 'custom']],
+                    'date_from' => ['type' => 'string', 'description' => 'Tanggal mulai YYYY-MM-DD. Isi bila period custom.'],
+                    'date_to' => ['type' => 'string', 'description' => 'Tanggal akhir YYYY-MM-DD. Isi bila period custom.'],
                     'query' => ['type' => 'string', 'description' => 'Nama produk, bahan, pelanggan, atau outlet bila disebut.'],
                 ]],
             ],
@@ -37,7 +39,7 @@ class YokaToolRegistry
 
     public function execute(Business $business, string $tool, array $args = []): array
     {
-        [$from, $to, $label] = $this->period($args['period'] ?? 'today');
+        [$from, $to, $label] = $this->period($args);
         $query = trim((string) ($args['query'] ?? ''));
         return match ($tool) {
             'sales_summary' => $this->sales($business, $from, $to, $label),
@@ -60,9 +62,17 @@ class YokaToolRegistry
         $seconds = max(1, $from->diffInSeconds($to));
         $previous = (float) Order::forBusiness($b->id)->paid()
             ->whereBetween('created_at', [$from->copy()->subSeconds($seconds + 1), $from->copy()->subSecond()])->sum('grand_total');
-        return compact('label', 'orders', 'revenue', 'profit', 'previous') + [
+        $daily = Order::forBusiness($b->id)->paid()->whereBetween('created_at', [$from, $to])
+            ->selectRaw('DATE(created_at) date, SUM(grand_total) revenue, COUNT(*) orders')
+            ->groupBy('date')->orderBy('date')->get()->map(fn ($r) => [
+                'date' => $r->date, 'revenue' => (float) $r->revenue, 'orders' => (int) $r->orders,
+            ])->all();
+        return compact('label', 'orders', 'revenue', 'previous') + [
+            'estimated_gross_profit' => $profit,
             'average_order' => $orders ? round($revenue / $orders) : 0,
             'change_percent' => $previous > 0 ? round(($revenue - $previous) / $previous * 100, 1) : null,
+            'daily_series' => $daily,
+            'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
         ];
     }
 
@@ -74,7 +84,7 @@ class YokaToolRegistry
             ->select('order_items.product_name')->selectRaw('SUM(order_items.qty) quantity, SUM(order_items.subtotal) revenue')
             ->selectRaw('SUM((order_items.price-order_items.cost_price)*order_items.qty) profit')
             ->groupBy('order_items.product_name')->orderByDesc('quantity')->limit(10)->get();
-        return ['label' => $label, 'products' => $rows->map(fn ($r) => [
+        return ['label' => $label, 'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()], 'products' => $rows->map(fn ($r) => [
             'name' => $r->product_name, 'quantity' => (float) $r->quantity, 'revenue' => (float) $r->revenue,
             'profit' => (float) $r->profit, 'margin_percent' => $r->revenue > 0 ? round($r->profit / $r->revenue * 100, 1) : 0,
         ])->all()];
@@ -99,21 +109,21 @@ class YokaToolRegistry
     {
         $rows = Order::forBusiness($b->id)->paid()->whereBetween('created_at', [$from, $to])
             ->selectRaw($this->hourExpression('created_at').' hour, COUNT(*) orders, SUM(grand_total) revenue')->groupBy('hour')->orderByDesc('orders')->limit(5)->get();
-        return ['label' => $label, 'hours' => $rows->map(fn ($r) => ['hour'=>(int)$r->hour,'orders'=>(int)$r->orders,'revenue'=>(float)$r->revenue])->all()];
+        return ['label' => $label, 'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()], 'hours' => $rows->map(fn ($r) => ['hour'=>(int)$r->hour,'orders'=>(int)$r->orders,'revenue'=>(float)$r->revenue])->all()];
     }
 
     private function payments(Business $b, Carbon $from, Carbon $to, string $label): array
     {
         $rows = Order::forBusiness($b->id)->paid()->whereBetween('created_at', [$from, $to])
             ->select('payment_method')->selectRaw('COUNT(*) orders, SUM(grand_total) total')->groupBy('payment_method')->orderByDesc('total')->get();
-        return ['label' => $label, 'payments' => $rows->map(fn($r)=>['payment_method'=>$r->payment_method,'orders'=>(int)$r->orders,'total'=>(float)$r->total])->all()];
+        return ['label' => $label, 'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()], 'payments' => $rows->map(fn($r)=>['payment_method'=>$r->payment_method,'orders'=>(int)$r->orders,'total'=>(float)$r->total])->all()];
     }
 
     private function outlets(Business $b, Carbon $from, Carbon $to, string $label): array
     {
         $rows = Order::forBusiness($b->id)->paid()->whereBetween('orders.created_at', [$from, $to])->join('outlets', 'outlets.id', '=', 'orders.outlet_id')
             ->select('outlets.name')->selectRaw('COUNT(*) orders, SUM(orders.grand_total) revenue')->groupBy('outlets.id', 'outlets.name')->orderByDesc('revenue')->get();
-        return ['label' => $label, 'outlets' => $rows->map(fn($r)=>['name'=>$r->name,'orders'=>(int)$r->orders,'revenue'=>(float)$r->revenue])->all()];
+        return ['label' => $label, 'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()], 'outlets' => $rows->map(fn($r)=>['name'=>$r->name,'orders'=>(int)$r->orders,'revenue'=>(float)$r->revenue])->all()];
     }
 
     private function customers(Business $b, Carbon $from, Carbon $to, string $label): array
@@ -121,7 +131,7 @@ class YokaToolRegistry
         $rows = Order::forBusiness($b->id)->paid()->whereBetween('orders.created_at', [$from, $to])->whereNotNull('customer_id')
             ->join('customers', 'customers.id', '=', 'orders.customer_id')->select('customers.name')
             ->selectRaw('COUNT(*) visits, SUM(orders.grand_total) spending')->groupBy('customers.id', 'customers.name')->orderByDesc('spending')->limit(10)->get();
-        return ['label' => $label, 'customers' => $rows->map(fn($r)=>['name'=>$r->name,'visits'=>(int)$r->visits,'spending'=>(float)$r->spending])->all()];
+        return ['label' => $label, 'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()], 'customers' => $rows->map(fn($r)=>['name'=>$r->name,'visits'=>(int)$r->visits,'spending'=>(float)$r->spending])->all()];
     }
 
     private function shifts(Business $b): array
@@ -130,8 +140,21 @@ class YokaToolRegistry
             ->map(fn ($s) => ['cashier' => $s->user?->name, 'outlet' => $s->outlet?->name, 'opened_at' => $s->opened_at?->toIso8601String()])->all()];
     }
 
-    private function period(string $period): array
+    private function period(array $args): array
     {
+        $period = $args['period'] ?? 'today';
+        if ($period === 'custom' && !empty($args['date_from'])) {
+            try {
+                $from = Carbon::parse($args['date_from'])->startOfDay();
+                $to = !empty($args['date_to']) ? Carbon::parse($args['date_to'])->endOfDay() : now();
+                if ($from->gt($to)) [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+                $to = $to->min(now());
+                $from = $from->max(Carbon::create(2000, 1, 1)->startOfDay());
+                return [$from, $to, $from->isoFormat('D MMM Y').'–'.$to->isoFormat('D MMM Y')];
+            } catch (\Throwable) {
+                $period = 'today';
+            }
+        }
         return match ($period) {
             'yesterday' => [now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), 'kemarin'],
             'this_week' => [now()->startOfWeek(), now(), 'minggu ini'],
@@ -139,6 +162,7 @@ class YokaToolRegistry
             'this_month' => [now()->startOfMonth(), now(), 'bulan ini'],
             'last_month' => [now()->subMonth()->startOfMonth(), now()->subMonth()->endOfMonth(), 'bulan lalu'],
             'last_30_days' => [now()->subDays(29)->startOfDay(), now(), '30 hari terakhir'],
+            'all_time' => [Carbon::create(2000, 1, 1)->startOfDay(), now(), 'sejak transaksi pertama'],
             default => [now()->startOfDay(), now(), 'hari ini'],
         };
     }
