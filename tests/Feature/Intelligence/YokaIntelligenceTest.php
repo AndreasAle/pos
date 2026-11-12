@@ -230,6 +230,41 @@ class YokaIntelligenceTest extends TestCase
         $this->assertCount(1, $table['response']['blocks']);
     }
 
+    public function test_latest_explicit_period_overrides_ai_context_and_markdown_table_is_not_duplicated(): void
+    {
+        $owner = $this->owner();
+        foreach ([[now()->startOfMonth(), 200000], [now(), 100000]] as $index => [$date, $amount]) {
+            $order = Order::create([
+                'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
+                'order_number' => 'PERIOD-'.$index, 'status' => 'paid', 'payment_status' => 'paid',
+                'payment_method' => 'cash', 'subtotal' => $amount, 'grand_total' => $amount,
+                'discount_amount' => 0, 'is_split_payment' => false,
+            ]);
+            $order->timestamps = false;
+            $order->forceFill(['created_at' => $date, 'updated_at' => $date])->save();
+        }
+
+        $first = app(YokaAssistantService::class)->ask($owner, 'Buatkan tabel pembayaran hari ini');
+        config(['services.yoka_ai.key' => 'test-key']);
+        Http::fakeSequence()
+            ->push(['choices' => [['message' => ['content' => json_encode([
+                'intent' => 'lookup', 'tool' => 'payment_breakdown',
+                'arguments' => ['period' => 'today', 'date_from' => null, 'date_to' => null, 'outlet_ids' => null, 'query' => null, 'limit' => null],
+                'visual' => 'table',
+            ])]]], 'usage' => []], 200)
+            ->push(['choices' => [['message' => ['content' => "| Metode | Total |\n|---|---|\n| Cash | Rp300.000 |\n\nCash menjadi metode utama bulan ini."]]], 'usage' => []], 200);
+
+        $reply = app(YokaAssistantService::class)->ask($owner, 'Nah sekarang buatkan tabelnya untuk keseluruhan transaksi bulan ini', $first['conversation_id']);
+        $message = AssistantConversation::find($first['conversation_id'])->messages()->findOrFail($reply['message_id']);
+
+        $this->assertSame('this_month', data_get($message->meta, 'arguments.period'));
+        $this->assertSame(300000.0, data_get($reply, 'data.data.total'));
+        $this->assertSame('Metode pembayaran bulan ini', data_get($reply, 'response.blocks.0.title'));
+        $this->assertSame('table', data_get($reply, 'response.blocks.0.type'));
+        $this->assertStringNotContainsString('| Metode |', $reply['answer']);
+        $this->assertSame('Cash menjadi metode utama bulan ini.', $reply['answer']);
+    }
+
     public function test_user_cannot_continue_another_tenants_conversation(): void
     {
         $first = $this->owner();
