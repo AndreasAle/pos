@@ -108,6 +108,17 @@
                 <x-nav-item route="reports.shift" icon="clock-rotate-left">Laporan Shift</x-nav-item>
                 <x-nav-item route="reports.inventory" icon="archive">Laporan Inventory</x-nav-item>
                 <x-nav-item route="reports.profit" icon="banknotes">Estimasi Profit</x-nav-item>
+                <x-nav-item route="reports.profit-loss" icon="chart-bar">Laba Rugi</x-nav-item>
+                <x-nav-item route="reports.tax" icon="badge-percent">Laporan Pajak</x-nav-item>
+                <x-nav-item route="reports.returns" icon="arrows-right-left">Retur Transaksi</x-nav-item>
+            </x-nav-group>
+
+            <x-nav-group title="Keuangan" :routes="['expenses.*','expense-categories.*','suppliers.*','purchases.*','payables.*','receivables.*']">
+                <x-nav-item route="expenses.index" icon="banknotes">Biaya</x-nav-item>
+                <x-nav-item route="purchases.index" icon="shopping-cart">Pembelian</x-nav-item>
+                <x-nav-item route="suppliers.index" icon="building-office">Supplier</x-nav-item>
+                <x-nav-item route="payables.index" icon="clipboard-list">Hutang</x-nav-item>
+                <x-nav-item route="receivables.index" icon="clipboard-list">Piutang</x-nav-item>
             </x-nav-group>
 
             <x-nav-group title="Pengaturan" :routes="['outlets.*','users.*','settings.*','audit.*']">

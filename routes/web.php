@@ -287,6 +287,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::get('sales/orders/{orderId}', [\App\Http\Controllers\SalesReportController::class, 'order'])->whereNumber('orderId')->name('sales.order');
         Route::get('sales/summary', [\App\Http\Controllers\SalesReportController::class, 'summaryJson'])->name('sales.summary');
         Route::get('sales/trends', [\App\Http\Controllers\SalesReportController::class, 'trendsJson'])->name('sales.trends');
+        Route::get('tax', [\App\Http\Controllers\FinanceReportController::class, 'tax'])->name('tax');
+        Route::get('returns', [\App\Http\Controllers\FinanceReportController::class, 'returns'])->name('returns');
+        Route::get('profit-loss', [\App\Http\Controllers\FinanceReportController::class, 'profitLoss'])->name('profit-loss');
         Route::get('sales/ask', [\App\Http\Controllers\SalesReportController::class, 'ask'])->name('sales.ask');
         Route::get('products', [ReportController::class, 'products'])->name('products');
         Route::get('cashier', [ReportController::class, 'cashier'])->name('cashier');
@@ -301,6 +304,35 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::get('sales/pdf', [ReportController::class, 'exportSalesPdf'])->name('sales.pdf');
         Route::get('products/pdf', [ReportController::class, 'exportProductsPdf'])->name('products.pdf');
         Route::get('profit/pdf', [ReportController::class, 'exportProfitPdf'])->name('profit.pdf');
+    });
+
+    // Finance: expenses, suppliers, purchases, payables, receivables (owner/admin only)
+    Route::middleware('role:owner,admin')->group(function () {
+        $c = \App\Http\Controllers\FinanceLedgerController::class;
+        Route::get('expenses', [$c, 'expenses'])->name('expenses.index');
+        Route::get('expenses/create', [$c, 'expenseCreate'])->name('expenses.create');
+        Route::post('expenses', [$c, 'expenseStore'])->name('expenses.store');
+        Route::post('expenses/{expense}/void', [$c, 'expenseVoid'])->name('expenses.void');
+        Route::get('expense-categories', [$c, 'categories'])->name('expense-categories.index');
+        Route::post('expense-categories', [$c, 'categoryStore'])->name('expense-categories.store');
+        Route::post('expense-categories/{category}/toggle', [$c, 'categoryToggle'])->name('expense-categories.toggle');
+        Route::get('suppliers', [$c, 'suppliers'])->name('suppliers.index');
+        Route::post('suppliers', [$c, 'supplierStore'])->name('suppliers.store');
+        Route::get('suppliers/{supplier}/edit', [$c, 'supplierEdit'])->name('suppliers.edit');
+        Route::post('suppliers/{supplier}', [$c, 'supplierStore'])->name('suppliers.update');
+        Route::get('purchases', [$c, 'purchases'])->name('purchases.index');
+        Route::get('purchases/create', [$c, 'purchaseCreate'])->name('purchases.create');
+        Route::post('purchases', [$c, 'purchaseStore'])->name('purchases.store');
+        Route::get('purchases/{purchase}', [$c, 'purchaseShow'])->name('purchases.show');
+        Route::post('purchases/{purchase}/pay', [$c, 'purchasePay'])->name('purchases.pay');
+        Route::post('purchases/{purchase}/cancel', [$c, 'purchaseCancel'])->name('purchases.cancel');
+        Route::get('payables', [$c, 'payables'])->name('payables.index');
+        Route::get('receivables', [$c, 'receivables'])->name('receivables.index');
+        Route::get('receivables/create', [$c, 'receivableCreate'])->name('receivables.create');
+        Route::post('receivables', [$c, 'receivableStore'])->name('receivables.store');
+        Route::get('receivables/{receivable}', [$c, 'receivableShow'])->name('receivables.show');
+        Route::post('receivables/{receivable}/pay', [$c, 'receivablePay'])->name('receivables.pay');
+        Route::post('receivables/{receivable}/void', [$c, 'receivableVoid'])->name('receivables.void');
     });
 
     // Audit Log

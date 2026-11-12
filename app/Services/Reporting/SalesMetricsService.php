@@ -432,7 +432,7 @@ class SalesMetricsService
     // ── Internals ────────────────────────────────────────────────────────────
 
     /** Eligible-order query. $aggregate=true returns a fresh builder ready for selectRaw on `orders`. */
-    private function orders(SalesReportFilter $f, string $table = 'orders', bool $withPaymentFilter = true, array $statuses = ['paid'], $base = null)
+    public function orders(SalesReportFilter $f, string $table = 'orders', bool $withPaymentFilter = true, array $statuses = ['paid'], $base = null)
     {
         $q = $base ?? DB::table($table);
 
