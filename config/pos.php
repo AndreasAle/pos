@@ -23,6 +23,12 @@ return [
 
     'features' => [
 
+        // Intelligence releases are independently gated so read-only chat can
+        // remain available while actions and scheduled agents mature.
+        'intelligence' => env('FEATURE_INTELLIGENCE', true),
+        'intelligence_actions' => env('FEATURE_INTELLIGENCE_ACTIONS', false),
+        'intelligence_agents' => env('FEATURE_INTELLIGENCE_AGENTS', false),
+
         // Staff activity trail. Useful on its own, off by default to keep the
         // sidebar focused; set FEATURE_AUDIT_LOG=true to bring it back.
         'audit_log' => env('FEATURE_AUDIT_LOG', false),
