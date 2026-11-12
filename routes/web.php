@@ -194,10 +194,10 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         ->middleware(['role:owner,admin', 'throttle:6,1'])->name('intelligence.refresh');
 
     // Outlets
-    Route::resource('outlets', OutletController::class);
+    Route::resource('outlets', OutletController::class)->except('show');
 
     // Users
-    Route::resource('users', UserController::class);
+    Route::resource('users', UserController::class)->except('show');
     Route::patch('users/{user}/toggle', [UserController::class, 'toggle'])->name('users.toggle');
     Route::get('profile', [UserController::class, 'profile'])->name('profile');
     Route::post('profile', [UserController::class, 'updateProfile'])->name('profile.update');
@@ -209,7 +209,7 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     // Categories
     Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])
         ->name('categories.kitchen');
-    Route::resource('categories', ProductCategoryController::class);
+    Route::resource('categories', ProductCategoryController::class)->except(['create', 'show', 'edit']);
 
     // Products
     Route::resource('products', ProductController::class);
@@ -288,7 +288,7 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::resource('customers', CustomerController::class);
 
     // Promotions
-    Route::resource('promotions', PromotionController::class);
+    Route::resource('promotions', PromotionController::class)->except('show');
     Route::patch('promotions/{promotion}/toggle', [PromotionController::class, 'toggle'])->name('promotions.toggle');
 
     // Reports
