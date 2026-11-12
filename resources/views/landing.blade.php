@@ -192,6 +192,11 @@
         </div>
     </header>
 
+    <style>
+        /* Slide 3: pudar ke atas di mobile/tablet, ke kiri di desktop. */
+        .hero-fade-y { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28%); mask-image: linear-gradient(to bottom, transparent 0, #000 28%); }
+        @media (min-width: 1024px) { .hero-fade-y { -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--hero-mask-x, 28%)); mask-image: linear-gradient(to right, transparent 0, #000 var(--hero-mask-x, 28%)); } }
+    </style>
     {{-- ================= HERO SLIDER ================= --}}
     @php
         $slides = [
@@ -218,7 +223,8 @@
             [
                 'bg' => '#075f40',
                 'img' => asset('images/about/dashboard-tim.webp'),
-                'imgClass' => 'right-[-42%] bottom-0 w-[175%] sm:right-[-18%] sm:w-[135%] md:right-[-8%] md:w-[112%] lg:right-0 lg:w-[72%] max-w-none',
+                // Di bawah lg foto hanya mengisi bagian bawah slide (tidak menimpa teks) dan memudar ke atas; di lg tetap di kanan.
+                'imgClass' => 'inset-x-0 bottom-0 w-full h-[40%] md:h-[42%] object-cover object-[68%_35%] hero-fade-y lg:inset-x-auto lg:right-0 lg:h-auto lg:w-[72%] lg:object-fill max-w-none',
                 'maskStop' => '28%',
                 'title' => 'Satu Sistem untuk Seluruh Operasional',
                 'text' => 'Transaksi, stok, pelanggan, shift, dan laporan terhubung dalam satu sistem yang siap dipakai seluruh tim.',
@@ -243,7 +249,8 @@
                  :class="i === {{ $k }} ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'"
                  :aria-hidden="i !== {{ $k }}">
                 <img src="{{ $s['img'] }}" alt="{{ $s['alt'] }}" class="absolute select-none {{ $s['imgClass'] }}"
-                     style="-webkit-mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }});mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }})"
+                     @unless (str_contains($s['imgClass'], 'hero-fade-y')) style="-webkit-mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }});mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }})" @endunless
+                     @if (str_contains($s['imgClass'], 'hero-fade-y')) style="--hero-mask-x: {{ $s['maskStop'] ?? '8%' }}" @endif
                      @if ($k === 0) fetchpriority="high" @else loading="lazy" @endif>
                 <div class="relative max-w-[1200px] mx-auto px-6 h-full flex items-start lg:items-center pt-[104px] lg:pt-0">
                     <div class="max-w-[520px] lg:pb-8">
