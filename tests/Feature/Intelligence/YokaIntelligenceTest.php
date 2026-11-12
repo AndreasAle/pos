@@ -79,8 +79,8 @@ class YokaIntelligenceTest extends TestCase
 
         $this->assertSame('sales_summary', $answer['tool']);
         $this->assertStringContainsString('Belum ada transaksi', $answer['answer']);
-        $this->assertArrayHasKey('presentation', $answer);
-        $this->assertSame('Ringkasan hari ini', $answer['presentation']['title']);
+        $this->assertSame('kpi', data_get($answer, 'response.blocks.0.type'));
+        $this->assertSame('Ringkasan hari ini', data_get($answer, 'response.blocks.0.title'));
         $this->assertDatabaseCount('assistant_messages', 2);
     }
 
@@ -103,9 +103,9 @@ class YokaIntelligenceTest extends TestCase
 
         $message = AssistantConversation::find($answer['conversation_id'])->messages()->findOrFail($answer['message_id']);
         $this->assertSame('all_time', data_get($message->meta, 'arguments.period'));
-        $this->assertCount(4, $answer['presentation']['metrics']);
-        $this->assertArrayNotHasKey('chart', $answer['presentation']);
-        $this->assertSame('Ringkasan sejak transaksi pertama', $answer['presentation']['title']);
+        $this->assertCount(4, data_get($answer, 'response.blocks.0.metrics'));
+        $this->assertSame('kpi', data_get($answer, 'response.blocks.0.type'));
+        $this->assertSame('Ringkasan sejak transaksi pertama', data_get($answer, 'response.blocks.0.title'));
     }
 
     public function test_acknowledgement_does_not_repeat_the_previous_data_or_visual(): void
@@ -116,7 +116,7 @@ class YokaIntelligenceTest extends TestCase
 
         $this->assertNull($reply['tool']);
         $this->assertNull($reply['data']);
-        $this->assertSame([], $reply['presentation']);
+        $this->assertSame([], $reply['response']['blocks']);
         $this->assertSame('Sama-sama, bro 🙌', $reply['answer']);
     }
 
@@ -130,20 +130,26 @@ class YokaIntelligenceTest extends TestCase
         $this->assertSame('payment_breakdown', $reply['tool']);
         $this->assertSame('analysis', data_get($message->meta, 'intent'));
         $this->assertSame('custom', data_get($message->meta, 'arguments.period'));
-        $this->assertSame([], $reply['presentation']);
+        $this->assertSame([], $reply['response']['blocks']);
     }
 
     public function test_visual_type_follows_the_users_request(): void
     {
         $owner = $this->owner();
+        Order::create([
+            'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
+            'order_number' => 'VISUAL-PAYMENT', 'status' => 'paid', 'payment_status' => 'paid',
+            'payment_method' => 'cash', 'subtotal' => 100000, 'grand_total' => 100000, 'is_split_payment' => false,
+        ]);
 
         $chart = app(YokaAssistantService::class)->ask($owner, 'Buatkan grafik pembayaran bulan ini');
-        $this->assertArrayHasKey('chart', $chart['presentation']);
-        $this->assertArrayNotHasKey('table', $chart['presentation']);
+        $this->assertNotEmpty(data_get($chart, 'data.data.payments'), json_encode($chart));
+        $this->assertSame('bar_chart', data_get($chart, 'response.blocks.0.type'));
+        $this->assertCount(1, $chart['response']['blocks']);
 
         $table = app(YokaAssistantService::class)->ask($owner, 'Buatkan tabel pembayaran bulan ini');
-        $this->assertArrayHasKey('table', $table['presentation']);
-        $this->assertArrayNotHasKey('chart', $table['presentation']);
+        $this->assertSame('table', data_get($table, 'response.blocks.0.type'));
+        $this->assertCount(1, $table['response']['blocks']);
     }
 
     public function test_user_cannot_continue_another_tenants_conversation(): void

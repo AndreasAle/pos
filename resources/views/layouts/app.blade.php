@@ -67,7 +67,9 @@
             {{-- Utama --}}
             <x-nav-item route="dashboard" icon="home" data-tour="dashboard">Dashboard</x-nav-item>
             @if(in_array($role, ['owner','admin']))
-            <x-nav-item route="intelligence.index" icon="sparkles">Tanya Yoka</x-nav-item>
+            @if(config('pos.features.intelligence'))
+                <x-nav-item route="intelligence.index" icon="sparkles">Tanya Yoka</x-nav-item>
+            @endif
             @endif
             @if(in_array($role, ['owner','admin','cashier']))
             <x-nav-item route="pos.index" icon="shopping-cart" data-tour="pos">Kasir / POS</x-nav-item>
