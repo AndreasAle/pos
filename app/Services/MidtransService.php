@@ -104,7 +104,7 @@ class MidtransService
      */
     public function verifySignature(string $orderId, string $statusCode, string $grossAmount, string $signature): bool
     {
-        $key = (string) config('midtrans.server_key');
+        $key = (string) config('midtrans.signature_secret');
         if ($key === '' || $orderId === '' || $statusCode === '' || $grossAmount === '' || $signature === '') {
             return false;
         }

@@ -157,7 +157,10 @@ class SubscribeTest extends TestCase
 
     public function test_valid_midtrans_webhook_activates_the_pending_plan(): void
     {
-        config(['midtrans.server_key' => 'sandbox-server-key']);
+        config([
+            'midtrans.server_key' => 'sandbox-api-server-key',
+            'midtrans.signature_secret' => 'sandbox-signature-secret',
+        ]);
         $this->setUpPos();
         $plan = $this->plan('business', 249000);
         $orderId = 'SUB-'.$this->business->id.'-TEST';
@@ -173,7 +176,7 @@ class SubscribeTest extends TestCase
         ]);
         $grossAmount = '249000.00';
         $statusCode = '200';
-        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.'sandbox-server-key');
+        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.'sandbox-signature-secret');
 
         $this->postJson(route('midtrans.callback'), [
             'order_id' => $orderId,
@@ -191,7 +194,10 @@ class SubscribeTest extends TestCase
 
     public function test_webhook_with_the_wrong_amount_cannot_activate_a_plan(): void
     {
-        config(['midtrans.server_key' => 'sandbox-server-key']);
+        config([
+            'midtrans.server_key' => 'sandbox-api-server-key',
+            'midtrans.signature_secret' => 'sandbox-signature-secret',
+        ]);
         $this->setUpPos();
         $plan = $this->plan('business', 249000);
         $orderId = 'SUB-'.$this->business->id.'-MISMATCH';
@@ -205,7 +211,7 @@ class SubscribeTest extends TestCase
             'amount' => 249000,
         ]);
         $grossAmount = '99000.00';
-        $signature = hash('sha512', $orderId.'200'.$grossAmount.'sandbox-server-key');
+        $signature = hash('sha512', $orderId.'200'.$grossAmount.'sandbox-signature-secret');
 
         $this->postJson(route('midtrans.callback'), [
             'order_id' => $orderId,
@@ -218,9 +224,9 @@ class SubscribeTest extends TestCase
         $this->assertSame('pending', $pending->fresh()->status);
     }
 
-    public function test_webhook_is_rejected_when_the_server_key_is_not_configured(): void
+    public function test_webhook_is_rejected_when_the_signature_secret_is_not_configured(): void
     {
-        config(['midtrans.server_key' => '']);
+        config(['midtrans.server_key' => '', 'midtrans.signature_secret' => '']);
 
         $this->postJson(route('midtrans.callback'), [
             'order_id' => 'SUB-1-FORGED',
