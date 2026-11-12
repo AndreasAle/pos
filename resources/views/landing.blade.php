@@ -552,78 +552,56 @@
     {{-- ================= JENIS USAHA ================= --}}
     @php
         $segmen = [
-            [
-                'tab' => 'Kafe & Resto',
-                'img' => asset('images/photos/kafe.webp'),
-                'alt' => 'Barista menunjuk layar kasir Yoka POS di kafe',
-                'title' => 'Pesanan masuk rapi, antrean tetap jalan',
-                'desc' => 'Terima pesanan dine-in, takeaway, dan delivery dari satu layar, lalu kirim ke dapur tanpa catatan kertas.',
-                'points' => ['Varian dan topping per menu', 'Tahan pesanan atas nama atau nomor meja', 'Struk otomatis ke printer thermal'],
-            ],
-            [
-                'tab' => 'Toko Kelontong',
-                'img' => asset('images/photos/toko-kelontong.webp'),
-                'alt' => 'Penjaga toko kelontong mencatat penjualan dari HP',
-                'title' => 'Stok barang selalu terpantau',
-                'desc' => 'Jualan ratusan barang kecil tanpa pusing menghitung sisa stok di akhir hari.',
-                'points' => ['Scan barcode atau cari nama produk', 'Stok berkurang otomatis tiap transaksi', 'Pemberitahuan saat stok mulai menipis'],
-            ],
-            [
-                'tab' => 'Toko Online & Butik',
-                'img' => asset('images/photos/toko-online.webp'),
-                'alt' => 'Pemilik toko online melihat analitik penjualan di tablet',
-                'title' => 'Rekap penjualan tanpa hitung manual',
-                'desc' => 'Lihat omzet dan keuntungan dari hari ke hari, siap dikirim ke pemilik atau akuntan.',
-                'points' => ['Laporan harian, mingguan, dan bulanan', 'Laporan profit dengan HPP', 'Ekspor ke Excel atau PDF sekali klik'],
-            ],
+            ['Restoran', 'images/photos/kafe.webp', 'Suasana restoran yang menggunakan Yoka POS'],
+            ['Kafe & Bakery', 'images/about/barista.jpg', 'Barista melayani pelanggan kafe'],
+            ['Kedai Kopi', 'images/about/layar.jpg', 'Layar kasir Yoka POS di kedai kopi'],
+            ['Warung Makan', 'images/photos/kasir-pelanggan.webp', 'Pelayanan pelanggan di depan kasir'],
+            ['Booth Minuman', 'images/menu/es-kopi-susu.jpg', 'Produk minuman untuk booth'],
+            ['Food Truck', 'images/menu/beef-burger.jpg', 'Menu makanan untuk food truck'],
+            ['Toko Kelontong', 'images/photos/toko-kelontong.webp', 'Penjaga toko kelontong menggunakan Yoka POS'],
+            ['Toko Oleh-oleh', 'images/about/printer.jpg', 'Pengelolaan toko dengan Yoka POS'],
+            ['Butik & Retail', 'images/photos/toko-online.webp', 'Pemilik butik memantau penjualan'],
+            ['Salon & Barbershop', 'images/photos/toko-online.webp', 'Pemilik usaha memantau operasional'],
+            ['Laundry', 'images/photos/toko-kelontong.webp', 'Pencatatan transaksi usaha dengan Yoka POS'],
+            ['Multi-outlet', 'images/about/dashboard-tim.webp', 'Tim memantau banyak outlet melalui dashboard Yoka POS'],
         ];
     @endphp
-    <section id="usaha" class="py-20 md:py-28 px-6 bg-[#f2f9f5]" x-data="{ t: 0 }">
-        <div class="max-w-[1100px] mx-auto">
-            <div class="text-center max-w-[640px] mx-auto">
-                <h2 class="text-[32px] md:text-[42px] font-extrabold leading-[1.15] text-emerald-900">Dipakai di Kafe, Toko, dan Usaha Online</h2>
-                <p class="mt-4 text-[17px] text-slate-600">Pilih jenis usaha Anda, lihat bagaimana Yoka POS membantu.</p>
-            </div>
+    <section id="usaha" class="overflow-hidden bg-white px-5 py-24 md:px-8 md:py-36" x-data="{ active: null }" @mouseleave="active = null">
+        <div class="mx-auto max-w-[1240px] text-center">
+            <h2 class="text-[36px] font-extrabold leading-[1.08] tracking-[-.035em] text-slate-950 md:text-[58px]">
+                Kami bantu bisnis tumbuh<br class="hidden sm:block"> dan bertahan lama
+            </h2>
+            <p class="mx-auto mt-5 max-w-[650px] text-base leading-relaxed text-slate-500 md:text-[18px]">
+                Beragam fitur Yoka POS disiapkan untuk cara jualan dan melayani pelanggan yang berbeda-beda.
+            </p>
 
-            <div class="mt-9 flex flex-wrap justify-center gap-3" role="tablist">
-                @foreach ($segmen as $k => $s)
-                    <button type="button" role="tab" @click="t = {{ $k }}" :aria-selected="t === {{ $k }}"
-                            class="px-6 py-3 rounded-full text-[15px] font-bold border transition-colors"
-                            :class="t === {{ $k }} ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-slate-700 border-slate-300 hover:border-emerald-600 hover:text-emerald-700'">
-                        {{ $s['tab'] }}
-                    </button>
+            <div class="mt-28 flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 md:mt-32" role="list" aria-label="Jenis usaha yang cocok menggunakan Yoka POS">
+                @foreach ($segmen as $k => [$label, $image, $alt])
+                    <div class="relative" role="listitem">
+                        <div x-show="active === {{ $k }}" x-cloak
+                             x-transition:enter="transition duration-300 ease-out"
+                             x-transition:enter-start="opacity-0 translate-y-5 scale-75 rotate-0"
+                             x-transition:enter-end="opacity-100 translate-y-0 scale-100 {{ $k % 2 === 0 ? '-rotate-6' : 'rotate-6' }}"
+                             x-transition:leave="transition duration-200 ease-in"
+                             x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                             x-transition:leave-end="opacity-0 translate-y-3 scale-90"
+                             class="pointer-events-none absolute bottom-[calc(100%+18px)] left-1/2 z-20 h-[145px] w-[125px] -translate-x-1/2 overflow-hidden rounded-[18px] border-[5px] border-white bg-emerald-100 shadow-[0_22px_45px_rgba(15,23,42,.25)] sm:h-[175px] sm:w-[150px]">
+                            <img src="{{ asset($image) }}" alt="{{ $alt }}" class="h-full w-full object-cover" loading="lazy">
+                        </div>
+                        <button type="button"
+                                @mouseenter="active = {{ $k }}" @focus="active = {{ $k }}" @click="active = active === {{ $k }} ? null : {{ $k }}" @blur="active = null"
+                                :aria-pressed="active === {{ $k }}"
+                                class="relative z-10 rounded-full px-4 py-2 text-[20px] font-semibold leading-none tracking-[-.025em] transition-all duration-200 sm:px-5 sm:py-2.5 sm:text-[25px] md:px-6 md:text-[31px]"
+                                :class="active === {{ $k }} ? 'bg-emerald-600 text-white shadow-[0_8px_22px_rgba(5,150,105,.22)]' : 'bg-[#f2f7f4] text-slate-900 hover:bg-emerald-100'">
+                            {{ $label }}
+                        </button>
+                    </div>
                 @endforeach
             </div>
 
-            <div class="mt-12 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-                <div class="relative aspect-[4/3] rounded-[28px] overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,.18)] bg-emerald-100">
-                    @foreach ($segmen as $k => $s)
-                        <img src="{{ $s['img'] }}" alt="{{ $s['alt'] }}" loading="lazy"
-                             class="absolute inset-0 w-full h-full object-cover transition-opacity duration-500"
-                             :class="t === {{ $k }} ? 'opacity-100' : 'opacity-0'">
-                    @endforeach
-                </div>
-
-                <div class="relative min-h-[300px]">
-                    @foreach ($segmen as $k => $s)
-                        <div x-show="t === {{ $k }}" x-transition.opacity.duration.300ms @if ($k > 0) x-cloak @endif>
-                            <h3 class="text-[28px] md:text-[32px] font-extrabold leading-[1.2] text-slate-900">{{ $s['title'] }}</h3>
-                            <p class="mt-4 text-[17px] leading-relaxed text-slate-600">{{ $s['desc'] }}</p>
-                            <ul class="mt-6 space-y-3">
-                                @foreach ($s['points'] as $pt)
-                                    <li class="flex items-start gap-3 text-[16px] text-slate-700">
-                                        <svg class="w-5 h-5 mt-0.5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                        {{ $pt }}
-                                    </li>
-                                @endforeach
-                            </ul>
-                            <a href="{{ route('register') }}" class="mt-8 inline-flex items-center gap-3 text-[17px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors group">
-                                Coba Gratis 7 Hari
-                                <svg class="w-6 h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
+            <div class="mt-14 flex flex-col items-center justify-center gap-3 sm:flex-row md:mt-20">
+                <a href="{{ route('register') }}" class="inline-flex min-w-[170px] items-center justify-center rounded-full bg-emerald-600 px-7 py-3.5 text-sm font-extrabold text-white transition hover:-translate-y-0.5 hover:bg-emerald-700">Coba Gratis 7 Hari</a>
+                <a href="{{ $waLink }}" target="_blank" class="inline-flex min-w-[170px] items-center justify-center rounded-full border border-emerald-600 px-7 py-3.5 text-sm font-extrabold text-emerald-700 transition hover:bg-emerald-50">Konsultasi Bisnis</a>
             </div>
         </div>
     </section>
@@ -879,75 +857,114 @@
         </div>
     </section>
 
-    {{-- ================= CTA PENUTUP ================= --}}
-    <section class="py-20 md:py-24 px-6">
-        <div class="max-w-[1000px] mx-auto rounded-[28px] overflow-hidden shadow-[0_18px_40px_rgba(15,23,42,.18)] bg-emerald-800">
-            <img src="{{ asset('images/photos/toko-banner.webp') }}" alt="Pemilik toko mengelola usaha dengan Yoka POS" class="w-full block" loading="lazy">
-            <div class="px-8 py-9 md:px-12 flex flex-col md:flex-row md:items-center justify-between gap-6 text-white">
-                <div>
-                    <h2 class="text-[26px] md:text-[30px] font-extrabold leading-tight">Siap mencoba Yoka POS?</h2>
-                    <p class="mt-2 text-emerald-50/90">Gratis 7 hari, semua fitur terbuka, tanpa kartu kredit.</p>
-                </div>
-                <div class="flex flex-wrap gap-3 shrink-0">
-                    <a href="{{ route('register') }}" class="px-7 py-3.5 rounded-full bg-white text-emerald-800 font-bold hover:bg-emerald-50 transition-colors">Coba Gratis</a>
-                    <a href="{{ $waLink }}" target="_blank" class="px-7 py-3.5 rounded-full border border-white/60 font-bold hover:bg-white/10 transition-colors">Hubungi Kami</a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    {{-- ================= FOOTER ================= --}}
+    {{-- ================= CTA + FOOTER ================= --}}
     @php
         $companyName = 'Conwebid Indonesia Digital';
         $companyEmail = 'conwebid@gmail.com';
         $companyPhone = '08xx-xxxx-xxxx'; // TODO: isi nomor lengkap
         $companyPhoneDigits = '628xxxxxxxxxx'; // TODO: format 62..., tanpa + dan spasi
     @endphp
-    <footer class="bg-white border-t border-slate-200">
-        <div class="max-w-7xl mx-auto px-6 pt-14 pb-8">
-            <div class="grid md:grid-cols-12 gap-10 mb-12">
-                <div class="md:col-span-5">
-                    <div class="flex items-center gap-2 mb-4">
-                        <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="Yoka" class="h-9 w-auto">
-                        <span class="text-[22px] leading-none font-bold tracking-tight text-emerald-700">POS</span>
-                    </div>
-                    <p class="text-sm text-slate-500 leading-relaxed max-w-sm">
-                        Sistem kasir modern untuk cafe, resto, bakery, dan bisnis F&amp;B — transaksi, stok, shift, hingga laporan dalam satu platform.
+    <footer class="overflow-hidden bg-[#073e2d] text-white">
+        <section class="relative min-h-[620px] overflow-hidden rounded-t-[34px] md:min-h-[690px] md:rounded-t-[54px]">
+            <img src="{{ asset('images/photos/terminal-pos-premium.png') }}"
+                 alt="Terminal kasir premium Yoka POS di studio hijau"
+                 class="absolute inset-0 h-full w-full object-cover object-[64%_center] md:object-center"
+                 loading="lazy">
+            <div class="absolute inset-0 bg-gradient-to-r from-[#043e2f]/95 via-[#043e2f]/70 to-transparent md:via-[#043e2f]/20"></div>
+            <div class="relative mx-auto flex min-h-[620px] max-w-[1200px] items-start px-6 pb-28 pt-16 md:min-h-[690px] md:items-center md:pb-36 md:pt-10">
+                <div class="max-w-[530px]">
+                    <p class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[.16em] backdrop-blur-sm">
+                        Mulai lebih mudah bersama Yoka
                     </p>
-                    <p class="mt-5 text-xs uppercase tracking-widest text-slate-400">Dikembangkan oleh</p>
-                    <p class="text-slate-900 font-semibold mt-1">{{ $companyName }}</p>
-                </div>
-
-                <div class="md:col-span-2">
-                    <p class="font-semibold text-slate-900 mb-4 text-sm">Navigasi</p>
-                    <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="#tentang" class="hover:text-emerald-600 transition-colors">Tentang</a></li>
-                        <li><a href="#keunggulan" class="hover:text-emerald-600 transition-colors">Keunggulan</a></li>
-                        <li><a href="#harga" class="hover:text-emerald-600 transition-colors">Harga</a></li>
-                        <li><a href="#faq" class="hover:text-emerald-600 transition-colors">FAQ</a></li>
+                    <h2 class="text-[40px] font-extrabold leading-[1.08] tracking-[-.035em] sm:text-[52px] md:text-[62px]">
+                        Saatnya bisnis<br>makin <span class="relative inline-block">sibuk<span class="absolute -bottom-1 left-0 h-[10px] w-full rounded-[50%] border-b-2 border-emerald-300"></span></span>
+                    </h2>
+                    <ul class="mt-7 space-y-3 text-sm font-semibold text-white/90 sm:text-base">
+                        @foreach (['Transaksi cepat, antrean tetap lancar.', 'Stok dan laporan selalu terpantau.', 'Satu sistem untuk seluruh tim bisnismu.'] as $benefit)
+                            <li class="flex items-center gap-3">
+                                <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-200 text-emerald-200">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m5 12 4 4L19 6"/></svg>
+                                </span>
+                                {{ $benefit }}
+                            </li>
+                        @endforeach
                     </ul>
-                </div>
-
-                <div class="md:col-span-2">
-                    <p class="font-semibold text-slate-900 mb-4 text-sm">Akun</p>
-                    <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="{{ route('login') }}" class="hover:text-emerald-600 transition-colors">Masuk</a></li>
-                        <li><a href="{{ route('register') }}" class="hover:text-emerald-600 transition-colors">Daftar</a></li>
-                    </ul>
-                </div>
-
-                <div class="md:col-span-3">
-                    <p class="font-semibold text-slate-900 mb-4 text-sm">Kontak</p>
-                    <ul class="space-y-3 text-sm text-slate-500">
-                        <li><a href="https://wa.me/{{ $companyPhoneDigits }}?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka" target="_blank" class="hover:text-emerald-600 transition-colors">WhatsApp: {{ $companyPhone }}</a></li>
-                        <li><a href="mailto:{{ $companyEmail }}" class="hover:text-emerald-600 transition-colors break-all">Email: {{ $companyEmail }}</a></li>
-                    </ul>
+                    <div class="mt-9 flex flex-wrap gap-3">
+                        <a href="{{ route('register') }}" class="rounded-full bg-white px-7 py-3.5 text-sm font-extrabold text-emerald-900 transition hover:bg-emerald-50 sm:text-base">Mulai Gratis</a>
+                        <a href="{{ $waLink }}" target="_blank" class="rounded-full border border-white/60 px-7 py-3.5 text-sm font-extrabold text-white transition hover:bg-white/10 sm:text-base">Jadwalkan Demo</a>
+                    </div>
                 </div>
             </div>
+        </section>
 
-            <div class="pt-6 border-t border-slate-200 flex flex-col md:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-                <p>&copy; {{ date('Y') }} {{ $companyName }}. Seluruh hak cipta dilindungi.</p>
-                <p>Yoka POS &mdash; Kasir modern untuk bisnis F&amp;B Indonesia</p>
+        <div class="relative z-10 mx-4 -mt-16 rounded-[30px] bg-white text-slate-700 shadow-[0_28px_70px_rgba(0,0,0,.24)] sm:mx-6 md:mx-auto md:-mt-20 md:max-w-[calc(100%-96px)] md:rounded-[42px]">
+            <div class="mx-auto max-w-[1300px] px-7 pb-7 pt-11 sm:px-10 md:px-16 md:pb-9 md:pt-14">
+                <div class="grid gap-10 border-b border-slate-200 pb-12 sm:grid-cols-2 lg:grid-cols-[1.35fr_.75fr_.85fr_1fr] lg:gap-12">
+                    <div>
+                        <a href="#" class="inline-flex items-center gap-2" aria-label="Yoka POS">
+                            <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="Yoka" class="h-10 w-auto">
+                            <span class="text-[23px] font-extrabold leading-none text-emerald-700">POS</span>
+                        </a>
+                        <p class="mt-5 max-w-sm text-sm leading-7 text-slate-500">Sistem kasir modern untuk cafe, resto, bakery, dan bisnis F&amp;B. Semua operasional penting, dalam satu platform.</p>
+                        <p class="mt-5 text-[11px] font-extrabold uppercase tracking-[.16em] text-slate-400">Dikembangkan oleh</p>
+                        <p class="mt-1 text-sm font-bold text-slate-900">{{ $companyName }}</p>
+                    </div>
+
+                    <div>
+                        <p class="mb-5 text-sm font-extrabold text-slate-950">Jelajahi</p>
+                        <ul class="space-y-3.5 text-sm text-slate-500">
+                            <li><a href="#tentang" class="transition hover:text-emerald-700">Tentang Yoka</a></li>
+                            <li><a href="#keunggulan" class="transition hover:text-emerald-700">Keunggulan</a></li>
+                            <li><a href="#harga" class="transition hover:text-emerald-700">Harga</a></li>
+                            <li><a href="#faq" class="transition hover:text-emerald-700">FAQ</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p class="mb-5 text-sm font-extrabold text-slate-950">Produk</p>
+                        <ul class="space-y-3.5 text-sm text-slate-500">
+                            <li><a href="{{ route('features.show', 'transaksi-kasir') }}" class="transition hover:text-emerald-700">Kasir &amp; Pembayaran</a></li>
+                            <li><a href="{{ route('features.show', 'stok-resep') }}" class="transition hover:text-emerald-700">Stok &amp; Resep</a></li>
+                            <li><a href="{{ route('features.show', 'kitchen-display') }}" class="transition hover:text-emerald-700">Kitchen Display</a></li>
+                            <li><a href="{{ route('features.show', 'laporan') }}" class="transition hover:text-emerald-700">Laporan Bisnis</a></li>
+                            <li><a href="{{ route('login') }}" class="transition hover:text-emerald-700">Masuk ke Akun</a></li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p class="mb-5 text-sm font-extrabold text-slate-950">Hubungi kami</p>
+                        <p class="text-sm leading-6 text-slate-500">Punya pertanyaan atau ingin melihat Yoka bekerja untuk bisnismu?</p>
+                        <div class="mt-5 space-y-3">
+                            <a href="https://wa.me/{{ $companyPhoneDigits }}?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka" target="_blank" class="inline-flex rounded-full border border-emerald-600 px-4 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50">WhatsApp {{ $companyPhone }}</a>
+                            <a href="mailto:{{ $companyEmail }}" class="block break-all text-sm font-semibold text-slate-700 transition hover:text-emerald-700">{{ $companyEmail }}</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-5 border-b border-slate-200 py-7 md:flex-row md:items-center md:justify-between">
+                    <p class="text-[22px] font-extrabold tracking-[-.025em] text-slate-950">Ada yang bisa kami bantu?</p>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="{{ $waLink }}" target="_blank" class="rounded-full border border-emerald-600 px-5 py-2.5 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50">Bicara dengan Sales</a>
+                        <a href="mailto:{{ $companyEmail }}" class="rounded-full border border-slate-300 px-5 py-2.5 text-xs font-bold text-slate-700 transition hover:border-emerald-600 hover:text-emerald-700">Layanan Pelanggan</a>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-4 pt-7 text-xs text-slate-400 md:flex-row md:items-center md:justify-between">
+                    <p>&copy; {{ date('Y') }} {{ $companyName }}. Seluruh hak cipta dilindungi.</p>
+                    <div class="flex flex-wrap gap-x-6 gap-y-2">
+                        <a href="#" class="transition hover:text-emerald-700">Kebijakan Privasi</a>
+                        <a href="#" class="transition hover:text-emerald-700">Syarat Layanan</a>
+                        <a href="#faq" class="transition hover:text-emerald-700">Pusat Bantuan</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 pb-14 pt-12 text-center md:pb-20 md:pt-16">
+            <p class="text-sm font-semibold text-emerald-100/75">Kelola bisnis lebih tenang bersama</p>
+            <div class="mt-4 inline-flex items-center gap-2">
+                <img src="{{ asset('images/brand/yoka-logo-white.png') }}" alt="Yoka" class="h-11 w-auto">
+                <span class="text-[25px] font-extrabold">POS</span>
             </div>
         </div>
     </footer>
