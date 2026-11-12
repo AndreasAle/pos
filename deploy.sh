@@ -75,8 +75,29 @@ for WEB_ROOT_ITEM in "${WEB_ROOT_LIST[@]}"; do
     cp -r "$APP_DIR/public/build/." "$WEB_ROOT_ITEM/build/"
     cp -r "$APP_DIR/public/images/." "$WEB_ROOT_ITEM/images/"
 
-    if [[ ! -e "$WEB_ROOT_ITEM/storage" ]]; then
-        ln -s "$APP_DIR/storage/app/public" "$WEB_ROOT_ITEM/storage"
+    # Foto produk/logo hasil upload disimpan di storage/app/public dan dilayani
+    # lewat symlink <web root>/storage. Symlink yang hilang atau menunjuk ke
+    # tempat lain membuat SEMUA foto 404. Perbaiki otomatis, dan jangan pernah
+    # membuang folder asli sebelum isinya diselamatkan.
+    STORAGE_TARGET="$APP_DIR/storage/app/public"
+    LINK="$WEB_ROOT_ITEM/storage"
+    mkdir -p "$STORAGE_TARGET"
+    if [[ -L "$LINK" ]]; then
+        if [[ "$(readlink -f "$LINK")" != "$(readlink -f "$STORAGE_TARGET")" ]]; then
+            echo "    Symlink storage salah arah ($(readlink "$LINK")); diperbaiki"
+            rm "$LINK"
+            ln -s "$STORAGE_TARGET" "$LINK"
+        fi
+    elif [[ -d "$LINK" ]]; then
+        echo "    storage adalah folder biasa; isinya disalin ke $STORAGE_TARGET"
+        cp -rn "$LINK/." "$STORAGE_TARGET/"
+        mv "$LINK" "$LINK.bak-$(date +%Y%m%d%H%M%S)"
+        ln -s "$STORAGE_TARGET" "$LINK"
+    elif [[ ! -e "$LINK" ]]; then
+        ln -s "$STORAGE_TARGET" "$LINK"
+    fi
+    if [[ ! -r "$LINK/." ]]; then
+        echo "    PERINGATAN: $LINK tidak terbaca; foto upload akan 404" >&2
     fi
 
     echo "    OK: aset disalin ke $WEB_ROOT_ITEM"
