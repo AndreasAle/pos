@@ -117,16 +117,6 @@
             </x-nav-group>
             @endif
 
-            @if($role === 'owner' && (config('pos.features.subscription') || config('pos.features.balance')))
-            <x-nav-group title="Langganan & Saldo" :routes="['saas.*','balance.*']">
-                @if(config('pos.features.subscription'))
-                <x-nav-item route="saas.plans" icon="credit-card">Paket Langganan</x-nav-item>
-                @endif
-                @if(config('pos.features.balance'))
-                <x-nav-item route="balance.index" icon="banknotes">Saldo & Penarikan</x-nav-item>
-                @endif
-            </x-nav-group>
-            @endif
         </nav>
 
         @php $supportUrl = config('pos.support_url') ?: 'mailto:' . config('mail.from.address'); @endphp
