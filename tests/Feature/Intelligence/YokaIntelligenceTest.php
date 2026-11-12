@@ -6,6 +6,7 @@ use App\Models\AssistantConversation;
 use App\Models\Business;
 use App\Models\BusinessInsight;
 use App\Models\Ingredient;
+use App\Models\Order;
 use App\Models\Outlet;
 use App\Models\User;
 use App\Services\InsightService;
@@ -42,6 +43,29 @@ class YokaIntelligenceTest extends TestCase
 
         $this->assertDatabaseHas('business_insights', [
             'business_id' => $business->id, 'type' => 'stock_forecast', 'severity' => 'critical',
+        ]);
+    }
+
+    public function test_sales_trend_uses_previous_revenue_value_without_type_error(): void
+    {
+        $owner = $this->owner();
+        $yesterday = Order::create([
+            'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
+            'order_number' => 'TREND-YESTERDAY', 'status' => 'paid', 'payment_status' => 'paid',
+            'grand_total' => 100000, 'created_at' => now()->subDay(),
+        ]);
+        $yesterday->timestamps = false;
+        $yesterday->forceFill(['created_at' => now()->subDay(), 'updated_at' => now()->subDay()])->save();
+        Order::create([
+            'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
+            'order_number' => 'TREND-TODAY', 'status' => 'paid', 'payment_status' => 'paid',
+            'grand_total' => 150000, 'created_at' => now(),
+        ]);
+
+        app(InsightService::class)->refresh($owner->business);
+
+        $this->assertDatabaseHas('business_insights', [
+            'business_id' => $owner->business_id, 'type' => 'sales_trend', 'severity' => 'positive',
         ]);
     }
 

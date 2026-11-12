@@ -44,8 +44,8 @@ class InsightService
     {
         $today = $this->revenue($b, now()->startOfDay(), now());
         $previous = $this->revenue($b, now()->subDay()->startOfDay(), now()->subDay());
-        if ($previous < 1 || $today['orders'] < 1) return [];
-        $delta = round(($today['revenue'] - $previous) / $previous * 100);
+        if ($previous['revenue'] < 1 || $today['orders'] < 1) return [];
+        $delta = round(($today['revenue'] - $previous['revenue']) / $previous['revenue'] * 100);
         if (abs($delta) < 10) return [];
         $down = $delta < 0;
 
@@ -54,7 +54,7 @@ class InsightService
             'severity' => $down ? 'warning' : 'positive',
             'title' => $down ? 'Omzet hari ini menurun' : 'Omzet hari ini bertumbuh',
             'summary' => 'Omzet '.($down ? 'turun ' : 'naik ').abs($delta).'% dibanding waktu yang sama kemarin.',
-            'data' => ['current' => $today['revenue'], 'previous' => $previous, 'change_percent' => $delta],
+            'data' => ['current' => $today['revenue'], 'previous' => $previous['revenue'], 'change_percent' => $delta],
             'action_label' => 'Buka laporan', 'action_route' => 'reports.sales',
         ]];
     }
