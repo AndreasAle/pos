@@ -60,3 +60,21 @@ main div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .page .fade-up { opacity: 1; transform: none }
     .page .line-draw { stroke-dashoffset: 0 }
 }
+
+/* Y-REPORT: pola bersama halaman laporan & keuangan. Pakai class "y-report" pada pembungkus halaman. */
+.y-report { color: #0B1B3F; font-size: 14px; }
+.y-report table { border-collapse: collapse; }
+.y-report thead th { background: #F8FAFC; color: #64748B; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.y-report tbody tr { transition: background-color .12s; }
+.y-report tbody tr:hover { background: rgb(236 253 243 / .55); }
+.y-report tbody tr:has(> td[colspan]):hover { background: transparent; }
+.y-report .tabular-nums, .y-report td.text-right, .y-report th.text-right { font-variant-numeric: tabular-nums; }
+.y-report input:not([type=checkbox]):not([type=radio]), .y-report select, .y-report textarea {
+    border: 1px solid #E5E7EB; border-radius: .5rem; background: #fff; color: #0B1B3F; font-size: 14px; }
+.y-report input:not([type=checkbox]):not([type=radio]):focus, .y-report select:focus, .y-report textarea:focus {
+    outline: none; border-color: #16A34A; box-shadow: 0 0 0 3px rgb(22 163 74 / .18); }
+.y-report input[type=checkbox] { accent-color: #16A34A; }
+.y-report .y-scroll { scrollbar-width: none; }
+.y-report .y-scroll::-webkit-scrollbar { display: none; }
+.y-report .overflow-x-auto, .y-report .overflow-auto, .y-report section { position: relative; } /* agar teks sr-only di dalam tabel lebar ikut terpotong, tidak melebarkan halaman */
+

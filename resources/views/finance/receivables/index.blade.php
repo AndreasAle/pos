@@ -1,17 +1,49 @@
 @extends('layouts.app')
 @section('title', 'Piutang')
 @section('page-title', 'Piutang Usaha')
+@section('page-subtitle', 'Uang yang masih harus diterima dari pelanggan atau pihak lain, beserta umur tagihannya.')
 @section('content')
 @php $rp = fn ($v) => \App\Support\Money::rp($v); $void = request('status') === 'void'; @endphp
-<div class="text-[14px] text-gray-800">
+<div class="y-report">
 @include('finance._flash')
-@include('finance._aging', ['aging' => $aging, 'labels' => $labels, 'title' => 'Umur piutang'])
-<section class="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white" aria-labelledby="rl">
-    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3"><h2 id="rl" class="text-sm font-semibold">{{ $void ? 'Piutang dibatalkan' : 'Daftar piutang' }}</h2>
-        <div class="flex gap-2"><a href="{{ route('receivables.index', $void ? [] : ['status' => 'void']) }}" class="inline-flex h-9 items-center rounded-lg border border-gray-300 px-3 text-sm font-semibold text-gray-700 hover:border-[#0C7856]">{{ $void ? 'Lihat aktif' : 'Lihat dibatalkan' }}</a><a href="{{ route('receivables.create') }}" class="inline-flex h-9 items-center rounded-lg bg-[#0C7856] px-3 text-sm font-semibold text-white hover:bg-[#0a6a4c]">Catat piutang</a></div></div>
-    <div class="overflow-x-auto"><table class="w-full min-w-[720px] text-sm"><thead class="bg-gray-50 text-xs font-semibold text-gray-500"><tr><th scope="col" class="px-4 py-2.5 text-left">No.</th><th scope="col" class="px-4 py-2.5 text-left">Pihak</th><th scope="col" class="px-4 py-2.5 text-left">Terbit</th><th scope="col" class="px-4 py-2.5 text-left">Jatuh tempo</th><th scope="col" class="px-4 py-2.5 text-right">Jumlah</th><th scope="col" class="px-4 py-2.5 text-right">Sisa</th></tr></thead>
-    <tbody class="divide-y divide-gray-100">@forelse($receivables as $r)<tr><td class="px-4 py-2.5"><a href="{{ route('receivables.show', $r) }}" class="font-semibold text-[#0C7856] hover:underline">{{ $r->receivable_number }}</a></td><td class="px-4 py-2.5">{{ $r->party_name }}</td><td class="px-4 py-2.5">{{ $r->issue_date->format('d M Y') }}</td><td class="px-4 py-2.5">{{ $r->due_date?->format('d M Y') ?? '-' }}</td><td class="px-4 py-2.5 text-right tabular-nums">{{ $rp((float) $r->amount) }}</td><td class="px-4 py-2.5 text-right font-semibold tabular-nums">{{ $rp($r->outstanding) }}</td></tr>@empty<tr><td colspan="6" class="px-4 py-10 text-center text-gray-500">Belum ada piutang.</td></tr>@endforelse</tbody></table></div>
-    <div class="border-t border-gray-100 px-4 py-3">{{ $receivables->links() }}</div>
-</section>
-<p class="mt-2 text-xs text-gray-500">Piutang dicatat manual. Kasir POS belum mendukung penjualan kredit, jadi tidak ada piutang otomatis dari transaksi.</p></div>
+@include('finance._aging', ['aging' => $aging, 'labels' => $labels, 'title' => 'Umur piutang', 'noun' => 'Piutang'])
+
+<x-panel class="mt-4" flush :title="$void ? 'Piutang dibatalkan' : 'Daftar piutang'" :sub="$void ? 'Dokumen yang dibatalkan tidak dihitung pada ringkasan di atas.' : 'Piutang aktif, terbaru di atas.'">
+    <x-slot:actions>
+        <a href="{{ route('receivables.index', $void ? [] : ['status' => 'void']) }}" class="inline-flex h-10 items-center rounded-lg border border-[#E5E7EB] bg-white px-4 text-sm font-semibold hover:border-[#16A34A] hover:text-[#15803D]">{{ $void ? 'Lihat aktif' : 'Lihat dibatalkan' }}</a>
+        <a href="{{ route('receivables.create') }}" class="inline-flex h-10 items-center rounded-lg bg-[#16A34A] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#15803D]">Catat piutang</a>
+    </x-slot:actions>
+    @if($receivables->count())
+    <div class="overflow-x-auto">
+        <table class="w-full min-w-[780px] text-sm">
+            <thead><tr><th scope="col" class="px-5 py-3 text-left">No.</th><th scope="col" class="px-5 py-3 text-left">Pihak</th><th scope="col" class="px-5 py-3 text-left">Terbit</th><th scope="col" class="px-5 py-3 text-left">Jatuh tempo</th><th scope="col" class="px-5 py-3 text-right">Jumlah</th><th scope="col" class="px-5 py-3 text-right">Sisa</th><th scope="col" class="px-5 py-3 text-left">Status</th></tr></thead>
+            <tbody class="divide-y divide-[#E5E7EB]">
+            @foreach($receivables as $r)
+                @php
+                    $late = ! $void && $r->due_date && $r->due_date->endOfDay()->isPast() && $r->outstanding > 0;
+                    $lateDays = $late ? (int) $r->due_date->startOfDay()->diffInDays(now()->startOfDay()) : 0;
+                    $pay = ['unpaid' => ['red', 'Belum dibayar'], 'partial' => ['amber', 'Sebagian'], 'paid' => ['green', 'Lunas']][$r->payment_status] ?? ['gray', '-'];
+                @endphp
+                <tr class="cursor-pointer" onclick="window.location='{{ route('receivables.show', $r) }}'">
+                    <td class="px-5 py-3.5"><a href="{{ route('receivables.show', $r) }}" class="font-mono text-[13px] font-semibold text-[#16A34A] hover:underline">{{ $r->receivable_number }}</a></td>
+                    <td class="px-5 py-3.5"><span class="font-medium">{{ $r->party_name }}</span>@if($r->description)<span class="block text-xs text-[#64748B]">{{ \Illuminate\Support\Str::limit($r->description, 48) }}</span>@endif</td>
+                    <td class="px-5 py-3.5 whitespace-nowrap text-[#475569]">{{ $r->issue_date->format('d M Y') }}</td>
+                    <td class="px-5 py-3.5 whitespace-nowrap">{{ $r->due_date?->format('d M Y') ?? '-' }}@if($late)<x-pill tone="red" class="ml-1.5">Lewat {{ $lateDays }} hari</x-pill>@endif</td>
+                    <td class="px-5 py-3.5 text-right tabular-nums">{{ $rp((float) $r->amount) }}</td>
+                    <td class="px-5 py-3.5 text-right font-bold tabular-nums">{{ $rp($r->outstanding) }}</td>
+                    <td class="px-5 py-3.5">@if($void)<x-pill>Dibatalkan</x-pill>@else<x-pill :tone="$pay[0]">{{ $pay[1] }}</x-pill>@endif</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    </div>
+    <div class="border-t border-[#E5E7EB] px-5 py-3">{{ $receivables->links() }}</div>
+    @else
+        <x-empty :title="$void ? 'Tidak ada piutang yang dibatalkan' : 'Belum ada piutang'" text="Catat uang yang belum diterima, misalnya pesanan katering atau titipan. Piutang yang jatuh tempo akan ditandai otomatis." icon="M12 8c-1.7 0-3 .9-3 2s1.3 2 3 2 3 .9 3 2-1.3 2-3 2m0-8V6m0 12v-2m9-6a9 9 0 11-18 0 9 9 0 0118 0z">
+            @unless($void)<a href="{{ route('receivables.create') }}" class="inline-flex h-10 items-center rounded-lg bg-[#16A34A] px-4 text-sm font-semibold text-white hover:bg-[#15803D]">Catat piutang</a>@endunless
+        </x-empty>
+    @endif
+</x-panel>
+<p class="mt-3 text-xs text-[#64748B]">Piutang dicatat manual. Kasir POS belum mendukung penjualan kredit, jadi tidak ada piutang otomatis dari transaksi.</p>
+</div>
 @endsection

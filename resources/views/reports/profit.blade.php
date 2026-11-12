@@ -1,163 +1,92 @@
 ﻿@extends('layouts.app')
-@section('title','Laporan Estimasi Profit')
-@section('page-title','Laporan Estimasi Profit')
+@section('title','Estimasi Profit')
+@section('page-title','Estimasi Profit')
+@section('page-subtitle','Omzet dikurangi harga pokok penjualan (HPP) per hari, untuk melihat margin kotor dengan cepat.')
 
 @push('styles')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 @endpush
 
 @section('content')
+@php $rp = fn ($v) => 'Rp ' . number_format((float) $v, 0, ',', '.'); @endphp
+<div class="y-report">
 @include('reports._nav')
+@include('reports._filter', ['outlets' => $outlets, 'f' => $f, 'exports' => [['label' => 'PDF', 'url' => route('reports.profit.pdf', request()->query())]]])
 
-<div class="flex items-center justify-end gap-2 mb-4">
-    <a href="{{ route('reports.profit.pdf', request()->query()) }}"
-       class="inline-flex items-center gap-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 px-4 py-2 rounded-xl transition-colors">
-        📄 Download PDF
-    </a>
+<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <x-kpi label="Omzet" :value="$rp($totalRevenue)" sub="Penjualan lunas" tone="brand"/>
+    <x-kpi label="HPP" :value="$rp($totalCogs)" sub="Harga pokok barang terjual"/>
+    <x-kpi label="Estimasi profit" :value="$rp($totalProfit)" sub="Omzet dikurangi HPP" :tone="$totalProfit < 0 ? 'danger' : 'default'"/>
+    <x-kpi label="Margin kotor" :value="number_format($margin, 1, ',', '.').'%'" sub="Profit / omzet"/>
 </div>
 
-@include('reports._filter', ['outlets' => $outlets, 'f' => $f])
-
-{{-- Summary --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
-    <x-stat-card label="Total Revenue" value="Rp {{ number_format($totalRevenue,0,',','.') }}" color="emerald"/>
-    <x-stat-card label="Total HPP (COGS)" value="Rp {{ number_format($totalCogs,0,',','.') }}" color="orange"/>
-    <x-stat-card label="Estimasi Profit" value="Rp {{ number_format($totalProfit,0,',','.') }}" color="blue"/>
-    <x-stat-card label="Margin Kotor" value="{{ number_format($margin,1) }}%" color="purple"/>
+<div class="mt-4 flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+    <svg class="mt-0.5 h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    <p>Profit dihitung dari <b>harga modal</b> yang diisi pada produk, sehingga bukan laba bersih. Untuk akurasi lebih baik, isi resep dan bahan baku. Biaya operasional bisa dilihat di <a href="{{ route('reports.profit-loss') }}" class="font-semibold underline">Laporan Laba Rugi</a>.</p>
 </div>
 
-<div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-5 text-sm text-blue-700">
-    <strong>Catatan:</strong> Profit dihitung berdasarkan <em>harga modal</em> yang diinput pada produk. Untuk akurasi lebih baik, gunakan fitur <strong>Resep + Bahan Baku</strong>.
-</div>
-
-<div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
-    {{-- Chart --}}
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-        <h3 class="text-sm font-semibold text-gray-900 mb-4">Grafik Revenue vs COGS Harian</h3>
+<div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <x-panel title="Omzet, HPP, dan profit harian" sub="Titik ungu menandai profit; merah bila rugi.">
         @if(count($rows))
-        <div style="position:relative;height:300px;width:100%;"><canvas id="profitChart"></canvas></div>
+        <div class="relative h-80 w-full"><canvas id="profitChart"></canvas></div>
         @else
-        <p class="text-sm text-gray-400 text-center py-16">Tidak ada data</p>
+        <x-empty title="Belum ada data" text="Grafik muncul setelah ada penjualan pada periode ini." icon="M3 17l6-6 4 4 8-8M14 7h7v7"/>
         @endif
-    </div>
+    </x-panel>
 
-    {{-- Daily breakdown table --}}
-    <x-card title="Breakdown Harian" :padding="false">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="bg-gray-50 border-b border-gray-100">
-                    <th class="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Tanggal</th>
-                    <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Revenue</th>
-                    <th class="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">HPP</th>
-                    <th class="text-right px-5 py-3 text-xs font-semibold text-gray-500 uppercase">Profit</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-50">
-                @forelse($rows as $row)
-                @php $profit = $row->revenue - $row->cogs; @endphp
-                <tr class="hover:bg-gray-50/50">
-                    <td class="px-5 py-3 text-gray-700">{{ \Carbon\Carbon::parse($row->date)->format('d M Y') }}</td>
-                    <td class="px-3 py-3 text-right text-emerald-700 font-semibold">Rp {{ number_format($row->revenue,0,',','.') }}</td>
-                    <td class="px-3 py-3 text-right text-orange-600">Rp {{ number_format($row->cogs,0,',','.') }}</td>
-                    <td class="px-5 py-3 text-right font-bold {{ $profit >= 0 ? 'text-blue-700' : 'text-red-600' }}">
-                        Rp {{ number_format($profit,0,',','.') }}
-                    </td>
-                </tr>
-                @empty
-                <tr><td colspan="4" class="px-5 py-10 text-center text-sm text-gray-400">Tidak ada data</td></tr>
-                @endforelse
-            </tbody>
-            @if(count($rows))
-            <tfoot>
-                <tr class="bg-gray-50 border-t border-gray-200 font-bold">
-                    <td class="px-5 py-3 text-sm">TOTAL</td>
-                    <td class="px-3 py-3 text-right text-sm text-emerald-700">Rp {{ number_format($totalRevenue,0,',','.') }}</td>
-                    <td class="px-3 py-3 text-right text-sm text-orange-600">Rp {{ number_format($totalCogs,0,',','.') }}</td>
-                    <td class="px-5 py-3 text-right text-sm text-blue-700">Rp {{ number_format($totalProfit,0,',','.') }}</td>
-                </tr>
-            </tfoot>
-            @endif
-        </table>
-    </x-card>
+    <x-panel flush title="Rincian harian" :sub="count($rows).' hari'">
+        @if(count($rows))
+        <div class="max-h-[420px] overflow-auto">
+            <table class="w-full min-w-[460px] text-sm">
+                <thead class="sticky top-0"><tr><th class="px-5 py-3 text-left">Tanggal</th><th class="px-3 py-3 text-right">Omzet</th><th class="px-3 py-3 text-right">HPP</th><th class="px-5 py-3 text-right">Profit</th></tr></thead>
+                <tbody class="divide-y divide-[#E5E7EB]">
+                @foreach($rows as $row)
+                    @php $profit = $row->revenue - $row->cogs; @endphp
+                    <tr>
+                        <td class="px-5 py-3 whitespace-nowrap">{{ \Carbon\Carbon::parse($row->date)->locale('id')->isoFormat('ddd, D MMM Y') }}</td>
+                        <td class="px-3 py-3 text-right font-semibold tabular-nums">{{ $rp($row->revenue) }}</td>
+                        <td class="px-3 py-3 text-right tabular-nums text-[#475569]">{{ $rp($row->cogs) }}</td>
+                        <td class="px-5 py-3 text-right font-bold tabular-nums {{ $profit >= 0 ? 'text-[#16A34A]' : 'text-red-600' }}">{{ $rp($profit) }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+                <tfoot class="sticky bottom-0"><tr class="border-t-2 border-[#16A34A]/30 bg-[#ECFDF3] font-bold"><td class="px-5 py-3">Total</td><td class="px-3 py-3 text-right tabular-nums">{{ $rp($totalRevenue) }}</td><td class="px-3 py-3 text-right tabular-nums">{{ $rp($totalCogs) }}</td><td class="px-5 py-3 text-right tabular-nums">{{ $rp($totalProfit) }}</td></tr></tfoot>
+            </table>
+        </div>
+        @else
+            <x-empty title="Belum ada data" text="Ubah rentang tanggal atau outlet untuk melihat rincian harian."/>
+        @endif
+    </x-panel>
 </div>
 
 <script type="application/json" id="profit-rows">{!! json_encode($rows) !!}</script>
+</div>
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const profitEl  = document.getElementById('profitChart');
-    const profitRaw = document.getElementById('profit-rows');
-    if (!profitEl || !profitRaw) return;
-
-    const rows = JSON.parse(profitRaw.textContent);
+document.addEventListener('DOMContentLoaded', function () {
+    const el = document.getElementById('profitChart'), raw = document.getElementById('profit-rows');
+    if (!el || !raw || !window.Chart) return;
+    const rows = JSON.parse(raw.textContent);
     if (!rows.length) return;
-
-    const labels  = rows.map(r => new Date(r.date).toLocaleDateString('id-ID', {day:'2-digit', month:'short'}));
-    const revenue = rows.map(r => parseFloat(r.revenue) || 0);
-    const cogs    = rows.map(r => parseFloat(r.cogs)    || 0);
-    const profit  = rows.map((r,i) => revenue[i] - cogs[i]);
-
-    new Chart(profitEl, {
-        data: {
-            labels,
-            datasets: [
-                { type:'bar', label:'Revenue', data: revenue,
-                  backgroundColor: 'rgba(16,185,129,0.4)',
-                  borderColor: 'rgb(16,185,129)', borderWidth:1.5,
-                  borderRadius:6, borderSkipped:false, order:2 },
-                { type:'bar', label:'HPP (COGS)', data: cogs,
-                  backgroundColor: 'rgba(245,158,11,0.35)',
-                  borderColor: 'rgb(245,158,11)', borderWidth:1.5,
-                  borderRadius:6, borderSkipped:false, order:3 },
-                { type:'line', label:'Profit', data: profit,
-                  borderColor: 'rgb(99,102,241)',
-                  backgroundColor: 'rgba(99,102,241,0.08)',
-                  borderWidth: 2.5,
-                  pointRadius: 5,
-                  pointBackgroundColor: profit.map(v => v >= 0 ? 'rgb(99,102,241)' : '#ef4444'),
-                  pointBorderColor: '#fff',
-                  pointBorderWidth: 2,
-                  fill: false,
-                  tension: 0.4,
-                  order: 1 }
-            ]
-        },
+    const labels = rows.map(r => new Date(r.date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }));
+    const revenue = rows.map(r => parseFloat(r.revenue) || 0), cogs = rows.map(r => parseFloat(r.cogs) || 0), profit = rows.map((r, i) => revenue[i] - cogs[i]);
+    new Chart(el, {
+        data: { labels, datasets: [
+            { type: 'bar', label: 'Omzet', data: revenue, backgroundColor: 'rgba(22,163,74,.55)', borderRadius: 4, order: 2 },
+            { type: 'bar', label: 'HPP', data: cogs, backgroundColor: 'rgba(245,158,11,.5)', borderRadius: 4, order: 3 },
+            { type: 'line', label: 'Profit', data: profit, borderColor: '#6366F1', borderWidth: 2.5, tension: .35, fill: false, order: 1,
+              pointRadius: 4, pointBackgroundColor: profit.map(v => v >= 0 ? '#6366F1' : '#EF4444'), pointBorderColor: '#fff', pointBorderWidth: 2 }
+        ] },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode:'index', intersect:false },
-            plugins: {
-                legend: {
-                    position: 'top',
-                    labels: { font:{size:11}, usePointStyle:true, pointStyle:'rectRounded' }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(17,24,39,0.92)', padding:10,
-                    callbacks: {
-                        label(c) {
-                            const val = 'Rp ' + Intl.NumberFormat('id').format(Math.abs(c.raw));
-                            if (c.dataset.label === 'Profit') {
-                                return '  ' + c.dataset.label + ': ' + (c.raw < 0 ? '-' : '') + val;
-                            }
-                            return '  ' + c.dataset.label + ': ' + val;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: { beginAtZero:true, grid:{color:'#f3f4f6'},
-                     ticks:{ font:{size:10}, maxTicksLimit:6, callback(v){
-                         if(v>=1000000) return 'Rp '+(v/1000000).toFixed(1)+'jt';
-                         if(v>=1000)    return 'Rp '+(v/1000).toFixed(0)+'rb';
-                         return v===0?'0':'Rp '+v;
-                     }}},
-                x: { grid:{display:false}, ticks:{font:{size:10}, maxRotation:0} }
-            }
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top', labels: { font: { size: 12 }, usePointStyle: true, pointStyle: 'rectRounded' } },
+                tooltip: { backgroundColor: '#0B1B3F', padding: 10, cornerRadius: 8, callbacks: { label: c => '  ' + c.dataset.label + ': ' + (c.raw < 0 ? '-' : '') + 'Rp ' + Intl.NumberFormat('id').format(Math.abs(c.raw)) } } },
+            scales: { y: { beginAtZero: true, grid: { color: '#EEF2F6' }, ticks: { font: { size: 12 }, color: '#64748B', maxTicksLimit: 6, callback: v => v >= 1e6 ? 'Rp ' + (v / 1e6).toFixed(1) + ' jt' : v >= 1e3 ? 'Rp ' + (v / 1e3).toFixed(0) + ' rb' : (v === 0 ? '0' : 'Rp ' + v) } },
+                x: { grid: { display: false }, ticks: { font: { size: 12 }, color: '#64748B', maxRotation: 0, autoSkip: true } } }
         }
     });
 });
 </script>
 @endpush
-

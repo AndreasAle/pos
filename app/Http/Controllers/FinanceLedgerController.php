@@ -115,14 +115,14 @@ class FinanceLedgerController extends Controller
 
     public function suppliers()
     {
-        return view('finance.suppliers', ['suppliers' => Supplier::where('business_id', $this->biz())->withCount('purchases')->orderBy('name')->get(), 'edit' => null]);
+        return view('finance.suppliers', ['suppliers' => $this->suppliersWithTotals(), 'edit' => null]);
     }
 
     public function supplierEdit(Supplier $supplier)
     {
         abort_unless((int) $supplier->business_id === $this->biz(), 404);
 
-        return view('finance.suppliers', ['suppliers' => Supplier::where('business_id', $this->biz())->withCount('purchases')->orderBy('name')->get(), 'edit' => $supplier]);
+        return view('finance.suppliers', ['suppliers' => $this->suppliersWithTotals(), 'edit' => $supplier]);
     }
 
     public function supplierStore(Request $request, ?Supplier $supplier = null)
@@ -150,7 +150,11 @@ class FinanceLedgerController extends Controller
             ->when($request->filled('q'), fn ($b) => $b->where(fn ($w) => $w->where('purchase_number', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->query('q')).'%')->orWhere('supplier_invoice_no', 'like', '%'.str_replace(['%', '_'], ['\%', '\_'], $request->query('q')).'%')))
             ->orderByDesc('purchase_date')->orderByDesc('id');
 
-        return view('finance.purchases.index', ['purchases' => $q->paginate(25)->withQueryString(), 'suppliers' => Supplier::where('business_id', $this->biz())->orderBy('name')->get(['id', 'name'])]);
+        return view('finance.purchases.index', [
+            'purchases' => $q->paginate(25)->withQueryString(),
+            'suppliers' => Supplier::where('business_id', $this->biz())->orderBy('name')->get(['id', 'name']),
+            'stats'     => $this->purchaseStats(),
+        ]);
     }
 
     public function purchaseCreate()
@@ -250,5 +254,34 @@ class FinanceLedgerController extends Controller
         $this->ledger->voidReceivable($request->user(), $receivable, $d['reason']);
 
         return back()->with('success', 'Piutang dibatalkan.');
+    }
+
+    /** Daftar supplier lengkap dengan jumlah, total, dan nilai terbayar pembelian (tanpa yang dibatalkan). */
+    private function suppliersWithTotals()
+    {
+        $received = fn ($q) => $q->where('status', 'received');
+
+        return Supplier::where('business_id', $this->biz())
+            ->withCount('purchases')
+            ->withSum(['purchases as purchases_total' => $received], 'total')
+            ->withSum(['purchases as purchases_paid' => $received], 'paid_amount')
+            ->orderBy('name')->get();
+    }
+
+    /** Angka ringkas di atas daftar pembelian. */
+    private function purchaseStats(): array
+    {
+        $base = fn () => Purchase::where('business_id', $this->biz())->where('status', 'received');
+        $month = $base()->whereBetween('purchase_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()]);
+        $open = $base()->whereColumn('paid_amount', '<', 'total')->get(['total', 'paid_amount', 'due_date']);
+        $overdue = $open->filter(fn ($p) => $p->due_date && $p->due_date->endOfDay()->isPast());
+
+        return [
+            'month_total'    => (float) (clone $month)->sum('total'),
+            'month_count'    => (clone $month)->count(),
+            'outstanding'    => (float) $open->sum(fn ($p) => (float) $p->total - (float) $p->paid_amount),
+            'overdue_count'  => $overdue->count(),
+            'overdue_amount' => (float) $overdue->sum(fn ($p) => (float) $p->total - (float) $p->paid_amount),
+        ];
     }
 }

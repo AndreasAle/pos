@@ -327,7 +327,8 @@
         {{-- Page content --}}
         <main class="flex-1 min-w-0 px-4 sm:px-6 pb-8">
             @unless(request()->routeIs('dashboard', 'intelligence.index'))
-            <h1 class="pt-5 pb-1 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
+            <h1 class="pt-5 pb-0.5 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
+            @hasSection('page-subtitle')<p class="mb-3 text-sm text-[#64748B]">@yield('page-subtitle')</p>@endif
             @endunless
             @yield('content')
         </main>
