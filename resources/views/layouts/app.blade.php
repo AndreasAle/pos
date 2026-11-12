@@ -22,6 +22,10 @@
     }">
     <x-page-loader/>
 
+    @php
+        $hasTopSubscriptionBar = $currentBusiness?->activeSubscription?->status === 'trial';
+    @endphp
+
     @if(session('platform_impersonating') && auth('platform')->check())
         <div class="fixed bottom-4 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-4 border border-amber-300 bg-amber-50 px-5 py-3 shadow-xl">
             <div>
@@ -38,28 +42,28 @@
     {{-- Mobile sidebar backdrop --}}
     <div x-show="sidebarOpen" x-cloak
          @click="sidebarOpen = false"
-         class="fixed inset-x-0 bottom-0 top-14 z-30 bg-black/50 lg:hidden"></div>
+         class="fixed inset-x-0 bottom-0 z-30 bg-black/50 lg:hidden {{ $hasTopSubscriptionBar ? 'top-28' : 'top-16' }}"></div>
 
     {{-- Sidebar --}}
-    <aside class="fixed top-14 bottom-0 left-0 z-40 w-[260px] bg-white border-r border-[#E5E7EB] flex flex-col -translate-x-full lg:translate-x-0 transition-[width,transform] duration-200"
+    <aside class="fixed bottom-0 left-0 z-40 w-[260px] bg-white border-r border-[#E5E7EB] flex flex-col -translate-x-full lg:translate-x-0 transition-[width,transform] duration-200 {{ $hasTopSubscriptionBar ? 'top-28' : 'top-16' }}"
            :class="[sidebarOpen ? '!translate-x-0' : '', collapsed ? 'lg:w-[72px]' : 'lg:w-[260px]']">
 
         {{-- Business / outlet --}}
         @php $outletName = auth()->user()->outlet?->name ?? 'Semua Outlet'; @endphp
-        <div class="px-3 pt-3 pb-2 shrink-0" :class="collapsed ? 'lg:px-4' : ''">
-            <div class="flex items-center gap-3 rounded-xl border border-[#E5E7EB] px-2.5 h-11"
+        <div class="shrink-0 px-3 pb-2 pt-3" :class="collapsed ? 'lg:px-4' : ''">
+            <div class="flex h-12 items-center gap-3 rounded-lg border border-[#EAECF0] px-3"
                  :class="collapsed ? 'lg:justify-center lg:px-0 lg:h-10 lg:border-0' : ''"
                  @mouseenter="tipShow($event, @js(($currentBusiness->name ?? config('app.name')).' · '.$outletName))" @mouseleave="tipHide()">
-                <svg class="w-6 h-6 text-gray-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 21v-6h6v6"/></svg>
+                <svg class="h-5 w-5 shrink-0 text-[#667085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 21v-6h6v6"/></svg>
                 <div class="min-w-0 flex-1" :class="collapsed ? 'lg:hidden' : ''">
-                    <p class="text-[13px] font-bold text-gray-900 leading-tight truncate">{{ $currentBusiness->name ?? config('app.name') }}</p>
-                    <p class="text-xs text-gray-500 truncate">{{ $outletName }}</p>
+                    <p class="truncate text-[13px] font-medium leading-tight text-[#273244]">{{ $currentBusiness->name ?? config('app.name') }}</p>
+                    <p class="mt-0.5 truncate text-[12px] text-[#7C8698]">{{ $outletName }}</p>
                 </div>
             </div>
         </div>
 
         {{-- Navigation --}}
-        <nav class="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2 space-y-px [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" :class="collapsed ? 'lg:px-4' : ''">
+        <nav class="flex-1 space-y-0.5 overflow-y-auto overflow-x-hidden px-3 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" :class="collapsed ? 'lg:px-4' : ''">
             @php
                 $role     = auth()->user()->role;
                 $isRetail = (bool) auth()->user()->business?->isRetail();
@@ -165,27 +169,33 @@
         $activeShift = $me->activeShift()->first();
         $canSettings = in_array($me->role, ['owner','admin']);
     @endphp
-    <header class="fixed inset-x-0 top-0 z-50 h-14 bg-[#0A5C3A] border-b border-black/10 shadow-sm px-3 sm:px-6 flex items-center gap-3 sm:gap-4 text-white">
+
+    {{-- Status langganan berada paling atas, di atas header utama. --}}
+    @if($hasTopSubscriptionBar)
+        <x-subscription-status-bar :current-business="$currentBusiness" />
+    @endif
+
+    <header class="fixed inset-x-0 z-50 flex h-16 items-center gap-3 border-b border-white/10 bg-[#0A5C3A] px-3 text-white shadow-[0_1px_0_rgba(15,23,42,.08)] sm:gap-5 sm:px-5 {{ $hasTopSubscriptionBar ? 'top-12' : 'top-0' }}">
         {{-- Brand --}}
-        <div class="flex items-center gap-2 shrink-0 lg:w-[228px] lg:justify-between">
-            <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-white/10" aria-label="Menu">
+        <div class="flex shrink-0 items-center gap-2 lg:w-[235px] lg:justify-between">
+            <button @click="sidebarOpen = !sidebarOpen" class="-ml-2 rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white lg:hidden" aria-label="Menu">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
             <div class="flex items-center gap-2">
             <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5" aria-label="Yoka POS">
-                <span class="w-8 h-8 rounded-lg bg-white flex items-center justify-center"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="w-6 h-6 object-contain"></span>
-                <span class="hidden sm:inline text-base font-semibold leading-6">Yoka POS</span>
+                <span class="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white shadow-sm"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="h-7 w-7 object-contain"></span>
+                <span class="hidden text-[15px] font-semibold tracking-[-.01em] sm:inline">Yoka POS</span>
             </a>
             </div>
-            <button @click="toggle()" class="hidden lg:inline-flex p-2 -mr-2 rounded-lg text-white/75 hover:bg-white/10 hover:text-white shrink-0" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
+            <button @click="toggle()" class="-mr-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/65 transition hover:bg-white/10 hover:text-white lg:inline-flex" :aria-label="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'" :title="collapsed ? 'Perluas sidebar' : 'Ciutkan sidebar'">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h10M4 18h16"/></svg>
         </button>
         </div>
 
 
         {{-- Pencarian global (menu & laporan) --}}
-        <div class="group relative flex-1 min-w-0 max-w-xl"
-             :class="mob ? 'max-sm:!fixed max-sm:inset-x-0 max-sm:top-0 max-sm:h-14 max-sm:z-[60] max-sm:bg-[#0A5C3A] max-sm:px-3 max-sm:flex max-sm:items-center max-sm:!max-w-none' : 'max-sm:hidden'"
+        <div class="group relative min-w-0 max-w-[690px] flex-1"
+             :class="mob ? 'max-sm:!fixed max-sm:inset-x-0 {{ $hasTopSubscriptionBar ? 'max-sm:top-12' : 'max-sm:top-0' }} max-sm:h-16 max-sm:z-[60] max-sm:bg-[#0A5C3A] max-sm:px-3 max-sm:flex max-sm:items-center max-sm:!max-w-none' : 'max-sm:hidden'"
              @open-search.window="mob = true; $nextTick(() => $refs.q.focus())"
              x-data="{
                 q: '', open: false, sel: 0, items: [], mob: false,
@@ -193,14 +203,14 @@
                 get results() { const t = this.q.trim().toLowerCase(); return t ? this.items.filter(i => i.label.toLowerCase().includes(t)).slice(0, 8) : [] },
                 go() { const r = this.results[this.sel]; if (r) window.location = r.href }
              }" @click.outside="open = false" @keydown.window="if ($event.key === '/' && !['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) { $event.preventDefault(); $refs.q.focus() }">
-            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-white/60 group-focus-within:text-[#0A5C3A] transition-colors pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
+            <svg class="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-white/55 transition-colors group-focus-within:text-[#0A5C3A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.65"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
             <input x-ref="q" type="text" x-model="q" autocomplete="off"
                    @focus="load(); open = true" @input="sel = 0; open = true"
                    @keydown.arrow-down.prevent="sel = Math.min(sel + 1, results.length - 1)" @keydown.arrow-up.prevent="sel = Math.max(sel - 1, 0)"
                    @keydown.enter.prevent="go()" @keydown.escape="open = false; mob = false; $refs.q.blur()"
                    placeholder="Cari menu, produk, atau laporan..."
-                   class="w-full h-10 pl-10 pr-12 rounded-xl bg-black/20 text-sm font-normal text-white placeholder:text-white/60 border border-white/10 shadow-inner transition-all duration-200 hover:bg-black/25 focus:outline-none focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-400 focus:border-white focus:ring-4 focus:ring-white/20">
-            <kbd class="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-md border border-white/20 bg-white/10 text-[12px] font-semibold text-white/70 pointer-events-none group-focus-within:hidden">/</kbd>
+                   class="h-10 w-full rounded-lg border border-white/10 bg-[#074E34] pl-10 pr-12 text-sm font-normal text-white shadow-inner shadow-black/5 transition-all duration-200 placeholder:text-white/55 hover:border-white/20 hover:bg-[#06482F] focus:border-white focus:bg-white focus:text-gray-900 focus:outline-none focus:ring-4 focus:ring-white/15 focus:placeholder:text-gray-400">
+            <kbd class="pointer-events-none absolute right-3 top-1/2 hidden h-5 min-w-[20px] -translate-y-1/2 items-center justify-center rounded border border-white/20 bg-white/10 px-1.5 text-[12px] font-medium text-white/65 group-focus-within:hidden sm:inline-flex">/</kbd>
             <button type="button" x-show="mob" x-cloak @click="mob = false; open = false; q = ''" class="sm:hidden ml-2 px-2 h-9 text-sm font-semibold text-white/90 shrink-0">Batal</button>
             <div x-show="open && q.trim()" x-cloak class="absolute left-3 right-3 sm:left-0 sm:right-0 top-full mt-1 sm:mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
                 <template x-for="(r, i) in results" :key="r.href">
@@ -210,7 +220,7 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-4 shrink-0 ml-auto">
+        <div class="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2.5">
             <button type="button" @click="$dispatch('open-search')" class="sm:hidden w-10 h-10 rounded-lg flex items-center justify-center text-white hover:bg-white/10" aria-label="Cari">
                 <svg class="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z"/></svg>
             </button>
@@ -222,8 +232,8 @@
 
             {{-- Notifikasi --}}
             <div class="relative max-sm:hidden" x-data="{ n: false }" @click.outside="n = false" @keydown.escape.window="n = false">
-                <button @click="n = !n" class="w-10 h-10 rounded-lg flex items-center justify-center text-white hover:bg-white/10 transition-colors" :class="n ? 'bg-white/10' : ''" aria-label="Notifikasi">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
+                <button @click="n = !n" class="flex h-9 w-9 items-center justify-center rounded-lg text-white/75 transition-colors hover:bg-white/10 hover:text-white" :class="n ? 'bg-white/10' : ''" aria-label="Notifikasi">
+                    <svg class="h-[21px] w-[21px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.65"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>
                 </button>
                 <div x-show="n" x-cloak x-transition.opacity.duration.100ms class="absolute right-0 mt-2 w-72 rounded-lg bg-white text-gray-800 border border-[#E5E7EB] shadow-xl z-50">
                     <p class="px-4 py-3 text-sm font-semibold border-b border-[#E5E7EB]">Notifikasi</p>
@@ -231,15 +241,15 @@
                 </div>
             </div>
 
-            <span class="hidden sm:block w-px h-6 bg-white/25"></span>
+            <span class="mx-1 hidden h-7 w-px bg-white/20 sm:block"></span>
 
             {{-- Profil --}}
             <div class="relative" x-data="{ menu: false }" @click.outside="menu = false" @keydown.escape.window="menu = false">
-                <button @click="menu = !menu" class="flex items-center gap-3 h-10 pl-1 pr-2 max-sm:pr-1 rounded-lg hover:bg-white/10 transition-colors" :class="menu ? 'bg-white/10' : ''" aria-label="Menu akun" :aria-expanded="menu">
-                    <span class="w-8 h-8 rounded-full bg-emerald-100 text-[#0B8F5B] flex items-center justify-center text-sm font-bold">{{ strtoupper(substr($me->name, 0, 1)) }}</span>
-                    <span class="hidden md:block text-left leading-tight max-w-[150px]">
-                        <span class="block text-sm font-semibold truncate">{{ $me->name }}</span>
-                        <span class="block text-xs text-white/75 capitalize">{{ $me->role }}</span>
+                <button @click="menu = !menu" class="flex h-11 items-center gap-2.5 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-white/10 max-sm:pr-1" :class="menu ? 'bg-white/10' : ''" aria-label="Menu akun" :aria-expanded="menu">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-[#DDF8E8] text-sm font-semibold text-[#087A4E] ring-1 ring-white/20">{{ strtoupper(substr($me->name, 0, 1)) }}</span>
+                    <span class="hidden max-w-[155px] text-left leading-tight md:block">
+                        <span class="block truncate text-[13px] font-semibold">{{ $me->name }}</span>
+                        <span class="mt-0.5 block text-[12px] capitalize text-white/65">{{ $me->role }}</span>
                     </span>
                     <svg class="max-sm:hidden w-4 h-4 text-white/75 transition-transform" :class="menu ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </button>
@@ -270,10 +280,7 @@
     </header>
 
     {{-- Main content --}}
-    <div class="transition-all duration-200 flex flex-col min-h-screen min-w-0 overflow-x-clip pt-14" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
-
-        {{-- Masa aktif selalu terlihat; tidak ikut dimatikan oleh modul pembayaran. --}}
-        <x-subscription-status-bar :current-business="$currentBusiness" />
+    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $hasTopSubscriptionBar ? 'pt-28' : 'pt-16' }}" :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'">
 
         {{-- Flash messages --}}
         <div class="px-4 sm:px-6 @if(session('success') || session('error') || session('info') || $errors->any()) pt-4 @endif">

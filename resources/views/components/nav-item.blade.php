@@ -31,7 +31,7 @@ $icons = [
     'receipt-percent'    => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/>',
     'credit-card'        => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>',
 ];
-$path = $icons[$icon] ?? $icons['home'];
+$path = str_replace('stroke-width="2"', 'stroke-width="1.6"', $icons[$icon] ?? $icons['home']);
 @endphp
 
 @php $label = trim(strip_tags((string) $slot)); @endphp
@@ -39,10 +39,10 @@ $path = $icons[$icon] ?? $icons['home'];
    {{ $attributes }}
    @mouseenter="tipShow($event, @js($label))" @mouseleave="tipHide()" @focus="tipShow($event, @js($label))" @blur="tipHide()"
    @if($active) aria-current="page" @endif
-   class="flex items-center gap-2 h-8 px-2.5 rounded-md text-[13px] font-semibold transition-colors
-          {{ $active ? 'bg-[#E8F7EF] text-[#0B8F5B]' : 'text-gray-800 hover:bg-[#F4F6F8] hover:text-gray-900' }}"
+   class="group flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] leading-none transition-colors duration-150
+          {{ $active ? 'bg-[#E8F5ED] font-medium text-[#078052]' : 'font-normal text-[#273244] hover:bg-[#F4F6F7] hover:text-[#111827]' }}"
    :class="collapsed ? 'lg:justify-center lg:px-0' : ''">
-    <svg class="w-[18px] h-[18px] flex-shrink-0 {{ $active ? 'text-[#0B8F5B]' : 'text-gray-600' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75">
+    <svg class="h-5 w-5 flex-shrink-0 transition-colors {{ $active ? 'text-[#078F5C]' : 'text-[#667085] group-hover:text-[#4B5565]' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         {!! $path !!}
     </svg>
     <span class="truncate" :class="collapsed ? 'lg:hidden' : ''">{{ $slot }}</span>

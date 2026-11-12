@@ -12,7 +12,7 @@
     ])->values() ?? collect();
 @endphp
 
-<div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] {{ $hasTrialBanner ? 'h-[calc(100vh-98px)]' : 'h-[calc(100vh-54px)]' }} min-h-[620px] overflow-hidden"
+<div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] {{ $hasTrialBanner ? 'h-[calc(100vh-112px)]' : 'h-[calc(100vh-64px)]' }} min-h-[620px] overflow-hidden"
      x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages), @js($reportPrompt ?? null))">
     <div class="flex h-full min-w-0">
         {{-- Riwayat percakapan internal --}}
