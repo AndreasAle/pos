@@ -149,7 +149,7 @@ class Business extends Model
             return true;
         }
 
-        $defaults = ['daily' => true, 'alerts' => true];
+        $defaults = ['daily' => true, 'alerts' => true, 'weekly' => true];
 
         return (bool) ($this->telegram()['prefs'][$key] ?? $defaults[$key] ?? false);
     }

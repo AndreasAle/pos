@@ -131,4 +131,21 @@ class YokaAgentLlmTest extends TestCase
         $this->assertSame('Budi S.', $out['data']['customers'][0]['name']);
         $this->assertArrayNotHasKey('customer_id', $out['data']['customers'][0]);
     }
+
+    public function test_weekly_digest_goes_to_telegram_only_for_linked_businesses_that_want_it(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key', 'services.telegram.token' => 't:oken', 'services.telegram.bot_token' => 't:oken']);
+        $owner = $this->owner();
+        $biz = $owner->business;
+        $biz->setTelegram(['chat_id' => '123', 'chat_name' => 'x', 'linked_at' => now()->toIso8601String()]);
+        Http::fake([
+            '*/chat/completions' => Http::sequence()
+                ->push(['choices' => [['message' => ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'w1', 'type' => 'function', 'function' => ['name' => 'marketing_brief', 'arguments' => json_encode(['period' => 'this_week', 'outlet_ids' => null])]]]]]]])
+                ->push(['choices' => [['message' => ['content' => "**Minggu ini stabil.**\nAksi: promo jam sepi. SARAN: x"]]]]),
+            'api.telegram.org/*' => Http::response(['ok' => true]),
+        ]);
+        \App\Services\TelegramNotifier::weeklyDigest($biz->fresh());
+
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'api.telegram.org') && str_contains($r['text'] ?? '', 'Analisis mingguan') && ! str_contains($r['text'], '**'));
+    }
 }

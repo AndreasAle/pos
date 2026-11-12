@@ -37,6 +37,9 @@ Schedule::call(function () {
 Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::dailySummary($b)))
     ->dailyAt('21:00')->name('telegram-daily')->withoutOverlapping();
 
+Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::weeklyDigest($b)))
+    ->weeklyOn(1, '08:00')->name('telegram-weekly-ai')->withoutOverlapping();
+
 Schedule::call(fn () => TelegramNotifier::linkedBusinesses()->each(fn ($b) => TelegramNotifier::lowStock($b)))
     ->everySixHours()->name('telegram-low-stock')->withoutOverlapping();
 

@@ -34,6 +34,33 @@ class TelegramNotifier
         });
     }
 
+    /** Analisis mingguan dari Yoka AI (satu panggilan per bisnis per minggu, mengikuti anggaran harian AI). */
+    public static function weeklyDigest(Business $biz): void
+    {
+        if (! $biz->telegramWants('weekly') || ! app(\App\Services\Intelligence\YokaAgent::class)->enabled()) {
+            return;
+        }
+        self::guard(function () use ($biz) {
+            $owner = $biz->owner;
+            $key = 'yoka-ai-budget:'.$biz->id.':'.today()->toDateString();
+            \Illuminate\Support\Facades\Cache::add($key, 0, now()->endOfDay());
+            if (! $owner || \Illuminate\Support\Facades\Cache::increment($key) > config('services.yoka_ai.daily_request_budget', 250)) {
+                return;
+            }
+            $agent = app(\App\Services\Intelligence\YokaAgent::class);
+            $r = $agent->run($owner, 'Buat analisis mingguan bisnis saya: bandingkan minggu lalu dengan minggu sebelumnya (per hari), sebut 2 temuan terpenting dengan angka, lalu 3 aksi marketing/operasional prioritas minggu ini. Format TEKS BIASA untuk Telegram tanpa tabel dan tanpa markdown, maksimal 900 karakter.', [], collect(), false);
+            if (! $r || $r['refused'] || $r['answer'] === '') {
+                return;
+            }
+            $text = trim(preg_replace(['/\*\*|__|`|^#+\s*/mu', '/^\s*\|.*\|\s*$/mu'], '', $r['answer']));
+            self::deliver($biz, '🧠 <b>Analisis mingguan Yoka</b> · '.TelegramService::esc($biz->name)."
+
+".TelegramService::esc(\Illuminate\Support\Str::limit($text, 1500))."
+
+Tanya lanjut di yokapos.com/intelligence");
+        });
+    }
+
     /** Teks ringkasan; dipakai juga oleh perintah /ringkasan. */
     public static function summaryText(Business $biz, array $s, array $top, int $lowCount, string $title): string
     {
