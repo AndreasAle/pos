@@ -278,6 +278,28 @@
         </div>
     </section>
 
+    {{-- ================= BUMPER (video penuh lebar, tanpa suara) ================= --}}
+    <section aria-label="Video perkenalan Yoka POS" class="relative w-full bg-[#0a5a3f]">
+        <video id="yoka-bumper" class="block w-full h-auto aspect-video object-cover"
+               autoplay muted loop playsinline preload="metadata" disablepictureinpicture controlslist="nodownload noplaybackrate"
+               poster="{{ asset('images/video/yoka-bumper-poster.jpg') }}" aria-hidden="true" tabindex="-1">
+            <source src="{{ asset('images/video/yoka-bumper.mp4') }}" type="video/mp4">
+        </video>
+        <script>
+            (function () {
+                var v = document.getElementById('yoka-bumper');
+                if (!v) return;
+                v.muted = true;
+                // Hormati pengguna yang meminta gerakan dikurangi: tampilkan poster saja.
+                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { v.removeAttribute('autoplay'); v.pause(); return; }
+                // Hemat baterai/data: berhenti saat di luar layar.
+                if ('IntersectionObserver' in window) {
+                    new IntersectionObserver(function (e) { e[0].isIntersecting ? v.play().catch(function () {}) : v.pause(); }, { threshold: 0.15 }).observe(v);
+                }
+            })();
+        </script>
+    </section>
+
     {{-- ================= TENTANG KAMI ================= --}}
     <section id="tentang" class="py-20 md:py-28 px-6 bg-white">
         <div class="max-w-[1100px] mx-auto grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
