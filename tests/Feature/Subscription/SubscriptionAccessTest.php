@@ -196,7 +196,7 @@ class SubscriptionAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Masa coba gratis')
             ->assertSee('hari tersisa')
-            ->assertSee('Hubungi Yoka');
+            ->assertSee('Pilih Paket');
     }
 
     // ── Role gate ────────────────────────────────────────────────────────────
@@ -217,6 +217,16 @@ class SubscriptionAccessTest extends TestCase
 
         $this->actingAs($this->cashier)
             ->post(route('saas.subscribe', $plan))
+            ->assertForbidden();
+    }
+
+    public function test_a_cashier_cannot_open_a_subscription_checkout(): void
+    {
+        $this->setUpPos();
+        $plan = SubscriptionPlan::first();
+
+        $this->actingAs($this->cashier)
+            ->post(route('saas.checkout'), ['plan_id' => $plan->id])
             ->assertForbidden();
     }
 }

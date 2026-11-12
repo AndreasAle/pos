@@ -10,6 +10,7 @@ use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class MidtransController extends Controller
 {
@@ -109,20 +110,48 @@ class MidtransController extends Controller
     /**
      * Create Midtrans Snap payment for subscription.
      */
-    public function createSubscriptionPayment(SubscriptionPlan $plan)
+    public function createSubscriptionPayment(Request $request)
     {
+        $validated = $request->validate([
+            'plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
+        ]);
+
+        $plan = SubscriptionPlan::query()
+            ->whereKey($validated['plan_id'])
+            ->where('is_active', true)
+            ->where('price', '>', 0)
+            ->firstOrFail();
+
         if (!$this->midtrans->isConfigured()) {
-            // Fallback: activate manually (old behavior)
-            return $this->activateManually($plan);
+            return redirect()->route('saas.plans')->with(
+                'error',
+                'Checkout belum tersedia karena kredensial Midtrans belum dipasang.'
+            );
         }
 
         $business = auth()->user()->business;
-        $orderId  = 'SUB-' . $business->id . '-' . time();
+        $orderId = 'SUB-'.$business->id.'-'.now()->format('YmdHis').'-'.Str::upper(Str::random(5));
+        $amount = (int) round((float) $plan->price);
+        $current = $business->activeSubscription()->first();
+        $periodBase = $current?->ends_at && $current->ends_at->isFuture()
+            ? $current->ends_at->copy()
+            : today();
+
+        $subscription = BusinessSubscription::create([
+            'business_id'          => $business->id,
+            'subscription_plan_id' => $plan->id,
+            'starts_at'            => today(),
+            'ends_at'              => $periodBase->addDays(30),
+            'status'               => 'pending',
+            'payment_token'        => $orderId,
+            'amount'               => $amount,
+            'notes'                => 'Menunggu pembayaran Midtrans',
+        ]);
 
         try {
             $result = $this->midtrans->createSnapToken(
                 $orderId,
-                (int) $plan->price,
+                $amount,
                 $business->name,
                 auth()->user()->email ?? 'owner@fnbpos.com'
             );
@@ -131,44 +160,25 @@ class MidtransController extends Controller
                 throw new \Exception('Midtrans tidak mengembalikan URL pembayaran.');
             }
 
-            BusinessSubscription::create([
-                'business_id'          => $business->id,
-                'subscription_plan_id' => $plan->id,
-                'starts_at'            => today(),
-                'ends_at'              => today()->addDays(30),
-                'status'               => 'pending',
-                'payment_token'        => $orderId,
-                'payment_url'          => $result['redirect_url'],
-                'notes'                => 'Midtrans payment pending',
+            $subscription->update(['payment_url' => $result['redirect_url']]);
+
+            return redirect()->away($result['redirect_url']);
+        } catch (\Exception $e) {
+            $subscription->update([
+                'status' => 'cancelled',
+                'notes' => 'Checkout gagal dibuat. Silakan coba kembali.',
+            ]);
+            Log::warning('Midtrans subscription checkout failed', [
+                'business_id' => $business->id,
+                'subscription_id' => $subscription->id,
+                'error' => $e->getMessage(),
             ]);
 
-            return redirect($result['redirect_url']);
-        } catch (\Exception $e) {
-            Log::warning('Midtrans subscription error, falling back to manual', ['error' => $e->getMessage()]);
-            return $this->activateManually($plan, 'Midtrans error: ' . $e->getMessage(), true);
+            return redirect()->route('saas.plans')->with(
+                'error',
+                'Checkout Midtrans belum berhasil dibuat. Silakan coba kembali.'
+            );
         }
-    }
-
-    private function activateManually(SubscriptionPlan $plan, string $notes = 'Manual activation', bool $midtransError = false)
-    {
-        $business = auth()->user()->business;
-
-        BusinessSubscription::create([
-            'business_id'          => $business->id,
-            'subscription_plan_id' => $plan->id,
-            'starts_at'            => today(),
-            'ends_at'              => today()->addDays(30),
-            'status'               => 'active',
-            'paid_at'              => now(),
-            'notes'                => $notes,
-        ]);
-
-        $message = 'Paket ' . $plan->name . ' berhasil diaktifkan.';
-        if ($midtransError) {
-            $message .= ' (Midtrans Snap belum aktif di akun Production — diaktifkan manual. Hubungi support@midtrans.com untuk mengaktifkan Snap.)';
-        }
-
-        return redirect()->route('saas.current')->with('success', $message);
     }
 
     /**
@@ -178,12 +188,17 @@ class MidtransController extends Controller
     public function callback(Request $request)
     {
         $data = $request->all();
-        Log::info('Midtrans callback', $data);
 
         $orderId     = $data['order_id'] ?? '';
         $statusCode  = $data['status_code'] ?? '';
         $grossAmount = $data['gross_amount'] ?? '';
         $signature   = $data['signature_key'] ?? '';
+
+        Log::info('Midtrans callback received', [
+            'order_id' => $orderId,
+            'status_code' => $statusCode,
+            'transaction_status' => $data['transaction_status'] ?? '',
+        ]);
 
         if (!$this->midtrans->verifySignature($orderId, $statusCode, $grossAmount, $signature)) {
             Log::warning('Midtrans invalid signature', compact('orderId'));
@@ -195,10 +210,43 @@ class MidtransController extends Controller
         // ── Subscription payment ──────────────────────────────────────────────
         if (str_starts_with($orderId, 'SUB-')) {
             $sub = BusinessSubscription::where('payment_token', $orderId)->first();
-            if ($sub && in_array($txStatus, ['capture', 'settlement'])) {
-                $sub->update(['status' => 'active', 'paid_at' => now()]);
-            } elseif ($sub && in_array($txStatus, ['deny', 'cancel', 'expire'])) {
-                $sub->update(['status' => 'cancelled']);
+            if (!$sub) {
+                return response()->json(['status' => 'subscription not found'], 404);
+            }
+
+            if ($sub->amount === null || (int) round((float) $sub->amount) !== (int) round((float) $grossAmount)) {
+                Log::warning('Midtrans subscription amount mismatch', [
+                    'subscription_id' => $sub->id,
+                    'expected' => $sub->amount,
+                    'received' => $grossAmount,
+                ]);
+
+                return response()->json(['status' => 'amount mismatch'], 400);
+            }
+
+            $paymentSucceeded = $txStatus === 'settlement'
+                || ($txStatus === 'capture' && ($data['fraud_status'] ?? '') === 'accept');
+            if ($paymentSucceeded) {
+                DB::transaction(function () use ($sub) {
+                    $locked = BusinessSubscription::query()->lockForUpdate()->findOrFail($sub->id);
+                    if ($locked->status === 'active') {
+                        return;
+                    }
+
+                    BusinessSubscription::query()
+                        ->where('business_id', $locked->business_id)
+                        ->where('id', '!=', $locked->id)
+                        ->whereIn('status', ['trial', 'active'])
+                        ->update(['status' => 'expired']);
+
+                    $locked->update([
+                        'status' => 'active',
+                        'paid_at' => now(),
+                        'notes' => 'Pembayaran Midtrans berhasil',
+                    ]);
+                });
+            } elseif (in_array($txStatus, ['deny', 'cancel', 'expire'], true) && $sub->status === 'pending') {
+                $sub->update(['status' => 'cancelled', 'notes' => 'Pembayaran Midtrans '.$txStatus]);
             }
             return response()->json(['status' => 'ok']);
         }

@@ -14,7 +14,8 @@ use Tests\TestCase;
  *
  * This walks the Blade files instead, and insists that any reference to a
  * gateable route either lives inside that module's own views (unreachable when
- * the module is off) or sits behind a feature check.
+ * the module is off) or sits behind a feature check. Billing routes are always
+ * registered so an expired tenant can still pay, therefore they are not gated.
  */
 class FeatureFlagViewGuardTest extends TestCase
 {
@@ -24,10 +25,8 @@ class FeatureFlagViewGuardTest extends TestCase
      * @var array<string, string>
      */
     private const GATED = [
-        "route('saas."               => 'saas',
         "route('balance."            => 'balance',
         "route('audit."              => 'audit',
-        "route('subscription.expired" => 'saas',
     ];
 
     public function test_no_shared_view_links_to_a_module_route_without_a_guard(): void

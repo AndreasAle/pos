@@ -27,10 +27,23 @@ class SubscriptionController extends Controller
 
     public function plans()
     {
-        $plans       = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get();
-        $current     = auth()->user()->business->activeSubscription()->with('plan')->first();
-        $midtransKey = config('midtrans.client_key');
-        return view('saas.plans', compact('plans', 'current', 'midtransKey'));
+        $business = auth()->user()->business;
+        $plans = SubscriptionPlan::query()
+            ->where('is_active', true)
+            ->where('slug', '!=', 'free')
+            ->where('price', '>', 0)
+            ->orderBy('sort_order')
+            ->get();
+        $current = $business->activeSubscription()->with('plan')->first();
+        $subs = $business->subscriptions()->with('plan')->latest()->limit(10)->get();
+        $outletCount = $business->outlets()->where('is_active', true)->count();
+        $midtransConfigured = $this->midtrans->isConfigured();
+        $isSandbox = ! config('midtrans.is_production');
+
+        return view('saas.plans', compact(
+            'business', 'plans', 'current', 'subs', 'outletCount',
+            'midtransConfigured', 'isSandbox'
+        ));
     }
 
     public function current()
@@ -45,12 +58,13 @@ class SubscriptionController extends Controller
     {
         $business = auth()->user()->business;
 
-        if ($this->midtrans->isConfigured() && (float) $plan->price > 0) {
-            // Redirect to Midtrans payment page
-            return redirect()->route('midtrans.subscription', $plan);
+        abort_unless($plan->is_active, 404);
+
+        if ((float) $plan->price > 0) {
+            return redirect()->route('saas.plans')
+                ->with('error', 'Paket berbayar harus diproses melalui checkout Midtrans.');
         }
 
-        // Fallback: manual activation (free plan or Midtrans not configured)
         BusinessSubscription::create([
             'business_id'          => $business->id,
             'subscription_plan_id' => $plan->id,

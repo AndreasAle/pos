@@ -146,9 +146,16 @@ Route::middleware(['auth', 'business', 'owner.verified'])->group(function () {
     Route::post('/onboarding/tour/complete', [OnboardingController::class, 'completeTour'])->name('onboarding.tour.complete');
     Route::post('/onboarding/tour/restart', [OnboardingController::class, 'restartTour'])->name('onboarding.tour.restart');
 
-    if (config('pos.features.subscription')) {
-        Route::get('/subscription/expired', [SubscriptionController::class, 'expired'])->name('subscription.expired');
-    }
+    Route::get('/subscription/expired', [SubscriptionController::class, 'expired'])->name('subscription.expired');
+
+    Route::prefix('saas')->name('saas.')->middleware('role:owner')->group(function () {
+        Route::get('plans', [SubscriptionController::class, 'plans'])->name('plans');
+        Route::get('subscription', [SubscriptionController::class, 'current'])->name('current');
+        Route::post('subscription/{plan}', [SubscriptionController::class, 'subscribe'])->name('subscribe');
+        Route::post('checkout', [MidtransController::class, 'createSubscriptionPayment'])
+            ->middleware('throttle:10,1')
+            ->name('checkout');
+    });
 
 });
 
@@ -292,20 +299,10 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::post('telegram/unlink', [SettingController::class, 'telegramUnlink'])->name('telegram.unlink');
     });
 
-    // SaaS
-    if (config('pos.features.subscription')) {
-        Route::prefix('saas')->name('saas.')->middleware('role:owner')->group(function () {
-            Route::get('plans', [SubscriptionController::class, 'plans'])->name('plans');
-            Route::get('subscription', [SubscriptionController::class, 'current'])->name('current');
-            Route::post('subscription/{plan}', [SubscriptionController::class, 'subscribe'])->name('subscribe');
-        });
-    }
-
     // Midtrans — QRIS dynamic
     Route::prefix('midtrans')->name('midtrans.')->group(function () {
         Route::post('qris/create', [MidtransController::class, 'createQris'])->name('qris.create');
         Route::post('qris/status', [MidtransController::class, 'checkQrisStatus'])->name('qris.status');
-        Route::get('subscription/{plan}', [MidtransController::class, 'createSubscriptionPayment'])->name('subscription');
     });
 
     // Barcode

@@ -11,7 +11,7 @@ class BusinessSubscription extends Model
         // Without these three the Midtrans columns were silently dropped on create():
         // the payment token never persisted, so the webhook could not find the
         // subscription it had just been paid for.
-        'payment_token', 'payment_url', 'paid_at',
+        'payment_token', 'payment_url', 'amount', 'paid_at',
     ];
 
     protected function casts(): array
@@ -19,6 +19,7 @@ class BusinessSubscription extends Model
         return [
             'starts_at' => 'date',
             'ends_at'   => 'date',
+            'amount'    => 'decimal:2',
             'paid_at'   => 'datetime',
         ];
     }

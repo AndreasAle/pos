@@ -41,9 +41,9 @@
             </div>
 
             @if($isOwner)
-                @if(config('pos.features.subscription') && Route::has('saas.plans'))
+                @if(Route::has('saas.plans'))
                     <a href="{{ route('saas.plans') }}" class="shrink-0 border border-current px-3 py-1.5 text-xs font-semibold text-[#0B5D3B] hover:bg-white/60">
-                        Lihat Paket
+                        Pilih Paket
                     </a>
                 @else
                     <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="shrink-0 border border-current px-3 py-1.5 text-xs font-semibold text-[#0B5D3B] hover:bg-white/60">

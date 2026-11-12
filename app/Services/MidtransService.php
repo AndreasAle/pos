@@ -66,6 +66,15 @@ class MidtransService
                 'first_name' => $customerName,
                 'email'      => $customerEmail,
             ],
+            'item_details' => [[
+                'id' => 'YOKA-SUBSCRIPTION',
+                'price' => $amount,
+                'quantity' => 1,
+                'name' => 'Langganan Yoka POS 30 hari',
+            ]],
+            'callbacks' => [
+                'finish' => route('saas.plans'),
+            ],
             'credit_card' => ['secure' => true],
         ];
 
@@ -95,7 +104,11 @@ class MidtransService
      */
     public function verifySignature(string $orderId, string $statusCode, string $grossAmount, string $signature): bool
     {
-        $key      = config('midtrans.server_key');
+        $key = (string) config('midtrans.server_key');
+        if ($key === '' || $orderId === '' || $statusCode === '' || $grossAmount === '' || $signature === '') {
+            return false;
+        }
+
         $expected = hash('sha512', $orderId . $statusCode . $grossAmount . $key);
         return hash_equals($expected, $signature);
     }

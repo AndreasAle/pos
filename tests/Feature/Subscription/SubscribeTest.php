@@ -5,13 +5,13 @@ namespace Tests\Feature\Subscription;
 use App\Models\BusinessSubscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\MidtransService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsPosScenario;
 use Tests\TestCase;
 
 /**
- * Taking a plan. With Midtrans unconfigured the app falls back to activating
- * the plan directly — the path every self-hosted install takes by default.
+ * Paid plans must remain pending until Midtrans confirms the payment.
  */
 class SubscribeTest extends TestCase
 {
@@ -40,11 +40,11 @@ class SubscribeTest extends TestCase
         ]);
     }
 
-    public function test_subscribing_activates_the_plan_for_thirty_days(): void
+    public function test_a_free_plan_can_still_be_activated_without_a_payment_gateway(): void
     {
         $this->setUpPos();
         BusinessSubscription::where('business_id', $this->business->id)->delete();
-        $plan = $this->plan('business', 249000);
+        $plan = $this->plan('free-extra', 0);
 
         $this->actingAs($this->owner())
             ->post(route('saas.subscribe', $plan))
@@ -66,7 +66,7 @@ class SubscribeTest extends TestCase
             'ends_at'  => now()->subDay()->toDateString(),
         ]);
         $owner = $this->owner();
-        $plan  = $this->plan('starter', 99000);
+        $plan  = $this->plan('free-recovery', 0);
 
         $this->actingAs($owner)->get(route('dashboard'))->assertRedirect(route('subscription.expired'));
 
@@ -81,7 +81,7 @@ class SubscribeTest extends TestCase
     {
         $this->setUpPos();
         $owner   = $this->owner();
-        $starter = $this->plan('starter', 99000);
+        $starter = $this->plan('free-newest', 0);
 
         $this->actingAs($owner)->post(route('saas.subscribe', $starter));
 
@@ -93,7 +93,7 @@ class SubscribeTest extends TestCase
     {
         $this->setUpPos();
         $mine = $this->business;
-        $plan = $this->plan('business', 249000);
+        $plan = $this->plan('free-outsider', 0);
 
         $outsider = $this->foreignUser('owner');
 
@@ -111,22 +111,124 @@ class SubscribeTest extends TestCase
         );
     }
 
-    public function test_a_paid_plan_goes_through_midtrans_when_it_is_configured(): void
+    public function test_checkout_creates_a_pending_midtrans_payment(): void
     {
-        config(['midtrans.server_key' => 'SB-Mid-server-dummy']);
+        $this->mock(MidtransService::class, function ($mock) {
+            $mock->shouldReceive('isConfigured')->once()->andReturnTrue();
+            $mock->shouldReceive('createSnapToken')->once()->andReturn([
+                'token' => 'sandbox-token',
+                'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v2/vtweb/test-token',
+            ]);
+        });
+
         $this->setUpPos();
         $plan = $this->plan('business', 249000);
 
         $this->actingAs($this->owner())
-            ->post(route('saas.subscribe', $plan))
-            ->assertRedirect(route('midtrans.subscription', $plan));
+            ->post(route('saas.checkout'), ['plan_id' => $plan->id])
+            ->assertRedirect('https://app.sandbox.midtrans.com/snap/v2/vtweb/test-token');
 
-        // Nothing is activated until the payment settles.
-        $this->assertSame(
-            1,
-            BusinessSubscription::where('business_id', $this->business->id)->count(),
-            'Only the fixture subscription should exist — no free activation.'
-        );
+        $pending = BusinessSubscription::where('business_id', $this->business->id)
+            ->where('status', 'pending')
+            ->sole();
+
+        $this->assertSame($plan->id, $pending->subscription_plan_id);
+        $this->assertSame('249000.00', $pending->amount);
+        $this->assertNotNull($pending->payment_token);
+        $this->assertNotNull($pending->payment_url);
+    }
+
+    public function test_a_paid_plan_is_never_activated_when_midtrans_is_not_configured(): void
+    {
+        config(['midtrans.server_key' => '']);
+        $this->setUpPos();
+        $plan = $this->plan('business', 249000);
+
+        $this->actingAs($this->owner())
+            ->post(route('saas.checkout'), ['plan_id' => $plan->id])
+            ->assertRedirect(route('saas.plans'))
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseMissing('business_subscriptions', [
+            'business_id' => $this->business->id,
+            'subscription_plan_id' => $plan->id,
+        ]);
+    }
+
+    public function test_valid_midtrans_webhook_activates_the_pending_plan(): void
+    {
+        config(['midtrans.server_key' => 'sandbox-server-key']);
+        $this->setUpPos();
+        $plan = $this->plan('business', 249000);
+        $orderId = 'SUB-'.$this->business->id.'-TEST';
+
+        $pending = BusinessSubscription::create([
+            'business_id' => $this->business->id,
+            'subscription_plan_id' => $plan->id,
+            'starts_at' => today(),
+            'ends_at' => today()->addDays(30),
+            'status' => 'pending',
+            'payment_token' => $orderId,
+            'amount' => 249000,
+        ]);
+        $grossAmount = '249000.00';
+        $statusCode = '200';
+        $signature = hash('sha512', $orderId.$statusCode.$grossAmount.'sandbox-server-key');
+
+        $this->postJson(route('midtrans.callback'), [
+            'order_id' => $orderId,
+            'status_code' => $statusCode,
+            'gross_amount' => $grossAmount,
+            'signature_key' => $signature,
+            'transaction_status' => 'settlement',
+            'fraud_status' => 'accept',
+        ])->assertOk()->assertJson(['status' => 'ok']);
+
+        $this->assertSame('active', $pending->fresh()->status);
+        $this->assertNotNull($pending->fresh()->paid_at);
+        $this->assertSame('expired', BusinessSubscription::where('business_id', $this->business->id)->oldest('id')->first()->status);
+    }
+
+    public function test_webhook_with_the_wrong_amount_cannot_activate_a_plan(): void
+    {
+        config(['midtrans.server_key' => 'sandbox-server-key']);
+        $this->setUpPos();
+        $plan = $this->plan('business', 249000);
+        $orderId = 'SUB-'.$this->business->id.'-MISMATCH';
+        $pending = BusinessSubscription::create([
+            'business_id' => $this->business->id,
+            'subscription_plan_id' => $plan->id,
+            'starts_at' => today(),
+            'ends_at' => today()->addDays(30),
+            'status' => 'pending',
+            'payment_token' => $orderId,
+            'amount' => 249000,
+        ]);
+        $grossAmount = '99000.00';
+        $signature = hash('sha512', $orderId.'200'.$grossAmount.'sandbox-server-key');
+
+        $this->postJson(route('midtrans.callback'), [
+            'order_id' => $orderId,
+            'status_code' => '200',
+            'gross_amount' => $grossAmount,
+            'signature_key' => $signature,
+            'transaction_status' => 'settlement',
+        ])->assertStatus(400);
+
+        $this->assertSame('pending', $pending->fresh()->status);
+    }
+
+    public function test_webhook_is_rejected_when_the_server_key_is_not_configured(): void
+    {
+        config(['midtrans.server_key' => '']);
+
+        $this->postJson(route('midtrans.callback'), [
+            'order_id' => 'SUB-1-FORGED',
+            'status_code' => '200',
+            'gross_amount' => '99000.00',
+            'signature_key' => hash('sha512', 'SUB-1-FORGED20099000.00'),
+            'transaction_status' => 'settlement',
+        ])->assertStatus(400)->assertJson(['status' => 'invalid signature']);
     }
 
     public function test_a_free_plan_is_activated_directly_even_with_midtrans_configured(): void

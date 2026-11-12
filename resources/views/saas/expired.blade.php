@@ -41,8 +41,9 @@
                         {{ $plan->max_users >= 999 ? 'User tanpa batas' : $plan->max_users . ' user' }}
                     </p>
                 </div>
-                <form method="POST" action="{{ route('saas.subscribe', $plan) }}">
+                <form method="POST" action="{{ route('saas.checkout') }}">
                     @csrf
+                    <input type="hidden" name="plan_id" value="{{ $plan->id }}">
                     <button type="submit" class="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors">
                         Pilih Paket
                     </button>

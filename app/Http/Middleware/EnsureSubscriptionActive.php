@@ -17,6 +17,7 @@ class EnsureSubscriptionActive
         'saas.plans',
         'saas.current',
         'saas.subscribe',
+        'saas.checkout',
         'profile',
         'profile.update',
         'logout',
