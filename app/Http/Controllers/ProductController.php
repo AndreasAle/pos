@@ -49,8 +49,8 @@ class ProductController extends Controller
     {
         $request->validate([
             'name'                => 'required|string|max:255',
-            'product_category_id' => 'nullable|exists:product_categories,id',
-            'outlet_id'           => 'nullable|exists:outlets,id',
+            'product_category_id' => 'nullable|exists:product_categories,id,business_id,'.auth()->user()->business_id,
+            'outlet_id'           => 'nullable|exists:outlets,id,business_id,'.auth()->user()->business_id,
             'sku'                 => 'nullable|string|max:100',
             'description'         => 'nullable|string|max:1000',
             'price'               => 'required|numeric|min:0',
@@ -114,8 +114,8 @@ class ProductController extends Controller
 
         $request->validate([
             'name'                => 'required|string|max:255',
-            'product_category_id' => 'nullable|exists:product_categories,id',
-            'outlet_id'           => 'nullable|exists:outlets,id',
+            'product_category_id' => 'nullable|exists:product_categories,id,business_id,'.auth()->user()->business_id,
+            'outlet_id'           => 'nullable|exists:outlets,id,business_id,'.auth()->user()->business_id,
             'sku'                 => 'nullable|string|max:100',
             'description'         => 'nullable|string|max:1000',
             'price'               => 'required|numeric|min:0',

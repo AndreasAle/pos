@@ -157,16 +157,16 @@ class PosController extends Controller
     {
         return [
             'items'                    => 'required|array|min:1',
-            'items.*.product_id'       => 'required_without:items.*.bundle_id|nullable|integer|exists:products,id',
-            'items.*.bundle_id'        => 'required_without:items.*.product_id|nullable|integer|exists:product_bundles,id',
+            'items.*.product_id'       => 'required_without:items.*.bundle_id|nullable|integer|exists:products,id,business_id,'.auth()->user()->business_id,
+            'items.*.bundle_id'        => 'required_without:items.*.product_id|nullable|integer|exists:product_bundles,id,business_id,'.auth()->user()->business_id,
             'items.*.qty'              => 'required|numeric|min:0.001',
             'items.*.variant_id'       => 'nullable|integer|exists:product_variants,id',
             'items.*.notes'            => 'nullable|string|max:255',
             'items.*.addons'           => 'nullable|array',
             'items.*.addons.*.addon_id' => 'required|integer|exists:product_addons,id',
             'order_type'               => 'nullable|in:dine_in,takeaway,delivery',
-            'customer_id'              => 'nullable|integer|exists:customers,id',
-            'promotion_id'             => 'nullable|integer|exists:promotions,id',
+            'customer_id'              => 'nullable|integer|exists:customers,id,business_id,'.auth()->user()->business_id,
+            'promotion_id'             => 'nullable|integer|exists:promotions,id,business_id,'.auth()->user()->business_id,
             'manual_discount'          => 'nullable|numeric|min:0',
             'redeem_points'            => 'nullable|integer|min:0',
             'delivery_fee'             => 'nullable|numeric|min:0',
@@ -306,7 +306,7 @@ class PosController extends Controller
     {
         $request->validate([
             'items'                     => 'required|array|min:1',
-            'items.*.product_id'        => 'required|integer|exists:products,id',
+            'items.*.product_id'        => 'required|integer|exists:products,id,business_id,'.auth()->user()->business_id,
             'items.*.qty'               => 'required|numeric|min:0.001',
             'items.*.variant_id'        => 'nullable|integer|exists:product_variants,id',
             'items.*.notes'             => 'nullable|string|max:255',

@@ -185,7 +185,7 @@ class PosOrderService
                 'outlet_id'        => $shift?->outlet_id ?? $user->outlet_id,
                 'user_id'          => $user->id,
                 'cashier_shift_id' => $shift?->id,
-                'customer_id'      => $data['customer_id'] ?? null,
+                'customer_id'      => $this->ownCustomerId($business->id, $data['customer_id'] ?? null),
                 'promotion_id'     => $promotionId,
                 'order_number'     => $this->generateOrderNumber($business->id),
                 'order_type'       => $data['order_type'] ?? 'dine_in',
@@ -291,7 +291,7 @@ class PosOrderService
 
             // ── Customer stats + loyalty (skip if payment pending) ───────────
             if (!$paymentPending && $order->customer_id) {
-                $customer = $redeemCustomer ?? Customer::find($order->customer_id);
+                $customer = $redeemCustomer ?? Customer::forBusiness($business->id)->find($order->customer_id);
                 if ($customer) {
                     $customer->increment('total_transactions');
                     $customer->increment('total_spending', $grandTotal);

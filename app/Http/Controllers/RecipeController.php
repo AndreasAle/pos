@@ -39,7 +39,7 @@ class RecipeController extends Controller
 
         $request->validate([
             'items'                    => 'nullable|array',
-            'items.*.ingredient_id'    => 'required|exists:ingredients,id',
+            'items.*.ingredient_id'    => 'required|exists:ingredients,id,business_id,'.auth()->user()->business_id,
             'items.*.qty'              => 'required|numeric|min:0.001',
         ]);
 

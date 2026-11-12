@@ -38,7 +38,7 @@ class ProductBundleController extends Controller
             'description'       => 'nullable|string|max:500',
             'price'             => 'required|numeric|min:0',
             'items'             => 'required|array|min:1',
-            'items.*.product_id'=> 'required|exists:products,id',
+            'items.*.product_id'=> 'required|exists:products,id,business_id,'.auth()->user()->business_id,
             'items.*.qty'       => 'required|numeric|min:0.001',
         ]);
 
@@ -88,7 +88,7 @@ class ProductBundleController extends Controller
             'description'       => 'nullable|string|max:500',
             'price'             => 'required|numeric|min:0',
             'items'             => 'required|array|min:1',
-            'items.*.product_id'=> 'required|exists:products,id',
+            'items.*.product_id'=> 'required|exists:products,id,business_id,'.auth()->user()->business_id,
             'items.*.qty'       => 'required|numeric|min:0.001',
         ]);
 
