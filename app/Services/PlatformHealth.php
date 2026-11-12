@@ -202,6 +202,8 @@ class PlatformHealth
         $admins = PlatformAdmin::query()->get(['role', 'is_active', 'last_login_at']);
         $supers = $admins->where('role', 'super_admin')->where('is_active', true)->count();
         $out[] = $this->c('Akun tim Yoka', $supers ? 'ok' : 'fail', $admins->count().' akun · '.$supers.' super admin aktif', $supers ? null : 'Buat akun: PLATFORM_ADMIN_EMAIL=... php artisan db:seed --class=PlatformAdminSeeder');
+        $noRecovery = PlatformAdmin::query()->where('is_active', true)->get(['recovery_codes'])->filter(fn ($a) => empty($a->recovery_codes))->count();
+        $out[] = $this->c('Kode pemulihan 2FA', $noRecovery ? 'warn' : 'ok', $noRecovery ? "{$noRecovery} akun aktif belum punya kode pemulihan" : 'Semua akun aktif punya cadangan', $noRecovery ? 'Buat di Platform > Akun Saya agar tidak terkunci bila email 2FA tidak sampai.' : null);
         $out[] = $this->c('Cookie sesi aman', config('session.secure') || str_starts_with((string) config('app.url'), 'https://') ? 'ok' : 'warn', 'secure='.var_export((bool) config('session.secure'), true).' · driver '.config('session.driver'));
         $logins = DB::table('platform_activity_logs')->where('action', 'login.failed')->where('created_at', '>=', now()->subDay())->count();
         $out[] = $this->c('Gagal login platform 24 jam', $logins >= 10 ? 'warn' : 'ok', "{$logins} percobaan gagal");

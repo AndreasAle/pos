@@ -124,6 +124,13 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('businesses/{business}/impersonate', [ImpersonationController::class, 'start'])->name('impersonate.start');
             Route::post('impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
             Route::get('activity', PlatformActivityController::class)->name('activity');
+            Route::get('account', [\App\Http\Controllers\Platform\AccountController::class, 'show'])->name('account');
+            Route::post('account/password', [\App\Http\Controllers\Platform\AccountController::class, 'password'])->middleware('throttle:5,10')->name('account.password');
+            Route::post('account/recovery', [\App\Http\Controllers\Platform\AccountController::class, 'recovery'])->middleware('throttle:5,10')->name('account.recovery');
+            Route::get('team', [\App\Http\Controllers\Platform\TeamController::class, 'index'])->name('team');
+            Route::post('team', [\App\Http\Controllers\Platform\TeamController::class, 'store'])->middleware('throttle:10,10')->name('team.store');
+            Route::patch('team/{admin}/toggle', [\App\Http\Controllers\Platform\TeamController::class, 'toggle'])->name('team.toggle');
+            Route::patch('team/{admin}/role', [\App\Http\Controllers\Platform\TeamController::class, 'role'])->name('team.role');
             Route::get('system', [\App\Http\Controllers\Platform\SystemController::class, 'index'])->name('system');
             Route::post('system/test-mail', [\App\Http\Controllers\Platform\SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
 

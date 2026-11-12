@@ -72,7 +72,8 @@ class AuthController extends Controller
 
     public function verifyTwoFactor(Request $request): RedirectResponse
     {
-        $request->validate(['code' => ['required', 'digits:6']]);
+        $usingRecovery = $request->filled('recovery_code');
+        $request->validate($usingRecovery ? ['recovery_code' => ['required', 'string', 'max:20']] : ['code' => ['required', 'digits:6']]);
         $admin = Auth::guard('platform')->user();
         $attempts = (int) $request->session()->get('platform_2fa_attempts', 0) + 1;
         $request->session()->put('platform_2fa_attempts', $attempts);
@@ -88,13 +89,19 @@ class AuthController extends Controller
             ]);
         }
 
-        $valid = $admin->two_factor_code_hash
-            && $admin->two_factor_expires_at?->isFuture()
-            && Hash::check($request->string('code')->toString(), $admin->two_factor_code_hash);
+        if ($usingRecovery) {
+            $valid = $admin->consumeRecoveryCode($request->string('recovery_code')->toString());
+            $field = 'recovery_code';
+        } else {
+            $valid = $admin->two_factor_code_hash
+                && $admin->two_factor_expires_at?->isFuture()
+                && Hash::check($request->string('code')->toString(), $admin->two_factor_code_hash);
+            $field = 'code';
+        }
 
         if (! $valid) {
             throw ValidationException::withMessages([
-                'code' => 'Kode salah atau sudah kedaluwarsa.',
+                $field => $usingRecovery ? 'Kode pemulihan salah atau sudah dipakai.' : 'Kode salah atau sudah kedaluwarsa.',
             ]);
         }
 
@@ -103,7 +110,7 @@ class AuthController extends Controller
         $request->session()->put('platform_2fa_passed_at', now()->timestamp);
         $request->session()->forget('platform_2fa_attempts');
 
-        PlatformActivityLog::record('login', 'Login platform berhasil dengan verifikasi dua langkah.');
+        PlatformActivityLog::record($usingRecovery ? 'login.recovery' : 'login', $usingRecovery ? 'Login platform memakai kode pemulihan (sisa '.count((array) $admin->fresh()->recovery_codes).').' : 'Login platform berhasil dengan verifikasi dua langkah.');
 
         return redirect()->intended(route('platform.dashboard'));
     }

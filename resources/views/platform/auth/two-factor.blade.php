@@ -22,6 +22,14 @@
     </button>
 </form>
 
+<div class="mt-6 border-t border-[#EEF0F2] pt-5" x-data="{ open: {{ $errors->has('recovery_code') ? 'true' : 'false' }} }">
+    <button type="button" @click="open = !open" class="text-[13px] font-semibold text-slate-500 hover:text-[#0A5C3A]" x-text="open ? 'Tutup kode pemulihan' : 'Email tidak sampai? Pakai kode pemulihan'"></button>
+    <form x-show="open" x-cloak method="POST" action="{{ route('platform.two-factor.verify') }}" class="mt-3">@csrf
+        <input type="text" name="recovery_code" maxlength="11" autocomplete="off" placeholder="XXXXX-XXXXX" class="h-12 w-full rounded-xl border border-[#E5E7EB] bg-white px-4 text-center font-mono text-[18px] font-bold uppercase tracking-[0.15em] focus:border-[#16A34A] focus:outline-none focus:ring-4 focus:ring-[#16A34A]/10">
+        @error('recovery_code')<p class="mt-2 text-[13px] font-semibold text-red-600">{{ $message }}</p>@enderror
+        <button type="submit" class="mt-3 h-11 w-full rounded-xl border border-[#E5E7EB] bg-white text-[14px] font-bold text-[#0B1B3F] hover:border-[#16A34A] hover:bg-[#F4FBF7]">Masuk dengan kode pemulihan</button>
+    </form>
+</div>
 <div class="mt-5 flex items-center justify-between text-[13px]" x-data="{ left: 45, t: null }" x-init="t = setInterval(() => { if (--left <= 0) clearInterval(t) }, 1000)">
     <form method="POST" action="{{ route('platform.two-factor.resend') }}">@csrf
         <button type="submit" :disabled="left > 0" class="font-semibold text-[#0A5C3A] hover:underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline">
