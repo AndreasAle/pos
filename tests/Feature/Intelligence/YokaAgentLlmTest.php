@@ -93,4 +93,42 @@ class YokaAgentLlmTest extends TestCase
 
         $this->assertSame('sales_summary', $reply['tool']);
     }
+
+    public function test_business_notes_are_saved_and_fed_back_into_later_prompts(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        $owner = $this->owner();
+        Http::fake(['*/chat/completions' => Http::sequence()
+            ->push(['choices' => [['message' => ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'n1', 'type' => 'function', 'function' => ['name' => 'save_business_note', 'arguments' => json_encode(['note' => 'Target omzet Desember 30 juta'])]]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Siap, kucatat. SARAN: Omzet hari ini?']]]])
+            ->push(['choices' => [['message' => ['content' => 'Oke. SARAN: lanjut']]]])]);
+        app(YokaAssistantService::class)->ask($owner, 'Ingat ya target omzet Desember 30 juta untuk toko');
+        $this->assertSame(['Target omzet Desember 30 juta'], $owner->business->fresh()->settings['yoka_notes']);
+
+        app(YokaAssistantService::class)->ask($owner->fresh(), 'Apa kabar toko kita');
+        Http::assertSent(fn ($r) => str_contains(json_encode($r->data()), 'Target omzet Desember 30 juta') && str_contains(json_encode($r->data()), 'CATATAN BISNIS'));
+    }
+
+    public function test_cashier_cannot_store_business_notes(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        $owner = $this->owner();
+        $cashier = User::factory()->create(['business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'role' => 'cashier']);
+        $agent = app(\App\Services\Intelligence\YokaAgent::class);
+        $m = new \ReflectionMethod($agent, 'saveNote');
+        $m->setAccessible(true);
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $m->invoke($agent, $cashier, ['note' => 'catatan jahat']);
+    }
+
+    public function test_customer_names_are_masked_before_leaving_for_the_ai_provider(): void
+    {
+        $agent = app(\App\Services\Intelligence\YokaAgent::class);
+        $m = new \ReflectionMethod($agent, 'maskPersonalData');
+        $m->setAccessible(true);
+        $out = $m->invoke($agent, ['data' => ['customers' => [['customer_id' => 9, 'name' => 'Budi Santoso', 'visits' => 3]]]]);
+
+        $this->assertSame('Budi S.', $out['data']['customers'][0]['name']);
+        $this->assertArrayNotHasKey('customer_id', $out['data']['customers'][0]);
+    }
 }
