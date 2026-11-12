@@ -15,15 +15,15 @@ use Tests\TestCase;
  */
 class SubscriptionAccessTest extends TestCase
 {
-    use RefreshDatabase, BuildsPosScenario;
+    use BuildsPosScenario, RefreshDatabase;
 
     private function owner(): User
     {
         return User::factory()->create([
             'business_id' => $this->business->id,
-            'outlet_id'   => $this->outlet->id,
-            'role'        => 'owner',
-            'is_active'   => true,
+            'outlet_id' => $this->outlet->id,
+            'role' => 'owner',
+            'is_active' => true,
         ]);
     }
 
@@ -35,11 +35,11 @@ class SubscriptionAccessTest extends TestCase
         BusinessSubscription::where('business_id', $this->business->id)->delete();
 
         return BusinessSubscription::create([
-            'business_id'          => $this->business->id,
+            'business_id' => $this->business->id,
             'subscription_plan_id' => SubscriptionPlan::first()->id,
-            'starts_at'            => now()->subMonth(),
-            'ends_at'              => $endsAt,
-            'status'               => $status,
+            'starts_at' => now()->subMonth(),
+            'ends_at' => $endsAt,
+            'status' => $status,
         ]);
     }
 
@@ -49,7 +49,10 @@ class SubscriptionAccessTest extends TestCase
     {
         $this->setUpPos();
 
-        $this->actingAs($this->owner())->get(route('dashboard'))->assertOk();
+        $subscription = $this->business->activeSubscription;
+        $this->actingAs($this->owner())->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('Paket '.($subscription?->plan?->name ?? 'Yoka POS').' aktif');
     }
 
     public function test_a_trial_subscription_also_grants_access(): void

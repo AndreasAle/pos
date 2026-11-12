@@ -9,35 +9,24 @@
         : 0;
 @endphp
 
-@if($subscription && in_array($subscription->status, ['trial', 'active']))
-    <div class="border-b {{ $subscription->status === 'trial' ? 'border-amber-200 bg-[#FFF6DA]' : 'border-emerald-200 bg-[#EAF8F0]' }}">
+@if($subscription?->status === 'trial')
+    <div class="border-b border-amber-200 bg-[#FFF6DA]">
         <div class="flex min-h-11 items-center justify-between gap-4 px-4 py-2 sm:px-6">
             <div class="flex min-w-0 items-center gap-2.5 text-sm text-[#0B1B3F]">
-                <svg class="h-4 w-4 shrink-0 {{ $subscription->status === 'trial' ? 'text-amber-700' : 'text-[#0B8F5B]' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <svg class="h-4 w-4 shrink-0 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
 
-                @if($subscription->status === 'trial')
-                    <p class="truncate">
-                        <span class="font-semibold">Masa coba gratis</span>
-                        @if($endsAt)
-                            <span class="hidden sm:inline"> berakhir {{ $endsAt->translatedFormat('d F Y') }}</span>
-                            <span class="mx-1.5 text-slate-400">&middot;</span>
-                            <span class="font-semibold {{ $daysRemaining <= 2 ? 'text-red-700' : 'text-amber-800' }}">
-                                {{ $daysRemaining > 0 ? $daysRemaining.' hari tersisa' : 'berakhir hari ini' }}
-                            </span>
-                        @endif
-                    </p>
-                @else
-                    <p class="truncate">
-                        <span class="font-semibold">Paket {{ $subscription->plan?->name ?? 'Yoka POS' }} aktif</span>
-                        @if($endsAt)
-                            <span class="hidden sm:inline"> hingga {{ $endsAt->translatedFormat('d F Y') }}</span>
-                        @else
-                            <span class="hidden sm:inline"> tanpa batas waktu</span>
-                        @endif
-                    </p>
-                @endif
+                <p class="truncate">
+                    <span class="font-semibold">Masa coba gratis</span>
+                    @if($endsAt)
+                        <span class="hidden sm:inline"> berakhir {{ $endsAt->translatedFormat('d F Y') }}</span>
+                        <span class="mx-1.5 text-slate-400">&middot;</span>
+                        <span class="font-semibold {{ $daysRemaining <= 2 ? 'text-red-700' : 'text-amber-800' }}">
+                            {{ $daysRemaining > 0 ? $daysRemaining.' hari tersisa' : 'berakhir hari ini' }}
+                        </span>
+                    @endif
+                </p>
             </div>
 
             @if($isOwner)

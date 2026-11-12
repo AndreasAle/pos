@@ -4,6 +4,7 @@
 
 @section('content')
 @php
+    $hasTrialBanner = $currentBusiness?->activeSubscription?->status === 'trial';
     $initialMessages = $activeConversation?->messages?->map(fn($m) => [
         'role' => $m->role, 'content' => $m->content,
         'hasData' => filled($m->tool_name),
@@ -11,7 +12,7 @@
     ])->values() ?? collect();
 @endphp
 
-<div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] h-[calc(100vh-98px)] min-h-[620px] overflow-hidden"
+<div class="-mx-4 sm:-mx-6 -mb-8 bg-white border-t border-[#E5E7EB] {{ $hasTrialBanner ? 'h-[calc(100vh-98px)]' : 'h-[calc(100vh-54px)]' }} min-h-[620px] overflow-hidden"
      x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages))">
     <div class="flex h-full min-w-0">
         {{-- Riwayat percakapan internal --}}
@@ -79,18 +80,9 @@
 
         {{-- Chat utama --}}
         <section class="relative flex-1 min-w-0 flex flex-col bg-white">
-            <header class="h-14 shrink-0 px-3 sm:px-5 border-b border-[#E5E7EB] flex items-center justify-between bg-white/95">
-                <div class="flex items-center gap-2 min-w-0">
-                    <button @click="historyOpen=true" class="lg:hidden w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center" aria-label="Buka riwayat">
-                        <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    </button>
-                    <div class="w-8 h-8 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
-                    </div>
-                    <div class="min-w-0"><h1 class="text-sm font-bold text-[#0B1B3F]">Tanya Yoka</h1><p class="text-[11px] text-slate-500 truncate">Asisten data {{ $currentBusiness->name }}</p></div>
-                </div>
-                <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-[#E8F7EF] px-2.5 py-1 text-[11px] font-semibold text-[#087A4E]"><span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>Data bisnis terhubung</span>
-            </header>
+            <button @click="historyOpen=true" class="absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white/95 shadow-sm hover:bg-slate-50 lg:hidden" aria-label="Buka riwayat">
+                <svg class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
 
             <div x-ref="messages" class="flex-1 min-h-0 overflow-y-auto scroll-smooth">
                 <div class="mx-auto w-full max-w-4xl px-4 sm:px-6 py-8 sm:py-12">
@@ -112,7 +104,7 @@
                     <div x-show="messages.length > 0" class="space-y-7">
                         <template x-for="(message, i) in messages" :key="i">
                             <div class="flex items-start gap-3 sm:gap-4" :class="message.role === 'user' ? 'justify-end' : ''">
-                                <div x-show="message.role !== 'user'" class="w-8 h-8 mt-0.5 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0"><span class="text-xs font-bold">Y</span></div>
+                                <div x-show="message.role !== 'user'" class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#CFE7D9] bg-white shadow-sm"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka POS" class="h-6 w-6 object-contain"></div>
                                 <div class="max-w-[92%] sm:max-w-[86%] min-w-0" :class="message.role !== 'user' && message.response?.blocks?.length ? 'w-full' : ''">
                                     <div class="text-sm sm:text-[15px] leading-7 whitespace-pre-wrap" :class="message.role === 'user' ? 'rounded-2xl rounded-br-md bg-[#E8F7EF] px-4 py-2.5 text-[#0B1B3F]' : 'text-slate-700'" x-text="message.content"></div>
                                     <div x-show="message.response?.blocks?.length" class="mt-4 space-y-3">
@@ -134,7 +126,7 @@
                             </div>
                         </template>
                         <div x-show="loading" class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-lg bg-[#0B8F5B] text-white flex items-center justify-center shrink-0"><span class="text-xs font-bold">Y</span></div>
+                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#CFE7D9] bg-white shadow-sm"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka POS" class="h-6 w-6 object-contain"></div>
                             <div class="pt-2 flex gap-1"><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:120ms]"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:240ms]"></span></div>
                         </div>
                     </div>

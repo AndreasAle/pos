@@ -304,7 +304,10 @@ class YokaIntelligenceTest extends TestCase
         $this->actingAs($owner)->get(route('intelligence.index'))
             ->assertOk()
             ->assertSee('Tanya Yoka')
-            ->assertSee('Apa yang ingin kamu ketahui?');
+            ->assertSee('Apa yang ingin kamu ketahui?')
+            ->assertSee('images/brand/yoka-icon.png')
+            ->assertDontSee('Data bisnis terhubung')
+            ->assertDontSee('Asisten data '.$owner->business->name);
     }
 
     public function test_cashier_cannot_open_the_dedicated_chat_page(): void
