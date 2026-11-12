@@ -58,16 +58,16 @@
         x-data="{ scrolled: false, featureOpen: false, mobileFeatures: false }"
         x-init="scrolled = window.scrollY > 40; window.addEventListener('scroll', () => scrolled = window.scrollY > 40, { passive: true })"
         :class="scrolled || mobileOpen || featureOpen ? 'bg-white shadow-[0_2px_16px_rgba(15,23,42,.08)]' : 'bg-transparent'"
-        class="fixed top-0 inset-x-0 z-40 transition-[background-color,box-shadow] duration-300"
+        class="fixed top-0 inset-x-0 z-40 transition-[background-color,box-shadow] duration-300 will-change-transform [transform:translate3d(0,0,0)] [backface-visibility:hidden] pt-[env(safe-area-inset-top)]"
     >
-        <div class="max-w-[1200px] mx-auto px-6 h-[76px] flex items-center">
+        <div class="max-w-[1200px] mx-auto px-5 sm:px-6 h-[60px] sm:h-[68px] lg:h-[76px] flex items-center">
             {{-- Logo: putih di atas hero, hijau setelah scroll --}}
             <a href="#" class="flex items-center gap-2 shrink-0" aria-label="Yoka POS">
-                <span class="relative block h-9 w-[100px]">
+                <span class="relative block h-7 w-[78px] sm:h-8 sm:w-[88px] lg:h-9 lg:w-[100px]">
                     <img src="{{ asset('images/brand/yoka-logo-white.png') }}" alt="Yoka" class="absolute inset-0 h-full w-full object-contain object-left transition-opacity duration-300" :class="scrolled || mobileOpen || featureOpen ? 'opacity-0' : 'opacity-100'">
                     <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="" class="absolute inset-0 h-full w-full object-contain object-left transition-opacity duration-300" :class="scrolled || mobileOpen || featureOpen ? 'opacity-100' : 'opacity-0'">
                 </span>
-                <span class="text-[22px] leading-none font-bold tracking-tight transition-colors duration-300" :class="scrolled || mobileOpen || featureOpen ? 'text-emerald-700' : 'text-white'">POS</span>
+                <span class="text-[17px] sm:text-[19px] lg:text-[22px] leading-none font-bold tracking-tight transition-colors duration-300" :class="scrolled || mobileOpen || featureOpen ? 'text-emerald-700' : 'text-white'">POS</span>
             </a>
 
             <nav class="hidden lg:flex items-center gap-9 ml-12 text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">
@@ -156,7 +156,7 @@
             </div>
 
             {{-- Hamburger --}}
-            <button @click="mobileOpen = !mobileOpen" class="lg:hidden ml-auto w-10 h-10 flex items-center justify-center rounded-lg transition-colors" :class="scrolled || mobileOpen ? 'text-slate-800' : 'text-white'" aria-label="Menu">
+            <button @click="mobileOpen = !mobileOpen" class="lg:hidden ml-auto -mr-2 w-11 h-11 flex items-center justify-center rounded-lg transition-colors" :class="scrolled || mobileOpen ? 'text-slate-800' : 'text-white'" aria-label="Menu">
                 <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
                 <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
@@ -252,7 +252,7 @@
                      @unless (str_contains($s['imgClass'], 'hero-fade-y')) style="-webkit-mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }});mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }})" @endunless
                      @if (str_contains($s['imgClass'], 'hero-fade-y')) style="--hero-mask-x: {{ $s['maskStop'] ?? '8%' }}" @endif
                      @if ($k === 0) fetchpriority="high" @else loading="lazy" @endif>
-                <div class="relative max-w-[1200px] mx-auto px-6 h-full flex items-start lg:items-center pt-[104px] lg:pt-0">
+                <div class="relative max-w-[1200px] mx-auto px-6 h-full flex items-start lg:items-center pt-[88px] sm:pt-[100px] lg:pt-0">
                     <div class="max-w-[520px] lg:pb-8">
                         <h1 class="text-[34px] md:text-[48px] font-extrabold leading-[1.15] text-white mb-5">{{ $s['title'] }}</h1>
                         <p class="text-base md:text-lg text-white/90 mb-8 max-w-[440px]">{{ $s['text'] }}</p>
