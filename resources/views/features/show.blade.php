@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $feature['title'] }} — Yoka POS</title>
     <meta name="description" content="{{ $feature['description'] }}">
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800" rel="stylesheet">
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         [x-cloak] { display: none !important; }
-        body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
     </style>
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
 </head>
@@ -34,7 +32,7 @@
                         <div class="grid grid-cols-3 gap-8">
                             @foreach ($featureGroups as $group => $items)
                                 <div>
-                                    <p class="mb-3 text-[10px] font-extrabold uppercase tracking-[.16em] text-slate-400">{{ $group }}</p>
+                                    <p class="mb-3 text-[12px] font-extrabold uppercase tracking-[.16em] text-slate-400">{{ $group }}</p>
                                     <div class="divide-y divide-slate-100">
                                         @foreach ($items as $slug => $item)
                                             <a href="{{ route('features.show', $slug) }}" class="block py-3 text-sm font-bold transition-colors {{ $slug === $featureSlug ? 'text-emerald-700' : 'text-slate-700 hover:text-emerald-700' }}">{{ $item['title'] }}</a>
@@ -63,7 +61,7 @@
 
         <div x-show="mobileOpen" x-cloak x-transition class="lg:hidden max-h-[calc(100vh-60px)] overflow-y-auto border-t border-[#d9e1dd] bg-white px-5 py-5">
             @foreach ($featureGroups as $group => $items)
-                <p class="mt-5 first:mt-0 text-[10px] font-extrabold uppercase tracking-[.16em] text-slate-400">{{ $group }}</p>
+                <p class="mt-5 first:mt-0 text-[12px] font-extrabold uppercase tracking-[.16em] text-slate-400">{{ $group }}</p>
                 <div class="mt-2 divide-y divide-slate-100 border-y border-slate-100">
                     @foreach ($items as $slug => $item)
                         <a href="{{ route('features.show', $slug) }}" class="block py-3 text-sm font-bold {{ $slug === $featureSlug ? 'text-emerald-700' : 'text-slate-700' }}">{{ $item['title'] }}</a>
@@ -93,7 +91,7 @@
                 </div>
                 <figure class="lg:col-span-7">
                     <img src="{{ asset($feature['image']) }}" alt="{{ $feature['image_alt'] }}" class="aspect-[16/10] w-full object-cover">
-                    <figcaption class="mt-2 text-[11px] font-semibold uppercase tracking-[.14em] text-slate-400">Ilustrasi &middot; {{ $feature['title'] }}</figcaption>
+                    <figcaption class="mt-2 text-[12px] font-semibold uppercase tracking-[.14em] text-slate-400">Ilustrasi &middot; {{ $feature['title'] }}</figcaption>
                 </figure>
             </div>
         </section>
@@ -148,12 +146,12 @@
                 <div class="mt-5 grid gap-x-12 gap-y-6 md:grid-cols-3">
                     @foreach ($featureGroups as $group => $items)
                         <div>
-                            <p class="text-[11px] font-extrabold uppercase tracking-[.14em] text-slate-400">{{ $group }}</p>
+                            <p class="text-[12px] font-extrabold uppercase tracking-[.14em] text-slate-400">{{ $group }}</p>
                             <ul class="mt-2 border-b border-[#d9e1dd]">
                                 @foreach ($items as $slug => $item)
                                     <li class="border-t border-[#d9e1dd]">
                                         @if ($slug === $featureSlug)
-                                            <span class="flex items-center justify-between py-3 text-[15px] font-bold text-[#0c7856]" aria-current="page">{{ $item['title'] }}<span class="text-[11px] uppercase tracking-wide">Dilihat</span></span>
+                                            <span class="flex items-center justify-between py-3 text-[15px] font-bold text-[#0c7856]" aria-current="page">{{ $item['title'] }}<span class="text-[12px] uppercase tracking-wide">Dilihat</span></span>
                                         @else
                                             <a href="{{ route('features.show', $slug) }}" class="group flex items-center justify-between py-3 text-[15px] font-semibold hover:text-[#0c7856]">{{ $item['title'] }}<span aria-hidden="true" class="transition-transform group-hover:translate-x-1">&rarr;</span></a>
                                         @endif

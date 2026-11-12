@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="id" class="h-full"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Verifikasi Tim Yoka</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
+<html lang="id" class="h-full"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Verifikasi Tim Yoka</title>@vite(['resources/css/app.css', 'resources/js/app.js'])    @include('layouts._fonts')
+</head>
 <body class="flex min-h-full items-center justify-center bg-emerald-950 px-5 py-12">
     <main class="w-full max-w-md border border-slate-200 bg-white p-8 shadow-2xl sm:p-10">
         <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Verifikasi dua langkah</p>

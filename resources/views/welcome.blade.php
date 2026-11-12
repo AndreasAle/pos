@@ -6,9 +6,8 @@
     <title>FNB POS — Sistem Kasir & Manajemen Resto Modern</title>
     <meta name="description" content="FNB POS membantu cafe, resto, dan cloud kitchen mengelola kasir, stok, laporan, dan loyalitas pelanggan dalam satu platform.">
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet" />
 
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-white text-slate-900 antialiased">

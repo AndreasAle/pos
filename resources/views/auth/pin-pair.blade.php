@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Pasangkan Perangkat — {{ config('app.name') }}</title>
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">

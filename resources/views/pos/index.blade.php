@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Kasir POS — {{ $business->name }}</title>
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
@@ -45,7 +46,7 @@
         <button @click="loadDrafts()" x-show="draftCount > 0" x-cloak
                 class="relative h-9 inline-flex items-center gap-1.5 text-xs font-bold text-amber-950 bg-amber-300 hover:bg-amber-200 px-3.5 rounded-full shadow-sm transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>Order Hold
-            <span x-text="draftCount" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#0c874e]"></span>
+            <span x-text="draftCount" class="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[12px] font-bold rounded-full flex items-center justify-center ring-2 ring-[#0c874e]"></span>
         </button>
 
         <span class="hidden md:inline text-sm font-semibold text-white/80 tabular-nums" x-text="currentTime"></span>
@@ -68,7 +69,7 @@
             </button>
             <div x-show="open" x-cloak x-transition.opacity.duration.150ms
                  class="absolute right-0 top-full mt-2 w-56 bg-white text-gray-800 rounded-xl border border-gray-200 shadow-[0_14px_36px_rgba(15,23,42,.20)] overflow-hidden py-1 z-40">
-                <p class="px-3.5 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">Cara cetak struk</p>
+                <p class="px-3.5 pt-2 pb-1 text-[12px] font-bold uppercase tracking-wider text-gray-400">Cara cetak struk</p>
                 <template x-for="o in opts" :key="o.v">
                     <button type="button" @click="printVia = o.v; savePrintVia(); open = false"
                             class="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-sm text-left hover:bg-emerald-50 transition-colors"
@@ -128,7 +129,7 @@
                             :class="activeCategory === null && !showBundles ? 'bg-emerald-600 text-white shadow-[0_4px_12px_rgba(5,150,105,.30)]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                             class="shrink-0 h-9 inline-flex items-center gap-2 text-[13px] font-semibold pl-4 pr-3 rounded-full transition-all">
                         Semua
-                        <span class="text-[11px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
+                        <span class="text-[12px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
                               :class="activeCategory === null && !showBundles ? 'bg-white/25 text-white' : 'bg-white text-gray-500'"
                               x-text="allProducts.length"></span>
                     </button>
@@ -138,7 +139,7 @@
                             :class="showBundles ? 'bg-purple-600 text-white shadow-[0_4px_12px_rgba(147,51,234,.30)]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                             class="shrink-0 h-9 inline-flex items-center gap-2 text-[13px] font-semibold pl-4 pr-3 rounded-full transition-all">
                         Bundle
-                        <span class="text-[11px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
+                        <span class="text-[12px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
                               :class="showBundles ? 'bg-white/25 text-white' : 'bg-white text-gray-500'"
                               x-text="allBundles.length"></span>
                     </button>
@@ -149,7 +150,7 @@
                             :class="(activeCategory === {{ $cat->id }} && !showBundles) ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                             class="shrink-0 h-9 inline-flex items-center gap-2 text-[13px] font-semibold pl-4 pr-3 rounded-full transition-all">
                         {{ $cat->name }}
-                        <span class="text-[11px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
+                        <span class="text-[12px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
                               :class="(activeCategory === {{ $cat->id }} && !showBundles) ? 'bg-white/25 text-white' : 'bg-white text-gray-500'"
                               x-text="allProducts.filter(p => p.cat_id == {{ $cat->id }}).length"></span>
                     </button>
@@ -283,7 +284,7 @@
                                   { v: 'shopeefood', l: 'ShopeeFood', c: '#f97316' }, { v: 'manual', l: 'Manual / Kurir Sendiri', c: '#64748b' }],
                            find(v) { return this.opts.find(o => o.v === v); } }"
                  @click.outside="open = false" @keydown.escape="open = false">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Detail pengiriman</p>
+                <p class="text-[12px] font-bold uppercase tracking-wider text-gray-400">Detail pengiriman</p>
 
                 {{-- Platform --}}
                 <div class="relative">
@@ -438,7 +439,7 @@
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5">
                                 <template x-if="item.isBundle">
-                                    <span class="text-[10px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded shrink-0 tracking-wide">BUNDLE</span>
+                                    <span class="text-[12px] bg-purple-100 text-purple-700 font-bold px-1.5 py-0.5 rounded shrink-0 tracking-wide">BUNDLE</span>
                                 </template>
                                 <p class="text-[15px] font-semibold text-gray-900 leading-snug" x-text="item.name"></p>
                             </div>
@@ -752,7 +753,7 @@
                 {{-- KIRI: total + metode --}}
                 <div class="p-4 sm:p-5 space-y-3 sm:space-y-4 md:bg-emerald-50/50 md:border-r md:border-gray-100">
                     <div class="rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white px-4 sm:px-5 py-3 sm:py-4 shadow-[0_10px_24px_rgba(5,150,105,.28)]">
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-emerald-100">Total tagihan</p>
+                        <p class="text-[12px] font-bold uppercase tracking-wider text-emerald-100">Total tagihan</p>
                         <p class="mt-1 text-3xl sm:text-4xl leading-none font-extrabold tabular-nums" x-text="'Rp '+fmt(grandTotal)"></p>
                         <p x-show="pointsDiscountAmt > 0" x-cloak class="mt-2 text-xs text-amber-200 font-medium">
                             Termasuk potongan poin Rp <span x-text="fmt(pointsDiscountAmt)"></span>
@@ -760,7 +761,7 @@
                     </div>
 
                     <div>
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Metode pembayaran</p>
+                        <p class="text-[12px] font-bold uppercase tracking-wider text-gray-400 mb-2">Metode pembayaran</p>
                         <div class="grid grid-cols-2 gap-2.5">
                             <button @click="selectPayMethod('cash')"
                                     :class="payMethod==='cash' ? 'bg-emerald-600 text-white border-emerald-600 shadow-[0_6px_16px_rgba(5,150,105,.28)]' : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400'"
@@ -792,7 +793,7 @@
 
                     {{-- Cash --}}
                     <div x-show="payMethod==='cash' && !isSplit" class="space-y-3">
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Uang diterima</p>
+                        <p class="text-[12px] font-bold uppercase tracking-wider text-gray-400">Uang diterima</p>
                         <div class="relative">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">Rp</span>
                             <input type="number" x-model.number="paidAmt" min="0" step="1000" @input="calcChange()" inputmode="numeric"
@@ -823,7 +824,7 @@
 
                     {{-- Petunjuk QRIS --}}
                     <div x-show="payMethod === 'qris' && !isSplit" x-cloak>
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pembayaran QRIS</p>
+                        <p class="text-[12px] font-bold uppercase tracking-wider text-gray-400 mb-2">Pembayaran QRIS</p>
                     @if($qrisData['use_dynamic'])
                     <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-3 text-emerald-700">
                         <svg class="w-6 h-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
@@ -864,7 +865,7 @@
 
                     {{-- Bayar terpisah: baris pembayaran --}}
                     <div x-show="isSplit" x-cloak class="space-y-2.5">
-                        <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Rincian pembayaran</p>
+                        <p class="text-[12px] font-bold uppercase tracking-wider text-gray-400">Rincian pembayaran</p>
                         <template x-for="(sp, si) in splitPayments" :key="si">
                             <div class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2">
                                 <div class="grid grid-cols-2 gap-0.5 p-0.5 bg-gray-100 rounded-lg shrink-0">
@@ -1113,13 +1114,13 @@
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nama pemesan <span class="text-red-500">*</span></label>
+                <label class="block text-[12px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nama pemesan <span class="text-red-500">*</span></label>
                 <input type="text" x-model="holdName" x-ref="holdNameInput" maxlength="60" required
                        placeholder="Contoh: Pak Budi"
                        class="w-full h-12 px-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all">
             </div>
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nomor meja</label>
+                <label class="block text-[12px] font-bold uppercase tracking-wider text-gray-400 mb-1.5">Nomor meja</label>
                 <input type="text" x-model="tableNumber" maxlength="20" inputmode="text"
                        placeholder="Kosongkan kalau takeaway"
                        class="w-full h-12 px-3.5 border border-gray-200 rounded-xl text-[15px] text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all">

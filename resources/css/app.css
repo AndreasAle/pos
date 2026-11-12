@@ -6,7 +6,8 @@
 @source "../**/*.js";
 
 @theme {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Plus Jakarta Sans', 'Nunito Sans', ui-sans-serif, system-ui, sans-serif;
     --color-emerald-50: oklch(97.2% 0.022 155.3);
     --color-emerald-100: oklch(94.5% 0.044 154.6);
     --color-emerald-600: oklch(53.2% 0.147 155.4);
@@ -78,3 +79,14 @@ main div:has(> table) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .y-report .y-scroll::-webkit-scrollbar { display: none; }
 .y-report .overflow-x-auto, .y-report .overflow-auto, .y-report section { position: relative; } /* agar teks sr-only di dalam tabel lebar ikut terpotong, tidak melebarkan halaman */
 
+/* ── TIPOGRAFI ─────────────────────────────────────────────────────────────
+   Nunito Sans  : isi, label, tombol, tabel (ramah dan mudah dibaca usia 26-56).
+   Plus Jakarta : judul dan semua teks tebal (bold/extrabold/black) agar tegas.
+   Italic tetap Nunito (punya italic asli); font-mono tidak disentuh.
+   Tidak dibungkus @layer supaya menang atas utilitas Tailwind. */
+body { font-family: var(--font-sans); font-optical-sizing: auto; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, h4, h5, h6, .font-display,
+.font-bold:not(.font-mono):not(.italic), .font-extrabold:not(.font-mono):not(.italic), .font-black:not(.font-mono):not(.italic),
+th:not(.font-mono) { font-family: var(--font-display); letter-spacing: -0.005em; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+em, i, .italic { font-synthesis: none; }

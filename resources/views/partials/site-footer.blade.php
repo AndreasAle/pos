@@ -47,7 +47,7 @@
                             <span class="text-[23px] font-extrabold leading-none text-emerald-700">POS</span>
                         </a>
                         <p class="mt-5 max-w-sm text-sm leading-7 text-slate-500">Sistem kasir modern untuk cafe, resto, bakery, dan bisnis F&amp;B. Semua operasional penting, dalam satu platform.</p>
-                        <p class="mt-5 text-[11px] font-extrabold uppercase tracking-[.16em] text-slate-400">Dikembangkan oleh</p>
+                        <p class="mt-5 text-[12px] font-extrabold uppercase tracking-[.16em] text-slate-400">Dikembangkan oleh</p>
                         <p class="mt-1 text-sm font-bold text-slate-900">{{ $companyName }}</p>
                     </div>
 

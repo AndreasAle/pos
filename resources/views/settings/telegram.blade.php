@@ -100,7 +100,7 @@
                 <div class="float w-[300px] rounded-[28px] border-[6px] border-[#0B1B3F] bg-[#E8F0F7] shadow-xl overflow-hidden">
                     <div class="flex items-center gap-2.5 bg-white px-3.5 py-2.5 border-b border-[#E5E7EB]">
                         <span class="w-8 h-8 rounded-full bg-[#16A34A] flex items-center justify-center"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="w-5 h-5 object-contain bg-white rounded-full p-0.5"></span>
-                        <div class="leading-tight"><p class="text-[13px] font-bold">Yoka POS Bot</p><p class="text-[11px] text-[#16A34A]">bot</p></div>
+                        <div class="leading-tight"><p class="text-[13px] font-bold">Yoka POS Bot</p><p class="text-[12px] text-[#16A34A]">bot</p></div>
                     </div>
                     <div class="h-[330px] px-3 py-4 space-y-2.5 text-[12.5px] leading-snug">
                         <div class="pop-in max-w-[88%] rounded-2xl rounded-bl-md bg-white px-3 py-2 shadow-sm" style="--d:0">

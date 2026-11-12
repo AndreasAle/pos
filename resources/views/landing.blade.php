@@ -6,14 +6,12 @@
     <title>Yoka POS — Kasir Modern untuk Cafe, Resto, Bakery & Bisnis F&B</title>
     <meta name="description" content="Kelola transaksi, QRIS, stok, shift kasir, laporan profit, dan insight bisnis Yoka Intelligence dalam satu sistem POS untuk cafe, resto, bakery, dan UMKM.">
 
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800" rel="stylesheet" />
 
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
         [x-cloak] { display: none !important; }
-        body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
         .gradient-text {
             background: linear-gradient(90deg, #059669, #10b981);
             -webkit-background-clip: text;
@@ -90,7 +88,7 @@
                         <span class="absolute -top-2 left-[132px] w-4 h-4 rotate-45 border-l border-t border-slate-200 bg-white"></span>
                         <div class="grid grid-cols-[1fr_1fr_1.15fr] gap-7">
                             <div>
-                                <p class="mb-3 text-[11px] font-extrabold uppercase tracking-[.14em] text-slate-400">Kasir &amp; Pembayaran</p>
+                                <p class="mb-3 text-[12px] font-extrabold uppercase tracking-[.14em] text-slate-400">Kasir &amp; Pembayaran</p>
                                 <div class="space-y-1">
                                     @foreach ([
                                         [route('features.show', 'transaksi-kasir'), 'Transaksi Kasir', 'Proses pesanan lebih cepat'],
@@ -100,14 +98,14 @@
                                     ] as [$href, $title, $desc])
                                         <a href="{{ $href }}" @click="featureOpen = false" class="group block rounded-xl px-3 py-2.5 hover:bg-emerald-50 transition-colors">
                                             <span class="block text-sm font-bold text-slate-800 group-hover:text-emerald-700">{{ $title }}</span>
-                                            <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ $desc }}</span>
+                                            <span class="mt-0.5 block text-[12px] font-medium text-slate-400">{{ $desc }}</span>
                                         </a>
                                     @endforeach
                                 </div>
                             </div>
 
                             <div>
-                                <p class="mb-3 text-[11px] font-extrabold uppercase tracking-[.14em] text-slate-400">Operasional Bisnis</p>
+                                <p class="mb-3 text-[12px] font-extrabold uppercase tracking-[.14em] text-slate-400">Operasional Bisnis</p>
                                 <div class="space-y-1">
                                     @foreach ([
                                         [route('features.show', 'stok-resep'), 'Stok & Resep', 'Stok bahan berkurang otomatis'],
@@ -117,7 +115,7 @@
                                     ] as [$href, $title, $desc])
                                         <a href="{{ $href }}" @click="featureOpen = false" class="group block rounded-xl px-3 py-2.5 hover:bg-emerald-50 transition-colors">
                                             <span class="block text-sm font-bold text-slate-800 group-hover:text-emerald-700">{{ $title }}</span>
-                                            <span class="mt-0.5 block text-[11px] font-medium text-slate-400">{{ $desc }}</span>
+                                            <span class="mt-0.5 block text-[12px] font-medium text-slate-400">{{ $desc }}</span>
                                         </a>
                                     @endforeach
                                 </div>
@@ -128,7 +126,7 @@
                                     <span class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 3-7.5 18-4.3-7.7L3 9.5 21 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.2 13.3 21 3"/></svg>
                                     </span>
-                                    <span class="rounded-full bg-amber-300 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-950">Unggulan</span>
+                                    <span class="rounded-full bg-amber-300 px-2.5 py-1 text-[12px] font-extrabold uppercase tracking-wider text-amber-950">Unggulan</span>
                                 </div>
                                 <p class="mt-5 text-lg font-extrabold">Yoka Intelligence</p>
                                 <p class="mt-2 text-xs font-medium leading-relaxed text-emerald-50/85">Tanya omzet, profit, stok, produk terlaris, dan dapatkan insight langsung dari data tokomu.</p>
@@ -416,13 +414,13 @@
                                     <span x-text="item.icon"></span><span x-text="item.tab"></span>
                                 </button>
                             </template>
-                            <span class="ml-auto hidden items-center gap-1.5 text-[10px] font-semibold text-slate-400 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Data tersambung</span>
+                            <span class="ml-auto hidden items-center gap-1.5 text-[12px] font-semibold text-slate-400 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Data tersambung</span>
                         </div>
 
                         <div class="flex h-[500px] flex-col sm:h-[520px]">
                             <div class="flex h-12 shrink-0 items-center justify-between border-b border-slate-100 px-5">
-                                <div class="flex items-center gap-2"><span class="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-600 text-[10px] font-black text-white">Y</span><span class="text-xs font-bold text-slate-700" x-text="scenarios[active].mode"></span></div>
-                                <span class="text-[10px] font-medium text-slate-400">{{ config('app.name') }}</span>
+                                <div class="flex items-center gap-2"><span class="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-600 text-[12px] font-black text-white">Y</span><span class="text-xs font-bold text-slate-700" x-text="scenarios[active].mode"></span></div>
+                                <span class="text-[12px] font-medium text-slate-400">{{ config('app.name') }}</span>
                             </div>
 
                             <div class="relative flex-1 overflow-hidden px-5 py-5 sm:px-7">
@@ -442,14 +440,14 @@
                                     <div x-show="phase === 2" class="space-y-2.5">
                                         <template x-for="(line, index) in scenarios[active].analysis" :key="line">
                                             <div x-show="analysisStep > index" x-transition class="ai-demo-enter flex items-start gap-3 rounded-xl border border-slate-100 bg-white px-3.5 py-3 shadow-sm">
-                                                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-black text-emerald-600" x-text="index + 1"></span>
+                                                <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[12px] font-black text-emerald-600" x-text="index + 1"></span>
                                                 <p class="text-xs leading-relaxed text-slate-600" x-text="line"></p>
                                             </div>
                                         </template>
                                         <div x-show="analysisStep < 3" class="h-11 rounded-xl ai-demo-shimmer"></div>
                                     </div>
                                     <div x-show="phase >= 3" x-transition class="ai-demo-enter overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
-                                        <div class="border-b border-emerald-100 bg-emerald-50/70 px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700" x-text="scenarios[active].label"></div>
+                                        <div class="border-b border-emerald-100 bg-emerald-50/70 px-4 py-2.5 text-[12px] font-extrabold uppercase tracking-wider text-emerald-700" x-text="scenarios[active].label"></div>
                                         <div class="p-4">
                                             <p class="text-[15px] font-extrabold leading-relaxed text-[#0B1B3F]" x-text="scenarios[active].answer"></p>
                                             <p class="mt-2 text-xs leading-relaxed text-slate-500" x-text="scenarios[active].detail"></p>
@@ -799,7 +797,7 @@
                 @foreach ($testimonials as $testimonial)
                     <figure class="snap-start shrink-0 w-[92%] md:w-[84%] lg:w-[88%] min-h-[620px] md:min-h-[470px] grid md:grid-cols-[42%_58%] overflow-hidden rounded-[28px] bg-white shadow-[0_20px_55px_rgba(15,23,42,.08)]">
                         <div class="relative min-h-[300px] md:min-h-full {{ $testimonial['photoBg'] }} overflow-hidden">
-                            <div class="absolute top-5 left-5 z-10 px-3 py-1.5 rounded-full bg-white/85 backdrop-blur-sm text-[11px] font-bold uppercase tracking-wider text-slate-700 shadow-sm">
+                            <div class="absolute top-5 left-5 z-10 px-3 py-1.5 rounded-full bg-white/85 backdrop-blur-sm text-[12px] font-bold uppercase tracking-wider text-slate-700 shadow-sm">
                                 {{ $testimonial['category'] }}
                             </div>
                             <img src="{{ $testimonial['image'] }}" alt="{{ $testimonial['alt'] }}"

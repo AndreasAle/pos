@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') — {{ config('app.name') }}</title>
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('styles')
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
@@ -199,7 +200,7 @@
                    @keydown.enter.prevent="go()" @keydown.escape="open = false; mob = false; $refs.q.blur()"
                    placeholder="Cari menu, produk, atau laporan..."
                    class="w-full h-10 pl-10 pr-12 rounded-xl bg-black/20 text-sm font-normal text-white placeholder:text-white/60 border border-white/10 shadow-inner transition-all duration-200 hover:bg-black/25 focus:outline-none focus:bg-white focus:text-gray-900 focus:placeholder:text-gray-400 focus:border-white focus:ring-4 focus:ring-white/20">
-            <kbd class="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-md border border-white/20 bg-white/10 text-[11px] font-semibold text-white/70 pointer-events-none group-focus-within:hidden">/</kbd>
+            <kbd class="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-md border border-white/20 bg-white/10 text-[12px] font-semibold text-white/70 pointer-events-none group-focus-within:hidden">/</kbd>
             <button type="button" x-show="mob" x-cloak @click="mob = false; open = false; q = ''" class="sm:hidden ml-2 px-2 h-9 text-sm font-semibold text-white/90 shrink-0">Batal</button>
             <div x-show="open && q.trim()" x-cloak class="absolute left-3 right-3 sm:left-0 sm:right-0 top-full mt-1 sm:mt-2 rounded-lg bg-white text-gray-800 shadow-xl border border-[#E5E7EB] py-1 z-50">
                 <template x-for="(r, i) in results" :key="r.href">

@@ -41,7 +41,7 @@
         @foreach($products as $p)
             <tr class="hover:bg-gray-50">
                 <th scope="row" class="px-4 py-2.5 text-left font-medium">{{ $p['name'] }}@if($p['variant']) <span class="font-normal text-[#64748B]">· {{ $p['variant'] }}</span>@endif
-                    @unless($p['matched'])<span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-[#475569]" title="Produk sudah dihapus atau item lama tanpa ID produk">tanpa ID</span>@endunless</th>
+                    @unless($p['matched'])<span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[12px] font-semibold text-[#475569]" title="Produk sudah dihapus atau item lama tanpa ID produk">tanpa ID</span>@endunless</th>
                 <td class="px-4 py-2.5 text-right tabular-nums">{{ \App\Support\Money::num($p['quantity'], 1) }}</td>
                 <td class="px-4 py-2.5 text-right tabular-nums">{{ \App\Support\Money::rp($p['gross_item_sales']) }}</td>
                 <td class="px-4 py-2.5 text-right font-semibold tabular-nums">{{ \App\Support\Money::rp($p['net_sales']) }}</td>

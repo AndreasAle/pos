@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Masuk Kasir — {{ $outlet->name }}</title>
+    @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
@@ -41,7 +42,7 @@
             <div class="flex flex-wrap justify-center gap-2 mb-6">
                 @foreach($staff as $person)
                     <span class="inline-flex items-center gap-1.5 bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full">
-                        <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-bold">
+                        <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[12px] font-bold">
                             {{ strtoupper(substr($person->name, 0, 1)) }}
                         </span>
                         {{ $person->name }}
