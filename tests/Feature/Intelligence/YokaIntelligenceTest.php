@@ -111,6 +111,34 @@ class YokaIntelligenceTest extends TestCase
         $this->assertDatabaseCount('assistant_messages', 2);
     }
 
+    public function test_assistant_returns_verified_business_analysis_instead_of_only_repeating_totals(): void
+    {
+        config(['services.yoka_ai.key' => null]);
+        $owner = $this->owner();
+        foreach ([100000, 300000] as $index => $amount) {
+            $date = now()->startOfMonth()->addDays($index);
+            $order = Order::create([
+                'business_id' => $owner->business_id, 'outlet_id' => $owner->outlet_id, 'user_id' => $owner->id,
+                'order_number' => 'ANALYSIS-'.$index, 'status' => 'paid', 'payment_status' => 'paid',
+                'payment_method' => 'cash', 'subtotal' => $amount, 'grand_total' => $amount,
+                'discount_amount' => 0, 'is_split_payment' => false,
+            ]);
+            $order->timestamps = false;
+            $order->forceFill(['created_at' => $date, 'updated_at' => $date])->save();
+        }
+
+        $answer = app(YokaAssistantService::class)->ask($owner, 'Buat grafik tren penjualan bulan ini');
+        $findings = data_get($answer, 'response.analysis.findings');
+
+        $this->assertSame('sales_series', $answer['tool']);
+        $this->assertCount(3, $findings);
+        $this->assertStringContainsString('2 hari aktif', $findings[0]);
+        $this->assertStringContainsString('Puncak terjadi', $findings[1]);
+        $this->assertStringContainsString('naik 200.0%', $findings[2]);
+        $this->assertStringContainsString('Langkah yang paling masuk akal', $answer['answer']);
+        $this->assertNotEmpty(data_get($answer, 'response.analysis.caveats'));
+    }
+
     public function test_follow_up_keeps_previous_subject_and_changes_the_date_range(): void
     {
         $owner = $this->owner();
