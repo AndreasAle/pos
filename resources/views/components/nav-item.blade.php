@@ -35,6 +35,7 @@ $path = $icons[$icon] ?? $icons['home'];
 
 @php $label = trim(strip_tags((string) $slot)); @endphp
 <a href="{{ route($route) }}"
+   {{ $attributes }}
    @mouseenter="tipShow($event, @js($label))" @mouseleave="tipHide()" @focus="tipShow($event, @js($label))" @blur="tipHide()"
    @if($active) aria-current="page" @endif
    class="flex items-center gap-2 h-8 px-2.5 rounded-md text-[13px] font-semibold transition-colors

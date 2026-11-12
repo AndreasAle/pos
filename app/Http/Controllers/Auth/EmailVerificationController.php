@@ -13,7 +13,7 @@ class EmailVerificationController extends Controller
     public function notice(Request $request)
     {
         if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->route('dashboard');
+            return redirect()->route($this->destinationFor($request->user()));
         }
 
         return view('auth.verify-email', ['email' => $request->user()->email]);
@@ -32,11 +32,13 @@ class EmailVerificationController extends Controller
             $user->markEmailAsVerified();
         }
 
-        $message = 'Email berhasil dikonfirmasi. Selamat datang di Yoka POS!';
+        $message = $user->requires_business_setup && ! $user->business_id
+            ? 'Email berhasil dikonfirmasi. Selanjutnya, lengkapi informasi bisnis Anda.'
+            : 'Email berhasil dikonfirmasi. Selamat datang di Yoka POS!';
 
         return Auth::check()
-            ? redirect()->route('dashboard')->with('success', $message)
-            : redirect()->route('login')->with('success', $message . ' Silakan masuk.');
+            ? redirect()->route($this->destinationFor(Auth::user()))->with('success', $message)
+            : redirect()->route('login')->with('success', $message.' Silakan masuk.');
     }
 
     public function resend(Request $request)
@@ -44,7 +46,7 @@ class EmailVerificationController extends Controller
         $user = $request->user();
 
         if ($user->hasVerifiedEmail()) {
-            return redirect()->route('dashboard');
+            return redirect()->route($this->destinationFor($user));
         }
 
         try {
@@ -55,6 +57,13 @@ class EmailVerificationController extends Controller
             return back()->withErrors(['email' => 'Email belum bisa terkirim saat ini. Coba lagi beberapa menit lagi.']);
         }
 
-        return back()->with('success', 'Tautan konfirmasi baru sudah dikirim ke ' . $user->email . '.');
+        return back()->with('success', 'Tautan konfirmasi baru sudah dikirim ke '.$user->email.'.');
+    }
+
+    private function destinationFor(User $user): string
+    {
+        return $user->requires_business_setup && ! $user->business_id
+            ? 'onboarding.business'
+            : 'dashboard';
     }
 }

@@ -35,7 +35,7 @@
                 <h1 class="text-[40px] xl:text-[44px] font-extrabold leading-[1.15] text-emerald-900 max-w-[560px]">
                     Mulai Jualan dengan Kasir yang Rapi
                 </h1>
-                <p class="mt-4 text-lg text-slate-600 max-w-[520px]">Daftar dalam satu menit, langsung bisa dipakai untuk transaksi pertama Anda.</p>
+                <p class="mt-4 text-lg text-slate-600 max-w-[520px]">Buat akun dalam satu menit. Setelah email terverifikasi, kami bantu menyiapkan bisnis Anda langkah demi langkah.</p>
 
                 <div class="relative mt-10 rounded-[32px] bg-[#01a05b] overflow-hidden max-w-[600px]">
                     <img src="{{ asset('images/hero/slide-kasir.webp') }}" alt="Tablet kasir dan printer struk Yoka POS" class="w-full block">
@@ -50,7 +50,7 @@
             {{-- Kanan: form --}}
             <div class="w-full max-w-[480px] mx-auto lg:mx-0 bg-white rounded-3xl shadow-[0_10px_40px_rgba(6,95,70,.10)] p-7 sm:p-9">
                 <h2 class="text-2xl font-extrabold text-slate-900">Daftar Akun</h2>
-                <p class="text-sm text-slate-500 mt-1 mb-6">Gratis 7 hari, tanpa kartu kredit.</p>
+                <p class="text-sm text-slate-500 mt-1 mb-6">Langkah 1 dari 3 · Buat akun pemilik.</p>
 
                 @if ($errors->any())
                     <div class="mb-5 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
@@ -69,18 +69,8 @@
                     @csrf
 
                     <div>
-                        <label for="business_name">Nama Bisnis</label>
-                        <input id="business_name" type="text" name="business_name" value="{{ old('business_name') }}" required autofocus
-                               placeholder="Contoh: Kopi Mertuaku" class="{{ $err('business_name') ? 'err' : '' }}">
-                    </div>
-                    <div>
-                        <label for="outlet_name">Nama Outlet</label>
-                        <input id="outlet_name" type="text" name="outlet_name" value="{{ old('outlet_name') }}" required
-                               placeholder="Contoh: Outlet Pusat" class="{{ $err('outlet_name') ? 'err' : '' }}">
-                    </div>
-                    <div>
                         <label for="name">Nama Lengkap</label>
-                        <input id="name" type="text" name="name" value="{{ old('name') }}" required placeholder="Nama sesuai KTP">
+                        <input id="name" type="text" name="name" value="{{ old('name') }}" required autofocus placeholder="Nama pemilik bisnis">
                     </div>
                     <div>
                         <label for="phone_local">Nomor HP</label>
@@ -122,7 +112,7 @@
                     </div>
 
                     <button type="submit" class="w-full h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[15px] transition-colors">
-                        Mulai Coba Gratis
+                        Buat Akun &amp; Verifikasi Email
                     </button>
                 </form>
 

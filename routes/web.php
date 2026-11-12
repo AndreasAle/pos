@@ -18,6 +18,7 @@ use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OutletController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
 use App\Http\Controllers\Platform\AuthController as PlatformAuthController;
@@ -81,6 +82,12 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:3,1')->name('verification.send');
 });
 
+// Akun baru menyiapkan tenant hanya setelah alamat emailnya terbukti valid.
+Route::middleware(['auth', 'owner.verified'])->prefix('mulai')->name('onboarding.')->group(function () {
+    Route::get('/bisnis', [OnboardingController::class, 'show'])->name('business');
+    Route::post('/bisnis', [OnboardingController::class, 'store'])->name('business.store');
+});
+
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
 // ── Backoffice tim Yoka ──────────────────────────────────────────────────────
@@ -130,6 +137,9 @@ Route::post('/kasir/logout', [PinLoginController::class, 'logout'])->name('pin.l
 
 // ── Authenticated + Business ──────────────────────────────────────────────────
 Route::middleware(['auth', 'business', 'owner.verified'])->group(function () {
+
+    Route::post('/onboarding/tour/complete', [OnboardingController::class, 'completeTour'])->name('onboarding.tour.complete');
+    Route::post('/onboarding/tour/restart', [OnboardingController::class, 'restartTour'])->name('onboarding.tour.restart');
 
     if (config('pos.features.subscription')) {
         Route::get('/subscription/expired', [SubscriptionController::class, 'expired'])->name('subscription.expired');

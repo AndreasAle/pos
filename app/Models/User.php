@@ -13,7 +13,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = [
         'business_id', 'outlet_id', 'name', 'email', 'google_id', 'password', 'pin',
-        'role', 'is_active', 'phone', 'avatar',
+        'role', 'is_active', 'requires_business_setup', 'phone', 'avatar',
     ];
 
     protected $hidden = ['password', 'pin', 'remember_token', 'google_id'];
@@ -24,6 +24,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'requires_business_setup' => 'boolean',
         ];
     }
 

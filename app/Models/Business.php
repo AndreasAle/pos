@@ -10,10 +10,11 @@ class Business extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'slug', 'phone', 'email', 'address',
+        'name', 'business_type', 'outlet_scale', 'slug', 'phone', 'email', 'address', 'city',
         'logo', 'qris_image', 'qris_merchant_name', 'qris_nmid',
         'timezone', 'currency', 'is_active', 'settings',
         'balance', 'total_earned', 'total_withdrawn',
+        'onboarding_completed_at', 'dashboard_tour_completed_at',
     ];
 
     protected function casts(): array
@@ -24,6 +25,8 @@ class Business extends Model
             'balance' => 'decimal:2',
             'total_earned' => 'decimal:2',
             'total_withdrawn' => 'decimal:2',
+            'onboarding_completed_at' => 'datetime',
+            'dashboard_tour_completed_at' => 'datetime',
         ];
     }
 

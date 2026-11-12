@@ -82,11 +82,11 @@ class GoogleLoginController extends Controller
             return $this->loginError('Akun Anda tidak aktif. Hubungi administrator.');
         }
 
-        if (! $user->business_id || ! $user->business) {
+        if ((! $user->business_id || ! $user->business) && ! $user->requires_business_setup) {
             return $this->loginError('Akun Anda belum terhubung ke bisnis mana pun. Hubungi pemilik bisnis.');
         }
 
-        if (! $user->business->is_active) {
+        if ($user->business && ! $user->business->is_active) {
             return $this->loginError('Bisnis Anda tidak aktif. Hubungi administrator.');
         }
 
@@ -98,7 +98,11 @@ class GoogleLoginController extends Controller
         Auth::login($user, true);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        $destination = $user->requires_business_setup && ! $user->business_id
+            ? route('onboarding.business')
+            : route('dashboard');
+
+        return redirect()->intended($destination);
     }
 
     private function hasVerifiedEmail(SocialiteUser $googleUser): bool

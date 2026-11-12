@@ -65,16 +65,16 @@
             @endphp
 
             {{-- Utama --}}
-            <x-nav-item route="dashboard" icon="home">Dashboard</x-nav-item>
+            <x-nav-item route="dashboard" icon="home" data-tour="dashboard">Dashboard</x-nav-item>
             @if(in_array($role, ['owner','admin','cashier']))
-            <x-nav-item route="pos.index" icon="shopping-cart">Kasir / POS</x-nav-item>
+            <x-nav-item route="pos.index" icon="shopping-cart" data-tour="pos">Kasir / POS</x-nav-item>
             <x-nav-item route="orders.index" icon="clipboard-list">Riwayat Order</x-nav-item>
             <x-nav-item route="shifts.index" icon="clock">Shift Kasir</x-nav-item>
             @endif
 
             @if(in_array($role, ['owner','admin']))
             <x-nav-group title="Master Data" :routes="['products.*','bundles.*','categories.*','customers.*','promotions.*']">
-                <x-nav-item route="products.index" icon="cube">{{ $isRetail ? 'Produk' : 'Produk / Menu' }}</x-nav-item>
+                <x-nav-item route="products.index" icon="cube" data-tour="products">{{ $isRetail ? 'Produk' : 'Produk / Menu' }}</x-nav-item>
                 <x-nav-item route="bundles.index" icon="squares-plus">Bundling Produk</x-nav-item>
                 <x-nav-item route="categories.index" icon="tag">Kategori</x-nav-item>
                 <x-nav-item route="customers.index" icon="users">Pelanggan</x-nav-item>
@@ -97,7 +97,7 @@
 
             @if(in_array($role, ['owner','admin']))
             <x-nav-group title="Laporan" :routes="['reports.*']">
-                <x-nav-item route="reports.sales" icon="chart-bar">Laporan Penjualan</x-nav-item>
+                <x-nav-item route="reports.sales" icon="chart-bar" data-tour="reports">Laporan Penjualan</x-nav-item>
                 <x-nav-item route="reports.products" icon="chart-pie">Produk Terlaris</x-nav-item>
                 <x-nav-item route="reports.cashier" icon="user-circle">Laporan Kasir</x-nav-item>
                 <x-nav-item route="reports.shift" icon="clock-rotate-left">Laporan Shift</x-nav-item>
@@ -139,7 +139,7 @@
                         <p class="text-xs text-gray-500 leading-tight mt-0.5">Hubungi tim support kami.</p>
                     </div>
                 </div>
-                <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="mt-3 h-10 flex items-center justify-center gap-2 rounded-lg bg-[#E1F5EA] text-[#0B8F5B] text-sm font-semibold hover:bg-[#CFEFDD] transition-colors">
+                <a href="{{ $supportUrl }}" target="_blank" rel="noopener" data-tour="support" class="mt-3 h-10 flex items-center justify-center gap-2 rounded-lg bg-[#E1F5EA] text-[#0B8F5B] text-sm font-semibold hover:bg-[#CFEFDD] transition-colors">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="stroke-width:1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 14v-2a8 8 0 1116 0v2M4 14a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 01-2 2h-1v-5h1a2 2 0 012 2zM18 18a3 3 0 01-3 3h-2"/></svg>
                     Hubungi Support
                 </a>
@@ -242,6 +242,14 @@
                     @if($canSettings)
                     <a href="{{ route('settings.business') }}" class="flex items-center gap-2.5 px-3 py-2 text-sm font-medium hover:bg-[#F4F6F8]">
                         <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M10.3 4.3a1.7 1.7 0 013.4 0 1.7 1.7 0 002.5 1l.1-.1a1.7 1.7 0 012.4 2.4l-.1.1a1.7 1.7 0 001 2.5 1.7 1.7 0 010 3.4 1.7 1.7 0 00-1 2.5l.1.1a1.7 1.7 0 01-2.4 2.4l-.1-.1a1.7 1.7 0 00-2.5 1 1.7 1.7 0 01-3.4 0 1.7 1.7 0 00-2.5-1l-.1.1a1.7 1.7 0 01-2.4-2.4l.1-.1a1.7 1.7 0 00-1-2.5 1.7 1.7 0 010-3.4 1.7 1.7 0 001-2.5l-.1-.1a1.7 1.7 0 012.4-2.4l.1.1a1.7 1.7 0 002.5-1zM15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Pengaturan</a>
+                    @endif
+                    @if($me->isOwner())
+                    <form method="POST" action="{{ route('onboarding.tour.restart') }}">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm font-medium hover:bg-[#F4F6F8]">
+                            <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.75"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M5.6 16.4A8 8 0 0118.8 7M18.4 7.6A8 8 0 015.2 17"/></svg>Ulangi Panduan Yoka
+                        </button>
+                    </form>
                     @endif
                     <div class="my-1 border-t border-[#E5E7EB]"></div>
                     <form method="POST" action="{{ route('logout') }}">

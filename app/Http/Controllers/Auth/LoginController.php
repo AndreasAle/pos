@@ -22,19 +22,20 @@ class LoginController extends Controller
         if (Auth::check()) {
             return redirect()->route('dashboard');
         }
+
         return view('auth.login');
     }
 
     public function login(Request $request)
     {
         $request->validate([
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
         $this->ensureIsNotRateLimited($request);
 
-        if (!Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+        if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey($request), self::DECAY_SECONDS);
 
             throw ValidationException::withMessages([
@@ -44,7 +45,7 @@ class LoginController extends Controller
 
         $user = Auth::user();
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             Auth::logout();
             RateLimiter::hit($this->throttleKey($request), self::DECAY_SECONDS);
 
@@ -56,7 +57,13 @@ class LoginController extends Controller
         RateLimiter::clear($this->throttleKey($request));
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        $destination = ! $user->hasVerifiedEmail()
+            ? route('verification.notice')
+            : ($user->requires_business_setup && ! $user->business_id
+                ? route('onboarding.business')
+                : route('dashboard'));
+
+        return redirect()->intended($destination);
     }
 
     /**
@@ -67,7 +74,7 @@ class LoginController extends Controller
      */
     private function ensureIsNotRateLimited(Request $request): void
     {
-        if (!RateLimiter::tooManyAttempts($this->throttleKey($request), self::MAX_ATTEMPTS)) {
+        if (! RateLimiter::tooManyAttempts($this->throttleKey($request), self::MAX_ATTEMPTS)) {
             return;
         }
 
@@ -84,7 +91,7 @@ class LoginController extends Controller
      */
     private function throttleKey(Request $request): string
     {
-        return Str::transliterate(Str::lower($request->input('email')) . '|' . $request->ip());
+        return Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
     }
 
     public function logout(Request $request)

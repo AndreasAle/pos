@@ -105,7 +105,7 @@
     <div class="space-y-4 min-w-0">
 
         {{-- Greeting --}}
-        <section class="fade-up relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-gradient-to-br from-white via-white to-[#ECFDF3] p-6" style="--i:0">
+        <section id="yoka-dashboard-summary" class="fade-up relative overflow-hidden rounded-xl border border-[#E5E7EB] bg-gradient-to-br from-white via-white to-[#ECFDF3] p-6" style="--i:0">
             <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_260px] gap-4 items-center">
                 <div>
                     <p class="text-xs font-semibold text-[#16A34A] uppercase tracking-wide">{{ now()->isoFormat('dddd, D MMMM Y') }}</p>
@@ -412,6 +412,9 @@
     </aside>
 </div>
 </div>
+@if($user->isOwner() && ! $currentBusiness->dashboard_tour_completed_at)
+    @include('onboarding._dashboard-tour')
+@endif
 @endsection
 
 @push('scripts')

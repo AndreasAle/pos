@@ -21,7 +21,13 @@ class EnsureBusinessIsSet
         //
         // Accounts end up here when their business is deleted: users.business_id
         // is nullOnDelete, so the row survives without a tenant.
-        if (!$user || !$user->business_id || !$user->business) {
+        if ($user && $user->isOwner() && $user->requires_business_setup && ! $user->business_id) {
+            return redirect()->route(
+                $user->hasVerifiedEmail() ? 'onboarding.business' : 'verification.notice'
+            );
+        }
+
+        if (! $user || ! $user->business_id || ! $user->business) {
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -31,7 +37,7 @@ class EnsureBusinessIsSet
             ]);
         }
 
-        if (!$user->business->is_active) {
+        if (! $user->business->is_active) {
             abort(403, 'Bisnis Anda tidak aktif. Hubungi administrator.');
         }
 
