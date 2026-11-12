@@ -144,7 +144,7 @@ class YokaToolRegistry
 
     private function customers(User $u, array $p, array $o, int $limit): array
     {
-        $rows = $this->orders($u, $p, $o)->whereNotNull('customer_id')->join('customers', 'customers.id', '=', 'orders.customer_id')->select('customers.id', 'customers.name')->selectRaw('COUNT(*) visits, SUM(orders.subtotal-orders.discount_amount) spending')->groupBy('customers.id', 'customers.name')->orderByDesc('spending')->limit($limit)->get()->map(fn ($r) => ['customer_id' => $r->id, 'name' => $r->name, 'visits' => (int) $r->visits, 'spending' => (float) $r->spending])->all();
+        $rows = $this->within(Order::query()->where('orders.business_id', $u->business_id)->whereIn('orders.outlet_id', $o)->where('orders.status', 'paid')->whereNotNull('orders.customer_id')->join('customers', 'customers.id', '=', 'orders.customer_id'), 'orders.created_at', $p)->select('customers.id', 'customers.name')->selectRaw('COUNT(*) visits, SUM(orders.subtotal-orders.discount_amount) spending')->groupBy('customers.id', 'customers.name')->orderByDesc('spending')->limit($limit)->get()->map(fn ($r) => ['customer_id' => $r->id, 'name' => $r->name, 'visits' => (int) $r->visits, 'spending' => (float) $r->spending])->all();
 
         return $this->payload(['customers' => $rows], ['net_sales', 'transactions'], 'partial', ['Hanya order yang terhubung ke pelanggan.']);
     }
