@@ -1,4 +1,4 @@
-{{-- Ilustrasi toko (vektor) dengan animasi halus. --}}
+{{-- Ilustrasi toko statis. --}}
 <svg viewBox="0 0 260 220" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <defs>
         <linearGradient id="st-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E7F8EE"/></linearGradient>
@@ -10,14 +10,7 @@
     {{-- tanah / bayangan --}}
     <ellipse cx="130" cy="206" rx="104" ry="8" fill="#0B8F5B" opacity=".10"/>
 
-    {{-- awan & bintang kecil --}}
-    <g class="anim-drift" opacity=".9">
-        <path d="M30 40c0-7 6-12 13-12 3-6 12-8 18-3 7-1 13 4 13 10 5 0 9 4 9 9H27c-4 0-6-2-6-4s3-0 9-0z" fill="#fff" opacity=".9"/>
-    </g>
-    <g class="anim-twinkle"><path d="M226 34l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#86EFAC"/></g>
-    <g class="anim-twinkle" style="animation-delay:.9s"><path d="M42 98l1.8 4.2 4.2 1.8-4.2 1.8L42 110l-1.8-4.2L36 104l4.2-1.8z" fill="#BBF7D0"/></g>
-
-    <g class="anim-float" filter="url(#st-shadow)">
+    <g filter="url(#st-shadow)">
         {{-- bangunan --}}
         <rect x="52" y="82" width="156" height="118" rx="6" fill="url(#st-wall)" stroke="#D1F0DD"/>
         {{-- papan atas --}}
@@ -28,7 +21,7 @@
             <path d="M44 74h28.7l-3.3 30H34zM101.3 74h28.7v30h-28.7zM159.3 74H188l7.6 30h-28.7z" fill="url(#st-green)"/>
             <path d="M72.7 74h28.6l-1.6 30H69.4zM130 74h29.3l-1.6 30H131.6zM188 74h28l10 30h-30.4z" fill="#fff"/>
             {{-- lengkung bawah kanopi --}}
-            <g class="anim-awning">
+            <g>
                 <path d="M34 104h32l-1 8a15.2 15.2 0 01-30 0z" fill="#16A34A"/>
                 <path d="M66 104h32l-1 8a15.2 15.2 0 01-30 0z" fill="#fff"/>
                 <path d="M98 104h32l-1 8a15.2 15.2 0 01-30 0z" fill="#16A34A"/>
@@ -45,7 +38,7 @@
         {{-- produk di etalase --}}
         <rect x="76" y="154" width="12" height="14" rx="2" fill="#16A34A"/><rect x="92" y="148" width="12" height="20" rx="2" fill="#A855F7"/><rect x="108" y="156" width="12" height="12" rx="2" fill="#F59E0B"/><rect x="123" y="151" width="10" height="17" rx="2" fill="#0EA5E9"/>
         {{-- papan OPEN --}}
-        <g class="anim-sign">
+        <g>
             <rect x="82" y="92" width="46" height="16" rx="4" fill="#0B1B3F"/>
             <text x="105" y="104" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" fill="#4ADE80">OPEN</text>
         </g>
@@ -58,7 +51,7 @@
 
     {{-- tanaman --}}
     <g transform="translate(214 150)">
-        <g class="anim-sway" style="transform-origin:14px 44px">
+        <g>
             <path d="M14 44C14 28 8 18 0 12c10-2 17 6 14 20z" fill="#22C55E"/>
             <path d="M14 44C14 24 20 12 30 6c-4 14-4 26-16 38z" fill="#16A34A"/>
             <path d="M14 44c-1-12 0-24 6-34-1 12-2 22-6 34z" fill="#4ADE80"/>
@@ -66,7 +59,4 @@
         <path d="M2 44h24l-3 22H5z" fill="#F59E0B"/><rect x="0" y="40" width="28" height="6" rx="2" fill="#FBBF24"/>
     </g>
 
-    {{-- koin melayang --}}
-    <g class="anim-coin"><circle cx="30" cy="150" r="10" fill="#FBBF24"/><circle cx="30" cy="150" r="6.5" stroke="#F59E0B" stroke-width="2"/><path d="M30 146v8" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/></g>
-    <g class="anim-coin" style="animation-delay:1.2s"><circle cx="238" cy="112" r="7" fill="#FCD34D"/><circle cx="238" cy="112" r="4.4" stroke="#F59E0B" stroke-width="1.6"/></g>
 </svg>

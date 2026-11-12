@@ -31,29 +31,8 @@
 @push('styles')
 <style>
     .dash { --navy:#0B1B3F; --green:#16A34A; --soft:#ECFDF3; --border:#E5E7EB; --muted:#64748B; }
-    .anim-float { animation:dash-float 5s ease-in-out infinite }
-    .anim-sway { animation:dash-sway 4s ease-in-out infinite }
-    .anim-drift { animation:dash-drift 9s ease-in-out infinite alternate }
-    .anim-twinkle { animation:dash-twinkle 2.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
-    .anim-coin { animation:dash-coin 3.2s ease-in-out infinite; transform-box:fill-box; transform-origin:center }
-    .anim-sign { animation:dash-sign 2.8s ease-in-out infinite }
-    .anim-awning { animation:dash-awning 6s ease-in-out infinite; transform-box:fill-box; transform-origin:top }
-    .anim-bar { transform-box:fill-box; transform-origin:bottom; animation:dash-bar 3.6s ease-in-out infinite }
-    .anim-line { stroke-dasharray:1; stroke-dashoffset:1; animation:dash-line 3.6s ease-in-out infinite }
-    .anim-pop { animation:dash-pop 3.6s ease-in-out infinite }
-    @keyframes dash-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-    @keyframes dash-sway { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(4deg)} }
-    @keyframes dash-drift { from{transform:translateX(-6px)} to{transform:translateX(10px)} }
-    @keyframes dash-twinkle { 0%,100%{opacity:.35;transform:scale(.7)} 50%{opacity:1;transform:scale(1.1)} }
-    @keyframes dash-coin { 0%,100%{transform:translateY(0) rotateY(0)} 50%{transform:translateY(-9px) rotateY(180deg)} }
-    @keyframes dash-sign { 0%,100%{opacity:1} 92%{opacity:1} 95%{opacity:.35} 98%{opacity:1} }
-    @keyframes dash-awning { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.06)} }
-    @keyframes dash-bar { 0%{transform:scaleY(0)} 25%,80%{transform:scaleY(1)} 100%{transform:scaleY(0)} }
-    @keyframes dash-line { 0%,15%{stroke-dashoffset:1} 45%,85%{stroke-dashoffset:0} 100%{stroke-dashoffset:-1} }
-    @keyframes dash-pop { 0%,45%{transform:scale(0)} 58%{transform:scale(1.2)} 66%,85%{transform:scale(1)} 100%{transform:scale(0)} }
-    .dash .pulse-dot { animation:dash-dot 2s ease-out infinite }
-    @keyframes dash-dot { 0%{box-shadow:0 0 0 0 currentColor} 70%{box-shadow:0 0 0 7px transparent} 100%{box-shadow:0 0 0 0 transparent} }
-    @media (prefers-reduced-motion: reduce) { .dash *, .dash svg * { animation:none !important } .anim-bar{transform:none} .anim-line{stroke-dashoffset:0} }
+    .dash *, .dash svg * { animation: none !important; }
+    .dash .fade-up { opacity: 1 !important; transform: none !important; }
 </style>
 @endpush
 
@@ -80,13 +59,13 @@
                     <p class="mt-1 text-sm text-[#64748B] max-w-sm">Berikut ringkasan yang terjadi di <span class="font-medium text-[#0B1B3F]">{{ $currentBusiness->name }}</span> hari ini.</p>
 
                     <div class="mt-5 flex flex-wrap gap-x-10 gap-y-4">
-                        <div x-data="{ v: 0, t: {{ (int) $summary['todayRevenue'] }}, init() { const s = performance.now(); const f = n => { const p = Math.min((n - s) / 1100, 1); this.v = Math.round(this.t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f) }; requestAnimationFrame(f) } }">
+                        <div>
                             <p class="text-sm font-semibold">Total Penjualan Hari Ini</p>
-                            <p class="mt-0.5 text-[32px] leading-10 font-semibold tracking-tight">Rp <span x-text="v.toLocaleString('id-ID')">{{ number_format($summary['todayRevenue'], 0, ',', '.') }}</span></p>
+                            <p class="mt-0.5 text-[32px] leading-10 font-semibold tracking-tight">{{ $rp($summary['todayRevenue']) }}</p>
                         </div>
-                        <div x-data="{ v: 0, t: {{ (int) $summary['todayOrders'] }}, init() { const s = performance.now(); const f = n => { const p = Math.min((n - s) / 900, 1); this.v = Math.round(this.t * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f) }; requestAnimationFrame(f) } }">
+                        <div>
                             <p class="text-sm font-semibold">Total Transaksi</p>
-                            <p class="mt-0.5 text-[32px] leading-10 font-semibold tracking-tight" x-text="v.toLocaleString('id-ID')">{{ number_format($summary['todayOrders']) }}</p>
+                            <p class="mt-0.5 text-[32px] leading-10 font-semibold tracking-tight">{{ number_format($summary['todayOrders']) }}</p>
                         </div>
                     </div>
                 </div>
@@ -261,7 +240,7 @@
 
             <div class="p-5">
                 {{-- Penjualan --}}
-                <div x-show="tab === 'sales'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+                <div x-show="tab === 'sales'">
                     <div class="flex items-start justify-between gap-2">
                         <p class="text-sm font-semibold">Total Penjualan</p>
                 @if($revDelta !== null)
@@ -278,14 +257,14 @@
                     <div class="mt-3" style="position:relative;height:150px"><canvas id="miniRevenue"></canvas></div>
                     @else
                     <div class="mt-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm text-[#64748B]">
-                        <svg class="w-9 h-9 shrink-0 text-[#16A34A]/70 anim-float" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+                        <svg class="w-9 h-9 shrink-0 text-[#16A34A]/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
                         <span>Belum ada data 7 hari terakhir. Grafik muncul setelah transaksi pertama.</span>
                     </div>
                     @endif
                 </div>
 
                 {{-- Transaksi --}}
-                <div x-show="tab === 'orders'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+                <div x-show="tab === 'orders'" x-cloak>
                     <div class="flex items-start justify-between gap-2">
                         <p class="text-sm font-semibold">Total Transaksi</p>
                 @if($ordDelta !== null)
@@ -302,14 +281,14 @@
                     <div class="mt-3" style="position:relative;height:150px"><canvas id="miniOrders"></canvas></div>
                     @else
                     <div class="mt-4 flex items-center gap-3 rounded-lg bg-slate-50 px-4 py-3 text-sm text-[#64748B]">
-                        <svg class="w-9 h-9 shrink-0 text-[#16A34A]/70 anim-float" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
+                        <svg class="w-9 h-9 shrink-0 text-[#16A34A]/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8M14 7h7v7"/></svg>
                         <span>Belum ada data 7 hari terakhir. Grafik muncul setelah transaksi pertama.</span>
                     </div>
                     @endif
                 </div>
 
                 {{-- Pembayaran --}}
-                <div x-show="tab === 'pay'" x-cloak x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0">
+                <div x-show="tab === 'pay'" x-cloak>
                     <p class="text-sm font-semibold">Metode Pembayaran</p>
                     <p class="text-xs text-[#64748B] mt-0.5 mb-4">Hari ini</p>
             @if(count($paymentBreakdown) > 0)
@@ -364,12 +343,12 @@
             </div>
             @empty
             <div class="flex flex-col items-center text-center py-8">
-                <svg class="w-20 h-20 anim-float" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <svg class="w-20 h-20" viewBox="0 0 80 80" fill="none" aria-hidden="true">
                     <ellipse cx="40" cy="70" rx="24" ry="4" fill="#16A34A" opacity=".12"/>
                     <path d="M40 14l22 11v26L40 62 18 51V25z" fill="#ECFDF3" stroke="#BBF7D0" stroke-width="2" stroke-linejoin="round"/>
                     <path d="M18 25l22 11 22-11M40 36v26" stroke="#16A34A" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
                     <path d="M29 19.5l22 11" stroke="#86EFAC" stroke-width="2" stroke-linecap="round"/>
-                    <g class="anim-twinkle"><path d="M64 14l1.6 3.4 3.4 1.6-3.4 1.6L64 24l-1.6-3.4L59 19l3.4-1.6z" fill="#4ADE80"/></g>
+                    <path d="M64 14l1.6 3.4 3.4 1.6-3.4 1.6L64 24l-1.6-3.4L59 19l3.4-1.6z" fill="#4ADE80"/>
                 </svg>
                 <p class="mt-2 text-sm font-semibold">Belum ada data</p>
                 <p class="mt-1 text-xs text-[#64748B] max-w-[220px]">Data produk terlaris akan muncul setelah ada transaksi.</p>
@@ -426,6 +405,7 @@ if (salesCtx) {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { display: false },
@@ -487,12 +467,13 @@ if (payCtx) {
                 backgroundColor: ['#16a34a','#3b82f6','#a855f7','#f59e0b','#ef4444','#64748b'],
                 borderWidth: 3,
                 borderColor: '#fff',
-                hoverOffset: 4,
+                hoverOffset: 0,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false,
             plugins: { legend: { display: false } },
             cutout: '72%'
         }
@@ -513,7 +494,7 @@ function miniLine(id, data, color, fmt) {
         data: { labels: salesData.labels, datasets: [{ data: data, borderColor: color, backgroundColor: g, fill: true, borderWidth: 2.2, tension: 0.4, pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: color }] },
         options: {
             responsive: true, maintainAspectRatio: false,
-            animation: { duration: 1200, easing: 'easeOutCubic' },
+            animation: false,
             interaction: { mode: 'index', intersect: false },
             plugins: { legend: { display: false }, tooltip: { backgroundColor: '#0B1B3F', padding: 10, cornerRadius: 8, displayColors: false, callbacks: { label: c => fmt(c.raw) } } },
             scales: {
