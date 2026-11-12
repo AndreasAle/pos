@@ -106,7 +106,8 @@
                             <div class="flex items-start gap-3 sm:gap-4" :class="message.role === 'user' ? 'justify-end' : ''">
                                 <div x-show="message.role !== 'user'" class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#CFE7D9] bg-white shadow-sm"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka POS" class="h-6 w-6 object-contain"></div>
                                 <div class="max-w-[92%] sm:max-w-[86%] min-w-0" :class="message.role !== 'user' && message.response?.blocks?.length ? 'w-full' : ''">
-                                    <div class="text-sm sm:text-[15px] leading-7" :class="message.role === 'user' ? 'whitespace-pre-wrap rounded-2xl rounded-br-md bg-[#E8F7EF] px-4 py-2.5 text-[#0B1B3F]' : 'yoka-md text-slate-700'" x-html="message.role === 'user' ? esc(message.content) : md(message.content)"></div>
+                                    <div x-show="message.role !== 'user' && message.response?.thinking?.steps?.length" x-data="{o:false}" class="mb-3 border-b border-[#E5E7EB] pb-2"><button type="button" @click="o=!o" class="text-[13px] text-slate-400 transition hover:text-slate-600">Memproses selama <span x-text="message.response?.thinking?.seconds"></span> detik <span x-text="o ? '⌄' : '›'"></span></button><ul x-show="o" x-cloak class="mt-2 space-y-1 text-[12px] text-slate-500"><template x-for="step in (message.response?.thinking?.steps || [])"><li x-text="'• ' + step"></li></template></ul></div>
+                                    <div class="text-sm sm:text-[15px] leading-7" :class="message.role === 'user' ? 'whitespace-pre-wrap rounded-2xl rounded-br-md bg-[#E8F7EF] px-4 py-2.5 text-[#0B1B3F]' : 'yoka-md text-slate-700'" x-html="message.role === 'user' ? esc(message.content) : md(message.content, message.response?.visuals)"></div>
                                     <div x-show="message.role === 'user' && (message.attachments || message.meta?.attachments || []).length" class="mt-1 flex flex-wrap justify-end gap-1.5"><template x-for="name in (message.attachments || message.meta?.attachments || [])"><span class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-500" x-text="'📎 ' + name"></span></template></div>
                                     <div x-show="message.response?.blocks?.length" class="mt-4 space-y-3">
                                         <template x-for="(block, blockIndex) in (message.response?.blocks || [])" :key="blockIndex">
@@ -120,6 +121,7 @@
                                             </section>
                                         </template>
                                     </div>
+                                    <div x-show="message.response?.sources?.length" class="mt-4 flex flex-wrap items-center gap-2"><span class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Sumber</span><template x-for="s in (message.response?.sources || [])" :key="s.url"><a :href="s.url" target="_blank" rel="noopener noreferrer nofollow" class="inline-flex max-w-[220px] items-center gap-1.5 truncate rounded-full border border-[#E5E7EB] bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:border-[#16A34A] hover:text-[#087A4E]" :title="s.title"><span class="h-1.5 w-1.5 shrink-0 rounded-full bg-[#16A34A]"></span><span class="truncate" x-text="s.host"></span></a></template></div>
                                     <div x-show="message.response?.uncertainty?.length" class="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-800"><template x-for="note in (message.response?.uncertainty || [])"><p x-text="note"></p></template></div>
                                     <div x-show="message.role !== 'user' && message.hasData" class="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-slate-400"><span>Dihitung dari data bisnis kamu</span><span x-show="message.response?.as_of">·</span><span x-show="message.response?.as_of" x-text="`Per ${formatAsOf(message.response.as_of)}`"></span><span x-show="message.response?.timezone" class="rounded bg-slate-100 px-1.5 py-0.5" x-text="message.response.timezone"></span></div>
                                     <div x-show="message.response?.suggestions?.length" class="mt-3 flex flex-wrap gap-2"><template x-for="suggestion in (message.response?.suggestions || [])" :key="suggestion"><button type="button" @click="question=suggestion; ask()" class="rounded-full border border-[#CFE7D9] px-3 py-1.5 text-[11px] font-semibold text-[#087A4E] hover:bg-[#F0FAF4]" x-text="suggestion"></button></template></div>
@@ -169,34 +171,58 @@ function yokaChat(initialConversation, initialMessages, initialQuestion) {
         pick(e){const max=3,limit=5*1024*1024;for(const f of e.target.files){if(this.files.length>=max){alert('Maksimal 3 file per pesan.');break}if(f.size>limit){alert(f.name+' lebih dari 5 MB.');continue}this.files.push(f)}e.target.value=''},
         esc(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))},
         // Safe mini-Markdown: everything is HTML-escaped first, then only a fixed set of tags is produced.
-        md(src){
-            const inline=s=>this.esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code>$1</code>');
+        md(src,visuals){
+            const inline=s=>this.esc(s).replace(/\*\*(.+?)\*\*/g,'<strong class="font-bold text-[#0B1B3F]">$1</strong>').replace(/(^|[^*])\*(?!\s)(.+?)\*/g,'$1<em>$2</em>').replace(/`([^`]+)`/g,'<code class="rounded bg-slate-100 px-1 text-[0.9em]">$1</code>');
             const lines=String(src??'').replace(/\r/g,'').split('\n');let out='',list=null,i=0;
             const close=()=>{if(list){out+=`</${list}>`;list=null}};
             while(i<lines.length){
                 const l=lines[i];
                 if(/^\s*\|.*\|\s*$/.test(l)&&/^\s*\|[\s:|-]+\|\s*$/.test(lines[i+1]||'')){
                     close();const cells=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
-                    let t='<div class="my-3 overflow-x-auto rounded-xl border border-[#E5E7EB]"><table class="w-full text-left text-xs"><thead class="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500"><tr>'+cells(l).map(c=>`<th class="px-3 py-2 font-bold">${inline(c)}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">';i+=2;
-                    while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){t+='<tr>'+cells(lines[i]).map(c=>`<td class="px-3 py-2">${inline(c)}</td>`).join('')+'</tr>';i++}
+                    let t='<div class="my-4 overflow-x-auto rounded-2xl border border-[#E5E7EB]"><table class="w-full text-left text-[13px]"><thead class="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500"><tr>'+cells(l).map(c=>`<th class="px-4 py-2.5 font-bold">${inline(c)}</th>`).join('')+'</tr></thead><tbody class="divide-y divide-slate-100">';i+=2;
+                    while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){t+='<tr>'+cells(lines[i]).map(c=>`<td class="px-4 py-2.5">${inline(c)}</td>`).join('')+'</tr>';i++}
                     out+=t+'</tbody></table></div>';continue;
                 }
                 let m;
-                if(m=l.match(/^#{1,4}\s+(.*)$/)){close();out+=`<p class="mt-4 mb-1 font-bold text-[#0B1B3F]">${inline(m[1])}</p>`}
-                else if(m=l.match(/^\s*[-*•]\s+(.*)$/)){if(list!=='ul'){close();out+='<ul class="my-2 list-disc space-y-1 pl-5">';list='ul'}out+=`<li>${inline(m[1])}</li>`}
-                else if(m=l.match(/^\s*\d+[.)]\s+(.*)$/)){if(list!=='ol'){close();out+='<ol class="my-2 list-decimal space-y-1 pl-5">';list='ol'}out+=`<li>${inline(m[1])}</li>`}
+                if(m=l.match(/^\[\[visual:(\d+)\]\]$/)){close();out+=this.visual((visuals||[])[+m[1]])}
+                else if(m=l.match(/^#{1,4}\s+(.*)$/)){close();out+=`<h3 class="mt-7 mb-2 text-[17px] font-extrabold leading-snug text-[#0B1B3F]">${inline(m[1])}</h3>`}
+                else if(m=l.match(/^\s*\*\*(\d+[.)]\s.+?)\*\*\s*$/)){close();out+=`<h3 class="mt-7 mb-2 text-[17px] font-extrabold leading-snug text-[#0B1B3F]">${this.esc(m[1])}</h3>`}
+                else if(m=l.match(/^\s*[-*•]\s+(.*)$/)){if(list!=='ul'){close();out+='<ul class="my-3 list-disc space-y-1.5 pl-6 marker:text-[#16A34A]">';list='ul'}out+=`<li>${inline(m[1])}</li>`}
+                else if(m=l.match(/^\s*\d+[.)]\s+(.*)$/)){if(list!=='ol'){close();out+='<ol class="my-3 list-decimal space-y-1.5 pl-6 marker:font-bold marker:text-[#16A34A]">';list='ol'}out+=`<li>${inline(m[1])}</li>`}
+                else if(m=l.match(/^>\s?(.*)$/)){close();out+=`<blockquote class="my-3 border-l-4 border-[#16A34A]/40 bg-[#F4FBF7] px-4 py-2 text-slate-600">${inline(m[1])}</blockquote>`}
+                else if(/^\s*---+\s*$/.test(l)){close();out+='<hr class="my-5 border-[#E5E7EB]">'}
                 else if(!l.trim()){close()}
-                else{close();out+=`<p class="my-1.5">${inline(l)}</p>`}
+                else{close();out+=`<p class="my-2.5">${inline(l)}</p>`}
                 i++;
             }
             close();return out;
+        },
+        // Trusted visual cards. Content was validated server-side; every string is still escaped here.
+        visual(v){
+            if(!v)return '';const e=x=>this.esc(x);
+            const head=(t,s)=>(t?`<p class="text-[12px] font-semibold text-slate-500">${e(t)}</p>`:'')+(s?`<p class="mt-0.5 text-[12px] text-slate-400">${e(s)}</p>`:'');
+            const wrap=b=>`<div class="my-5 overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,.04)]">${b}</div>`;
+            const note=n=>n?`<p class="mt-3 text-[11px] text-slate-400">${e(n)}</p>`:'';
+            if(v.type==='chart'){
+                const items=v.items||[],max=Math.max(...items.map(i=>Math.abs(i.value)),1),fmt=i=>i.formatted||new Intl.NumberFormat('id-ID').format(i.value)+(v.unit?' '+v.unit:'');
+                let body;
+                if(v.kind==='hbar'){body='<div class="mt-4 space-y-3">'+items.map(i=>`<div class="grid grid-cols-[110px_minmax(0,1fr)_auto] items-center gap-3 text-[12px]"><span class="truncate font-semibold text-slate-600">${e(i.label)}</span><div class="h-3 rounded-full bg-slate-100"><div class="h-3 rounded-full bg-gradient-to-r from-[#16A34A] to-[#4ADE80]" style="width:${Math.max(3,Math.round(Math.abs(i.value)/max*100))}%"></div></div><span class="font-bold text-[#0B1B3F]">${e(fmt(i))}</span></div>`).join('')+'</div>'}
+                else if(v.kind==='line'){const n=items.length,pts=items.map((i,k)=>`${n===1?50:k/(n-1)*100},${46-Math.max(0,i.value)/max*42}`).join(' ');body=`<div class="mt-4"><svg viewBox="0 0 100 50" preserveAspectRatio="none" class="h-40 w-full overflow-visible"><polyline points="${pts}" fill="none" stroke="#16A34A" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>${items.map((i,k)=>`<circle cx="${n===1?50:k/(n-1)*100}" cy="${46-Math.max(0,i.value)/max*42}" r="1.6" fill="#16A34A" stroke="#fff" stroke-width="1" vector-effect="non-scaling-stroke"><title>${e(i.label)}: ${e(fmt(i))}</title></circle>`).join('')}</svg><div class="mt-1 flex justify-between text-[11px] text-slate-400"><span>${e(items[0].label)}</span><span>${e(items[n-1].label)}</span></div></div>`}
+                else{body='<div class="mt-5 flex h-48 items-end gap-3 border-b border-slate-200">'+items.map(i=>`<div class="flex h-full flex-1 flex-col items-center justify-end gap-1.5"><span class="text-[11px] font-bold text-[#0B1B3F]">${e(fmt(i))}</span><div class="w-full max-w-[64px] rounded-t-lg bg-gradient-to-t from-[#16A34A] to-[#4ADE80]" style="height:${Math.max(4,Math.round(Math.abs(i.value)/max*78))}%"></div></div>`).join('')+'</div><div class="mt-2 flex gap-3">'+items.map(i=>`<span class="flex-1 truncate text-center text-[11px] text-slate-500">${e(i.label)}</span>`).join('')+'</div>'}
+                return wrap(head(v.title,'')+(v.headline?`<p class="mt-1 text-[26px] font-extrabold tracking-tight text-[#16A34A]">${e(v.headline)}</p>`:'')+(v.subtitle?`<p class="text-[12px] text-slate-400">${e(v.subtitle)}</p>`:'')+body+note(v.note));
+            }
+            if(v.type==='kpi')return wrap(head(v.title,v.subtitle)+`<div class="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[#E5E7EB] sm:grid-cols-${Math.min(4,(v.metrics||[]).length||1)}">`+(v.metrics||[]).map(m=>`<div class="bg-white px-4 py-3"><p class="text-[11px] font-semibold uppercase tracking-wide text-slate-400">${e(m.label)}</p><p class="mt-1 text-[18px] font-extrabold text-[#0B1B3F]">${e(m.value)}</p>${m.note?`<p class="text-[11px] text-slate-400">${e(m.note)}</p>`:''}</div>`).join('')+'</div>'+note(v.note));
+            if(v.type==='steps')return wrap(head(v.title,v.subtitle)+'<div class="mt-4 space-y-1">'+(v.steps||[]).map((s,k,a)=>`<div class="rounded-xl ${s.highlight?'border border-[#16A34A]/30 bg-[#F4FBF7]':''} px-3 py-2.5"><p class="text-[14px] font-bold text-[#0B1B3F]">${e(s.title)}</p>${s.text?`<p class="mt-0.5 text-[12.5px] text-slate-500">${e(s.text)}</p>`:''}</div>${k<a.length-1?'<div class="text-center text-slate-300">↓</div>':''}`).join('')+'</div>'+note(v.note));
+            if(v.type==='roadmap')return wrap(head(v.title,v.subtitle)+'<div class="mt-4 space-y-4">'+(v.items||[]).map((s,k)=>`<div class="flex gap-4"><span class="mt-0.5 h-fit shrink-0 rounded-lg ${k===0?'bg-[#E1F5EA] text-[#087A4E]':'text-slate-500'} px-2.5 py-1 text-[13px] font-bold">${e(s.when)}</span><div><p class="text-[14px] font-bold text-[#0B1B3F]">${e(s.title)}</p>${s.detail?`<p class="text-[13px] font-semibold text-slate-700">${e(s.detail)}</p>`:''}${s.text?`<p class="text-[12px] text-slate-400">${e(s.text)}</p>`:''}</div></div>`).join('')+'</div>'+note(v.note));
+            if(v.type==='callout'){const c={info:'border-sky-200 bg-sky-50 text-sky-900',warn:'border-amber-200 bg-amber-50 text-amber-900',success:'border-emerald-200 bg-emerald-50 text-emerald-900'}[v.tone]||'';return `<div class="my-4 rounded-2xl border ${c} px-4 py-3 text-[14px]">${v.title?`<p class="font-bold">${e(v.title)}</p>`:''}<p>${e(v.text)}</p></div>`}
+            return '';
         },
         async ask(){
             const text=this.question.trim(); if(!text||this.loading)return;
             const sending=this.files.slice(); const form=new FormData(); form.append('question',text); if(this.conversationId)form.append('conversation_id',this.conversationId); sending.forEach(f=>form.append('files[]',f));
             this.messages.push({role:'user',content:text,attachments:sending.map(f=>f.name)}); this.question=''; this.files=[]; this.loading=true; this.scroll();
             this.status='Memahami pertanyaan…'; let live=null, raw='', done=null;
-            const view=t=>t.replace(/\n\s*\**\s*SARAN\s*\**\s*:[\s\S]*$/i,'');
+            const view=t=>t.replace(/```yoka[\s\S]*?```/g,'').replace(/```yoka[\s\S]*$/,'').replace(/\n\s*\**\s*SARAN\s*\**\s*:[\s\S]*$/i,'');
             try{
                 const response=await fetch('{{ route('intelligence.ask.stream') }}',{method:'POST',headers:{'Accept':'text/event-stream','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:form});
                 if(!response.ok||!response.body){let m='Yoka gagal membaca data.';try{const j=await response.json();m=j.message||(j.errors?Object.values(j.errors).flat()[0]:m)}catch{}throw new Error(m)}

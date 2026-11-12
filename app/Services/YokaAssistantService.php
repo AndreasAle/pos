@@ -63,7 +63,7 @@ class YokaAssistantService
             if ($agentResult) {
                 $response = $this->emptyResponse($agentResult['answer']);
                 if (! $agentResult['refused']) {
-                    $shown = array_filter($this->agent->toolResults, fn ($t) => ! in_array($t['tool'], ['compare_periods', 'marketing_brief', 'save_business_note', 'profit_and_loss', 'cash_position', 'menu_engineering', 'sales_forecast', 'customer_retention'], true));
+                    $shown = array_filter($this->agent->toolResults, fn ($t) => ! in_array($t['tool'], ['compare_periods', 'marketing_brief', 'save_business_note', 'web_search', 'profit_and_loss', 'cash_position', 'menu_engineering', 'sales_forecast', 'customer_retention'], true));
                     foreach (array_slice($shown, 0, 2) as $t) {
                         $built = $this->responses->build($t['tool'], $t['result'], 'full');
                         $response['blocks'] = array_merge($response['blocks'], $built['blocks']);
@@ -77,6 +77,9 @@ class YokaAssistantService
                     }
                 }
                 $response['suggestions'] = $agentResult['suggestions'];
+                $response['visuals'] = $agentResult['visuals'] ?? [];
+                $response['sources'] = $agentResult['sources'] ?? [];
+                $response['thinking'] = $agentResult['thinking'] ?? null;
                 $message = $conversation->messages()->create(['role' => 'assistant', 'content' => $agentResult['answer'], 'response' => $response, 'meta' => ['intent' => $agentResult['refused'] ? 'refused' : 'agent', 'tools' => array_column($this->agent->toolResults, 'tool')], 'token_usage' => $this->agent->usage, 'duration_ms' => $this->elapsed($started)]);
                 $conversation->update(['last_message_at' => now()]);
 
