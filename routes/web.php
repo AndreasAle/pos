@@ -168,6 +168,7 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         ->middleware('role:owner,admin')->name('intelligence.index');
     Route::middleware(['role:owner,admin', 'json'])->prefix('intelligence')->name('intelligence.')->group(function () {
         Route::post('ask', [IntelligenceController::class, 'ask'])->middleware('throttle:30,1')->name('ask');
+        Route::post('ask/stream', [IntelligenceController::class, 'askStream'])->middleware('throttle:30,1')->name('ask.stream');
         Route::get('history', [IntelligenceController::class, 'history'])->name('history');
         Route::post('insights/{insight}/read', [IntelligenceController::class, 'read'])->name('insights.read');
         Route::post('insights/{insight}/dismiss', [IntelligenceController::class, 'dismiss'])->name('insights.dismiss');

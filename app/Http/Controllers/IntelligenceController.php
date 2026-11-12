@@ -50,6 +50,41 @@ class IntelligenceController extends Controller
         return response()->json(['success' => true] + $assistant->ask($request->user(), $data['question'], $data['conversation_id'] ?? null, $request->file('files', [])));
     }
 
+    /** Same as ask(), but streams progress and answer tokens as Server-Sent Events; the final "done" event carries the full payload. */
+    public function askStream(Request $request, YokaAssistantService $assistant)
+    {
+        abort_unless(config('pos.features.intelligence'), 404);
+        $data = $request->validate([
+            'question' => 'required|string|max:2000', 'conversation_id' => 'nullable|integer',
+            'files' => 'nullable|array|max:'.AttachmentService::MAX_FILES, 'files.*' => 'file|max:5120',
+        ]);
+        $user = $request->user();
+        $files = $request->file('files', []);
+
+        return response()->stream(function () use ($assistant, $user, $data, $files) {
+            @ini_set('zlib.output_compression', '0');
+            while (ob_get_level() > 0) {
+                @ob_end_flush();
+            }
+            $send = function (string $event, array $payload) {
+                echo "event: {$event}\ndata: ".json_encode($payload, JSON_UNESCAPED_UNICODE)."\n\n";
+                @ob_flush();
+                flush();
+            };
+            try {
+                $send('status', ['label' => 'Memahami pertanyaan…']);
+                $result = $assistant->ask($user, $data['question'], $data['conversation_id'] ?? null, $files,
+                    fn (string $t) => $send('token', ['t' => $t]), fn (string $l) => $send('status', ['label' => $l]));
+                $send('done', ['success' => true] + $result);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $send('fail', ['message' => collect($e->errors())->flatten()->first() ?? 'Permintaan tidak valid.']);
+            } catch (\Throwable $e) {
+                report($e);
+                $send('fail', ['message' => 'Yoka gagal membaca data. Coba lagi sebentar.']);
+            }
+        }, 200, ['Content-Type' => 'text/event-stream', 'Cache-Control' => 'no-cache, no-transform', 'X-Accel-Buffering' => 'no', 'Connection' => 'keep-alive']);
+    }
+
     public function history(Request $request)
     {
         $conversation = AssistantConversation::where('business_id', $request->user()->business_id)

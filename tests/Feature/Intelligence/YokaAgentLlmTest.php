@@ -148,4 +148,32 @@ class YokaAgentLlmTest extends TestCase
 
         Http::assertSent(fn ($r) => str_contains($r->url(), 'api.telegram.org') && str_contains($r['text'] ?? '', 'Analisis mingguan') && ! str_contains($r['text'], '**'));
     }
+
+    public function test_streaming_forwards_status_and_tokens_and_returns_the_full_answer(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key']);
+        $sse = fn (array $chunks) => implode('', array_map(fn ($c) => 'data: '.json_encode($c)."\n\n", $chunks))."data: [DONE]\n\n";
+        $toolStep = $sse([
+            ['choices' => [['delta' => ['tool_calls' => [['index' => 0, 'id' => 't1', 'function' => ['name' => 'sales_sum', 'arguments' => '']]]]]]],
+            ['choices' => [['delta' => ['tool_calls' => [['index' => 0, 'function' => ['name' => 'mary', 'arguments' => '{"period":"today",']]]]]]],
+            ['choices' => [['delta' => ['tool_calls' => [['index' => 0, 'function' => ['arguments' => '"outlet_ids":null}']]]]]]],
+        ]);
+        $answer = $sse([
+            ['choices' => [['delta' => ['content' => 'Omzet ']]]], ['choices' => [['delta' => ['content' => 'stabil.']]]],
+            ['choices' => [['delta' => ['content' => "\nSARAN: Jam ramai?"]]]], ['choices' => [], 'usage' => ['prompt_tokens' => 5, 'completion_tokens' => 3, 'total_tokens' => 8]],
+        ]);
+        Http::fake(['*/chat/completions' => Http::sequence()->push($toolStep, 200, ['Content-Type' => 'text/event-stream'])->push($answer, 200, ['Content-Type' => 'text/event-stream'])]);
+        $tokens = [];
+        $statuses = [];
+        $reply = app(YokaAssistantService::class)->ask($this->owner(), 'Berapa omzet hari ini?', null, [], function ($t) use (&$tokens) {
+            $tokens[] = $t;
+        }, function ($l) use (&$statuses) {
+            $statuses[] = $l;
+        });
+
+        $this->assertSame(['Omzet ', 'stabil.', "\nSARAN: Jam ramai?"], $tokens);
+        $this->assertContains('Membaca data penjualan…', $statuses);
+        $this->assertSame('Omzet stabil.', $reply['answer']);
+        $this->assertSame(['Jam ramai?'], $reply['response']['suggestions']);
+    }
 }

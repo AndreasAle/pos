@@ -25,6 +25,11 @@ class YokaAgent
 
     public $steps = [];
 
+    /** Optional live callbacks: fn(string $text) for answer tokens, fn(string $label) for progress. */
+    public $onToken = null;
+
+    public $onStatus = null;
+
     public array $usage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
 
     /** @var array<int, array{tool:string, result:array}> */
@@ -53,12 +58,17 @@ class YokaAgent
             $messages = $this->buildMessages($user, $question, $history, $attachments, $newAttachments);
             $tools = array_merge($this->tools->definitions(), $this->extraDefinitions());
             for ($step = 0; $step < self::MAX_STEPS; $step++) {
-                $http = $this->client()->post('/chat/completions', [
+                $payload = [
                     'model' => config('services.yoka_ai.model'), 'temperature' => 0.4, 'messages' => $messages,
                     'tools' => $tools, 'tool_choice' => ($step === 0 && ! $this->isSocial($question)) ? 'required' : 'auto', 'max_tokens' => 1800,
-                ])->throw();
-                $this->capture($http);
-                $message = $http->json('choices.0.message');
+                ];
+                if ($this->onToken) {
+                    $message = $this->streamCompletion($payload);
+                } else {
+                    $http = $this->client()->post('/chat/completions', $payload)->throw();
+                    $this->capture($http);
+                    $message = $http->json('choices.0.message');
+                }
                 if (! $message) {
                     return null;
                 }
@@ -67,6 +77,7 @@ class YokaAgent
                 }
                 $messages[] = ['role' => 'assistant', 'content' => $message['content'] ?? null, 'tool_calls' => $message['tool_calls']];
                 foreach ($message['tool_calls'] as $call) {
+                    $this->status(self::LABELS[$call['function']['name'] ?? ''] ?? 'Membaca data bisnis…');
                     $messages[] = ['role' => 'tool', 'tool_call_id' => $call['id'], 'content' => $this->runTool($user, $call['function']['name'] ?? '', (string) ($call['function']['arguments'] ?? '{}'))];
                 }
             }
@@ -77,6 +88,66 @@ class YokaAgent
 
             return null;
         }
+    }
+
+    private const LABELS = [
+        'sales_summary' => 'Membaca data penjualan…', 'sales_series' => 'Menyusun tren penjualan…', 'payment_breakdown' => 'Memeriksa metode pembayaran…',
+        'product_performance' => 'Menganalisis produk…', 'stock_status' => 'Memeriksa stok bahan…', 'peak_hours' => 'Mencari jam ramai…',
+        'outlet_performance' => 'Membandingkan outlet…', 'customer_performance' => 'Melihat pelanggan teratas…', 'shift_summary' => 'Membaca data shift…',
+        'recipe_cost' => 'Menghitung biaya resep…', 'compare_periods' => 'Membandingkan dua periode…', 'marketing_brief' => 'Mengumpulkan data untuk strategi marketing…',
+        'save_business_note' => 'Menyimpan catatan bisnis…',
+    ];
+
+    private function status(string $label): void
+    {
+        if ($this->onStatus) {
+            ($this->onStatus)($label);
+        }
+    }
+
+    /** Streams one chat completion, forwarding answer tokens live; returns the assembled assistant message. */
+    private function streamCompletion(array $payload): ?array
+    {
+        $payload['stream'] = true;
+        $payload['stream_options'] = ['include_usage' => true];
+        $response = $this->client()->withOptions(['stream' => true])->post('/chat/completions', $payload)->throw();
+        $body = $response->toPsrResponse()->getBody();
+        $buffer = '';
+        $content = '';
+        $calls = [];
+        while (! $body->eof()) {
+            $buffer .= $body->read(1024);
+            while (($pos = strpos($buffer, "
+")) !== false) {
+                $line = trim(substr($buffer, 0, $pos));
+                $buffer = substr($buffer, $pos + 1);
+                if (! str_starts_with($line, 'data:') || ($data = trim(substr($line, 5))) === '[DONE]' || $data === '') {
+                    continue;
+                }
+                $chunk = json_decode($data, true);
+                foreach ($this->usage as $k => $v) {
+                    $this->usage[$k] = $v + (int) ($chunk['usage'][$k] ?? 0);
+                }
+                $delta = $chunk['choices'][0]['delta'] ?? [];
+                if (isset($delta['content']) && $delta['content'] !== '') {
+                    $content .= $delta['content'];
+                    ($this->onToken)($delta['content']);
+                }
+                foreach ($delta['tool_calls'] ?? [] as $tc) {
+                    $i = $tc['index'] ?? 0;
+                    $calls[$i] ??= ['id' => '', 'type' => 'function', 'function' => ['name' => '', 'arguments' => '']];
+                    $calls[$i]['id'] = $tc['id'] ?? $calls[$i]['id'];
+                    $calls[$i]['function']['name'] .= $tc['function']['name'] ?? '';
+                    $calls[$i]['function']['arguments'] .= $tc['function']['arguments'] ?? '';
+                }
+            }
+        }
+        if ($content === '' && ! $calls) {
+            return null;
+        }
+        ksort($calls);
+
+        return ['role' => 'assistant', 'content' => $content ?: null, 'tool_calls' => array_values($calls) ?: null] + [];
     }
 
     private function isSocial(string $q): bool

@@ -126,9 +126,9 @@
                                 </div>
                             </div>
                         </template>
-                        <div x-show="loading" class="flex items-start gap-4">
+                        <div x-show="loading && !streaming" class="flex items-start gap-4">
                             <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#CFE7D9] bg-white shadow-sm"><img src="{{ asset('images/brand/yoka-icon.png') }}" alt="Yoka POS" class="h-6 w-6 object-contain"></div>
-                            <div class="pt-2 flex gap-1"><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:120ms]"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:240ms]"></span></div>
+                            <div class="pt-2 flex gap-1"><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:120ms]"></span><span class="w-2 h-2 rounded-full bg-[#16A34A] animate-bounce [animation-delay:240ms]"></span><span class="ml-2 -mt-0.5 text-xs font-medium text-slate-400" x-text="status"></span></div>
                         </div>
                     </div>
                 </div>
@@ -158,7 +158,7 @@
 <script>
 function yokaChat(initialConversation, initialMessages, initialQuestion) {
     return {
-        historyOpen: false, files: [], loading: false, actionLoading: false, question: initialQuestion || '', conversationId: initialConversation, messages: initialMessages || [],
+        historyOpen: false, files: [], loading: false, streaming: false, status: 'Memahami pertanyaan…', actionLoading: false, question: initialQuestion || '', conversationId: initialConversation, messages: initialMessages || [],
         prompts: [
             {icon:'↗',title:'Ringkasan penjualan',text:'Bagaimana omzet hari ini?'},
             {icon:'★',title:'Produk unggulan',text:'Produk paling laris bulan ini'},
@@ -195,13 +195,40 @@ function yokaChat(initialConversation, initialMessages, initialQuestion) {
             const text=this.question.trim(); if(!text||this.loading)return;
             const sending=this.files.slice(); const form=new FormData(); form.append('question',text); if(this.conversationId)form.append('conversation_id',this.conversationId); sending.forEach(f=>form.append('files[]',f));
             this.messages.push({role:'user',content:text,attachments:sending.map(f=>f.name)}); this.question=''; this.files=[]; this.loading=true; this.scroll();
+            this.status='Memahami pertanyaan…'; let live=null, raw='', done=null;
+            const view=t=>t.replace(/\n\s*\**\s*SARAN\s*\**\s*:[\s\S]*$/i,'');
             try{
-                const response=await fetch('{{ route('intelligence.ask') }}',{method:'POST',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:form});
-                const data=await response.json(); if(!response.ok)throw new Error(data.message||'Yoka gagal membaca data.');
-                const isNew=!this.conversationId; this.conversationId=data.conversation_id; this.messages.push({role:'assistant',content:data.answer,hasData:!!data.tool,response:data.response});
-                if(isNew) history.replaceState({},'', '{{ route('intelligence.index') }}?conversation='+data.conversation_id);
-            }catch(error){this.messages.push({role:'assistant',content:'Maaf, '+error.message});}
-            finally{this.loading=false;this.scroll();this.$nextTick(()=>this.$refs.input.focus())}
+                const response=await fetch('{{ route('intelligence.ask.stream') }}',{method:'POST',headers:{'Accept':'text/event-stream','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:form});
+                if(!response.ok||!response.body){let m='Yoka gagal membaca data.';try{const j=await response.json();m=j.message||(j.errors?Object.values(j.errors).flat()[0]:m)}catch{}throw new Error(m)}
+                const reader=response.body.getReader(), dec=new TextDecoder(); let buf='';
+                const handle=(ev,d)=>{
+                    if(ev==='status'){this.status=d.label}
+                    else if(ev==='token'){
+                        if(!live){this.messages.push({role:'assistant',content:'',streamed:true});live=this.messages[this.messages.length-1];this.streaming=true}
+                        raw+=d.t; live.content=view(raw); this.scroll();
+                    }
+                    else if(ev==='done'){done=d}
+                    else if(ev==='fail'){throw new Error(d.message)}
+                };
+                while(true){
+                    const {value,done:end}=await reader.read(); if(end)break;
+                    buf+=dec.decode(value,{stream:true}); let i;
+                    while((i=buf.indexOf('\n\n'))>=0){
+                        const block=buf.slice(0,i); buf=buf.slice(i+2);
+                        const ev=(block.match(/^event: (.+)$/m)||[])[1], dl=(block.match(/^data: (.+)$/m)||[])[1];
+                        if(ev&&dl)handle(ev,JSON.parse(dl));
+                    }
+                }
+                if(!done)throw new Error('Koneksi terputus sebelum jawaban selesai.');
+                const isNew=!this.conversationId; this.conversationId=done.conversation_id;
+                const final={role:'assistant',content:done.answer,hasData:!!done.tool,response:done.response};
+                if(live){Object.assign(live,final)}else{this.messages.push(final)}
+                if(isNew) history.replaceState({},'', '{{ route('intelligence.index') }}?conversation='+done.conversation_id);
+            }catch(error){
+                const msg='Maaf, '+error.message;
+                if(live&&!done){live.content=(live.content?live.content+'\n\n':'')+msg}else if(!done){this.messages.push({role:'assistant',content:msg})}
+            }
+            finally{this.loading=false;this.streaming=false;this.scroll();this.$nextTick(()=>this.$refs.input.focus())}
         },
         scroll(){this.$nextTick(()=>{if(this.$refs.messages)this.$refs.messages.scrollTop=this.$refs.messages.scrollHeight})},
         barWidth(value, items){const max=Math.max(...(items||[]).map(i=>Number(i.value)||0),1);return Math.max(3,Math.round((Number(value)||0)/max*100))},

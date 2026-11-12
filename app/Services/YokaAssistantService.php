@@ -31,7 +31,7 @@ class YokaAssistantService
         private AttachmentService $attachments,
     ) {}
 
-    public function ask(User $user, string $question, ?int $conversationId = null, array $files = []): array
+    public function ask(User $user, string $question, ?int $conversationId = null, array $files = [], ?callable $onToken = null, ?callable $onStatus = null): array
     {
         $this->usage = ['prompt_tokens' => 0, 'completion_tokens' => 0, 'total_tokens' => 0];
         $this->requestIds = [];
@@ -57,6 +57,8 @@ class YokaAssistantService
         }
         if ($this->agent->enabled() && $this->reserveAiRequest($user)) {
             $docs = $this->attachments->forConversation($conversation);
+            $this->agent->onToken = $onToken;
+            $this->agent->onStatus = $onStatus;
             $agentResult = $this->agent->run($user, $question, array_slice($history, 0, -1), $docs, count($newDocs) > 0);
             if ($agentResult) {
                 $response = $this->emptyResponse($agentResult['answer']);
