@@ -44,6 +44,17 @@ class YokaRichAnswerTest extends TestCase
         $this->assertSame([], $visuals);
     }
 
+    public function test_json_fenced_card_is_rendered_but_plain_code_blocks_are_left_alone(): void
+    {
+        $text = "Intro\n```json\n{\"type\":\"roadmap\",\"title\":\"Rencana\",\"items\":[{\"title\":\"A\"},{\"title\":\"B\"}]}\n```\n```json\n{\"nama\":\"x\"}\n```";
+        [$clean, $visuals] = (new VisualBlocks)->extract($text);
+
+        $this->assertCount(1, $visuals);
+        $this->assertSame('roadmap', $visuals[0]['type']);
+        $this->assertStringContainsString('[[visual:0]]', $clean);
+        $this->assertStringContainsString('"nama"', $clean);
+    }
+
     public function test_web_research_strips_personal_data_and_returns_sources(): void
     {
         config(['services.yoka_ai.key' => 'k']);
