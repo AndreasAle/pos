@@ -359,7 +359,7 @@
                 'title' => 'Lebih banyak pesanan,',
                 'accent' => 'tetap terkendali',
                 'description' => 'Saat pelanggan berdatangan bersamaan, alur pesanan tetap rapi. Kasir bisa fokus melayani tanpa sibuk menghitung atau mencatat ulang.',
-                'video' => 'videos/landing/yoka-antrean-kafe.mp4',
+                'video' => 'images/videos/landing/yoka-antrean-kafe.mp4',
                 'position' => 'center',
             ],
             [
@@ -368,7 +368,7 @@
                 'title' => 'Satu transaksi selesai,',
                 'accent' => 'pelanggan langsung dilayani',
                 'description' => 'Tunai atau QRIS tercatat dalam satu alur. Kembalian dihitung otomatis dan struk siap dicetak atau dibagikan sebagai PDF.',
-                'video' => 'videos/landing/yoka-pelayanan-kasir.mp4',
+                'video' => 'images/videos/landing/yoka-pelayanan-kasir.mp4',
                 'position' => 'center',
             ],
             [
@@ -377,7 +377,7 @@
                 'title' => 'Semua tim bergerak,',
                 'accent' => 'data tetap satu',
                 'description' => 'Kasir, dapur, stok, dan pemilik bekerja dari informasi yang sama. Aktivitas toko bisa dipantau tanpa menunggu rekap akhir hari.',
-                'video' => 'videos/landing/yoka-operasional-tim.mp4',
+                'video' => 'images/videos/landing/yoka-operasional-tim.mp4',
                 'position' => 'center',
             ],
         ];
