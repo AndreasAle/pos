@@ -130,12 +130,13 @@
                 <x-nav-item route="receivables.index" icon="clipboard-list">Piutang</x-nav-item>
             </x-nav-group>
 
-            <x-nav-group title="Pengaturan" :routes="['outlets.*','users.*','settings.*','audit.*']">
+            <x-nav-group title="Pengaturan" :routes="['outlets.*','users.*','settings.*','audit.*','integrations.*']">
                 <x-nav-item route="outlets.index" icon="building-storefront">Outlet</x-nav-item>
                 <x-nav-item route="users.index" icon="user-group">Manajemen User</x-nav-item>
                 <x-nav-item route="settings.business" icon="building-office">Profil Bisnis</x-nav-item>
                 <x-nav-item route="settings.receipt" icon="receipt-percent">Pengaturan Struk</x-nav-item>
                 <x-nav-item route="settings.telegram" icon="paper-airplane">Bot Telegram</x-nav-item>
+                <x-nav-item route="integrations.index" icon="arrows-right-left">Integrasi</x-nav-item>
                 @if(config('pos.features.audit_log'))
                 <x-nav-item route="audit.index" icon="clipboard-list">Audit Log</x-nav-item>
                 @endif

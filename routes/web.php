@@ -364,6 +364,13 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
             ->middleware('role:owner,admin');
     }
 
+    // Integrasi GoFood / ShopeeFood
+    Route::prefix('integrasi')->name('integrations.')->middleware('role:owner,admin')->group(function () {
+        Route::get('/', [\App\Http\Controllers\IntegrationController::class, 'index'])->name('index');
+        Route::post('{provider}', [\App\Http\Controllers\IntegrationController::class, 'connect'])->name('connect');
+        Route::delete('{integration}', [\App\Http\Controllers\IntegrationController::class, 'disconnect'])->name('disconnect');
+    });
+
     // Settings
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('business', [SettingController::class, 'business'])->name('business');
