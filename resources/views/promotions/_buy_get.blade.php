@@ -1,30 +1,24 @@
-{{-- "Beli X gratis Y" fields, shown only for that promo type. Expects
-     $categories and an optional $promotion. --}}
-<div x-show="type === 'buy_get'" x-cloak class="space-y-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-    <div class="grid grid-cols-2 gap-4">
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Beli (qty)</label>
-            <input type="number" name="buy_qty" min="1" max="99" value="{{ old('buy_qty', $promotion->buy_qty ?? 1) }}"
-                   class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-        </div>
-        <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Gratis (qty)</label>
-            <input type="number" name="get_qty" min="1" max="99" value="{{ old('get_qty', $promotion->get_qty ?? 1) }}"
-                   class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-        </div>
+{{-- Kolom "Beli X gratis Y", tampil hanya untuk tipe promo itu. Butuh $categories dan $promotion (opsional). --}}
+<div x-show="type === 'buy_get'" x-cloak class="rounded-lg border border-[#BBF7D0] bg-[#ECFDF3] p-4 sm:p-5">
+    <p class="mb-4 text-xs font-semibold uppercase tracking-wider text-[#15803D]">Aturan Beli Gratis</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <x-field label="Beli (qty)" name="buy_qty">
+            <x-input name="buy_qty" type="number" :value="old('buy_qty', $promotion->buy_qty ?? 1)" min="1" max="99" />
+        </x-field>
+        <x-field label="Gratis (qty)" name="get_qty">
+            <x-input name="get_qty" type="number" :value="old('get_qty', $promotion->get_qty ?? 1)" min="1" max="99" />
+        </x-field>
+        <x-field label="Berlaku untuk kategori" name="product_category_id" class="sm:col-span-2">
+            <x-select name="product_category_id">
+                <option value="">Semua produk</option>
+                @foreach($categories as $cat)
+                <option value="{{ $cat->id }}" @selected((string) old('product_category_id', $promotion->product_category_id ?? '') === (string) $cat->id)>{{ $cat->name }}</option>
+                @endforeach
+            </x-select>
+        </x-field>
     </div>
-    <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Berlaku untuk Kategori</label>
-        <select name="product_category_id" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-            <option value="">-- Semua produk --</option>
-            @foreach($categories as $cat)
-            <option value="{{ $cat->id }}" {{ (string) old('product_category_id', $promotion->product_category_id ?? '') === (string) $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
-            @endforeach
-        </select>
-    </div>
-    <p class="text-xs text-emerald-700">
-        Contoh Beli 1 Gratis 1 kategori Minuman: pelanggan ambil 2 minuman, bayar 1.
-        Ambil 4 bayar 2. Yang digratiskan selalu yang harganya paling murah.
-        Minuman boleh beda jenis.
+    <p class="mt-4 text-xs leading-relaxed text-[#15803D]">
+        Contoh Beli 1 Gratis 1 kategori Minuman: pelanggan ambil 2 minuman, bayar 1. Ambil 4 bayar 2.
+        Yang digratiskan selalu yang harganya paling murah, dan minuman boleh beda jenis.
     </p>
 </div>
