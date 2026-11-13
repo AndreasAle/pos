@@ -64,7 +64,7 @@ php artisan migrate --force
 php artisan up
 trap - EXIT
 
-# Hanya build/ dan images/ — JANGAN salin public/ seluruhnya, karena index.php
+# Hanya build/, images/, dan models/ — JANGAN salin public/ seluruhnya, karena index.php
 # di web root sudah disesuaikan untuk menunjuk aplikasi di luar public_html.
 echo "==> Menyalin aset ke semua domain"
 for WEB_ROOT_ITEM in "${WEB_ROOT_LIST[@]}"; do
@@ -87,9 +87,10 @@ for WEB_ROOT_ITEM in "${WEB_ROOT_LIST[@]}"; do
         exit 1
     fi
 
-    mkdir -p "$WEB_ROOT_ITEM/build" "$WEB_ROOT_ITEM/images"
+    mkdir -p "$WEB_ROOT_ITEM/build" "$WEB_ROOT_ITEM/images" "$WEB_ROOT_ITEM/models"
     cp -r "$APP_DIR/public/build/." "$WEB_ROOT_ITEM/build/"
     cp -r "$APP_DIR/public/images/." "$WEB_ROOT_ITEM/images/"
+    cp -r "$APP_DIR/public/models/." "$WEB_ROOT_ITEM/models/"
 
     # Foto produk/logo hasil upload disimpan di storage/app/public dan dilayani
     # lewat symlink <web root>/storage. Symlink yang hilang atau menunjuk ke
@@ -132,12 +133,19 @@ php artisan queue:restart
 # gejalanya membingungkan karena tidak ada error di mana pun.
 echo "==> Memeriksa aset"
 CSS_FILE=$(php -r '$m = json_decode(file_get_contents("public/build/manifest.json"), true); echo $m["resources/css/app.css"]["file"];')
+MODEL_FILE="yokapos-full-set.glb"
 
 for WEB_ROOT_ITEM in "${WEB_ROOT_LIST[@]}"; do
     if [[ -f "$WEB_ROOT_ITEM/build/$CSS_FILE" ]]; then
         echo "    OK: $CSS_FILE ada di $WEB_ROOT_ITEM"
     else
         echo "    GAGAL: $CSS_FILE tidak ditemukan di $WEB_ROOT_ITEM — domain akan tampil tanpa CSS" >&2
+        exit 1
+    fi
+    if [[ -f "$WEB_ROOT_ITEM/models/$MODEL_FILE" ]]; then
+        echo "    OK: models/$MODEL_FILE ada di $WEB_ROOT_ITEM"
+    else
+        echo "    GAGAL: models/$MODEL_FILE tidak ditemukan di $WEB_ROOT_ITEM — pengalaman 3D tidak dapat dimuat" >&2
         exit 1
     fi
 done
