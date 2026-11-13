@@ -147,7 +147,7 @@
             <div class="hidden lg:flex items-center gap-7 ml-auto">
                 <x-lang-switch variant="light" />
                 <a href="{{ url('/login') }}" class="text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">Masuk</a>
-                <a href="{{ $waLink }}" target="_blank"
+                <a href="{{ url('/login') }}"
                    class="px-7 py-3 rounded-full text-[15px] font-bold transition-colors duration-300"
                    :class="scrolled || featureOpen ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-white text-emerald-700 hover:bg-emerald-50'">
                     Coba Gratis
