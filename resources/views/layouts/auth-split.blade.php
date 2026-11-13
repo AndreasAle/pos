@@ -40,7 +40,8 @@
         </div>
 
         {{-- Right — form panel --}}
-        <div class="flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 bg-white">
+        <div class="relative flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 bg-white">
+            <div class="absolute right-5 top-5"><x-lang-switch variant="light" /></div>
             <div class="w-full max-w-md mx-auto">
                 <div class="lg:hidden flex items-center gap-2 mb-8">
                     <img src="{{ asset('images/brand/yoka-logo.png') }}" alt="Yoka" class="h-8 w-auto">

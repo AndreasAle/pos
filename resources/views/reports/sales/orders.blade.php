@@ -13,7 +13,7 @@
         <input type="search" name="q" value="{{ $search }}" placeholder="mis. ORD-2026" class="h-10 w-full rounded-lg text-sm"></label>
     <label class="block"><span class="mb-1 block text-xs font-semibold text-[#64748B]">Status</span>
         <select name="status" class="h-10 rounded-lg text-sm">
-            @foreach(['paid' => 'Lunas', 'refunded' => 'Refund', 'cancelled' => 'Batal', 'all' => 'Semua'] as $k => $l)<option value="{{ $k }}" @selected($status === $k)>{{ $l }}</option>@endforeach
+            @foreach(['paid' => 'Lunas', 'refunded' => 'Refund', 'cancelled' => 'Dibatalkan', 'all' => 'Semua'] as $k => $l)<option value="{{ $k }}" @selected($status === $k)>{{ $l }}</option>@endforeach
         </select></label>
     <button class="h-10 rounded-lg bg-[#16A34A] px-4 text-sm font-semibold text-white hover:bg-[#15803D]">Cari</button>
     @if($drill)

@@ -4,7 +4,7 @@
         'pending'   => ['yellow', 'Pending'],
         'draft'     => ['yellow', 'Draft'],
         'paid'      => ['green',  'Lunas'],
-        'cancelled' => ['red',    'Batal'],
+        'cancelled' => ['red',    'Dibatalkan'],
         'refunded'  => ['blue',   'Refund'],
     ];
     [$color, $label] = $map[$status] ?? ['gray', ucfirst((string) $status)];

@@ -17,7 +17,7 @@
                 <h2 id="od-h" class="text-base font-bold text-[#0B1B3F]">{{ $order->order_number }}</h2>
                 <p class="text-xs text-[#64748B]">{{ $order->created_at->setTimezone($tz)->locale('id')->isoFormat('dddd, D MMM Y HH:mm') }} · {{ $order->outlet?->name }} · kasir {{ $order->user?->name }}</p>
             </div>
-            <span class="rounded px-2 py-0.5 text-xs font-semibold {{ ['paid' => 'bg-emerald-50 text-emerald-700', 'refunded' => 'bg-amber-50 text-amber-800', 'cancelled' => 'bg-slate-100 text-[#475569]'][$order->status] ?? 'bg-slate-100 text-[#475569]' }}">{{ ['paid' => 'Lunas', 'refunded' => 'Refund', 'cancelled' => 'Batal', 'pending' => 'Menunggu bayar'][$order->status] ?? $order->status }}</span>
+            <span class="rounded px-2 py-0.5 text-xs font-semibold {{ ['paid' => 'bg-emerald-50 text-emerald-700', 'refunded' => 'bg-amber-50 text-amber-800', 'cancelled' => 'bg-slate-100 text-[#475569]'][$order->status] ?? 'bg-slate-100 text-[#475569]' }}">{{ ['paid' => 'Lunas', 'refunded' => 'Refund', 'cancelled' => 'Dibatalkan', 'pending' => 'Menunggu bayar'][$order->status] ?? $order->status }}</span>
         </div>
         <div class="overflow-x-auto">
         <table class="w-full min-w-[520px] text-sm">

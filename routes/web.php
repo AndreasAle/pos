@@ -42,6 +42,13 @@ use Illuminate\Support\Facades\Route;
 
 // ── Public ───────────────────────────────────────────────────────────────────
 Route::get('/', fn () => view('landing'))->name('landing');
+
+// Ganti bahasa antarmuka (Indonesia / Inggris). Pilihan disimpan di cookie.
+Route::get('/lang/{locale}', function (string $locale) {
+    abort_unless(in_array($locale, \App\Http\Middleware\Localize::SUPPORTED, true), 404);
+
+    return back()->withCookie(cookie(\App\Http\Middleware\Localize::COOKIE, $locale, 60 * 24 * 365));
+})->name('lang.switch');
 Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('features.show');
 
 // ── Auth ──────────────────────────────────────────────────────────────────────

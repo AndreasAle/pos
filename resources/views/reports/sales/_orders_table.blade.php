@@ -27,7 +27,7 @@
                 @unless($compact)
                 <td class="px-4 py-2.5 text-right tabular-nums text-[#64748B]">{{ \App\Support\Money::rp((float) $o->grand_total) }}</td>
                 <td class="px-4 py-2.5">
-                    <span class="rounded px-2 py-0.5 text-xs font-semibold {{ ['paid' => 'bg-emerald-50 text-emerald-700', 'refunded' => 'bg-amber-50 text-amber-800', 'cancelled' => 'bg-slate-100 text-[#475569]'][$o->status] ?? 'bg-slate-100 text-[#475569]' }}">{{ ['paid' => 'Lunas', 'refunded' => 'Refund', 'cancelled' => 'Batal'][$o->status] ?? $o->status }}</span>
+                    <span class="rounded px-2 py-0.5 text-xs font-semibold {{ ['paid' => 'bg-emerald-50 text-emerald-700', 'refunded' => 'bg-amber-50 text-amber-800', 'cancelled' => 'bg-slate-100 text-[#475569]'][$o->status] ?? 'bg-slate-100 text-[#475569]' }}">{{ ['paid' => 'Lunas', 'refunded' => 'Refund', 'cancelled' => 'Dibatalkan'][$o->status] ?? $o->status }}</span>
                 </td>
                 @endunless
             </tr>

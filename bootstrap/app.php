@@ -7,6 +7,7 @@ use App\Http\Middleware\EnsurePlatformTwoFactor;
 use App\Http\Middleware\EnsureSubscriptionActive;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\Localize;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(append: [
             EnsureUserIsActive::class,
+            Localize::class,
         ]);
 
         // The tablet pairing cookie carries its own HMAC, so it is readable

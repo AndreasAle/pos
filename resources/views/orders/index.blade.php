@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $tabs        = ['' => 'Semua', 'paid' => 'Lunas', 'draft' => 'Draft', 'cancelled' => 'Batal', 'refunded' => 'Refund'];
+    $tabs        = ['' => 'Semua', 'paid' => 'Lunas', 'draft' => 'Draft', 'cancelled' => 'Dibatalkan', 'refunded' => 'Refund'];
     $current     = (string) request('status', '');
     $keep        = request()->except('status', 'page');
     $hasFilter   = request()->hasAny(['status', 'date_from', 'date_to']) && (request('status') || request('date_from') || request('date_to'));

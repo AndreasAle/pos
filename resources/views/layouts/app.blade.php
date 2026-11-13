@@ -236,6 +236,9 @@
             </a>
             @endif
 
+            {{-- Bahasa --}}
+            <x-lang-switch variant="dark" />
+
             {{-- Notifikasi --}}
             <div class="relative max-sm:hidden" x-data="{ n: false }" @click.outside="n = false" @keydown.escape.window="n = false">
                 <button @click="n = !n" class="flex h-9 w-9 items-center justify-center rounded-lg text-white/75 transition-colors hover:bg-white/10 hover:text-white" :class="n ? 'bg-white/10' : ''" aria-label="Notifikasi">

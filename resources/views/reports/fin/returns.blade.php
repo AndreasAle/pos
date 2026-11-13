@@ -6,7 +6,7 @@
 @section('content')
 @php $card = 'min-w-0 rounded-xl border border-[#E5E7EB] bg-white'; $rp = fn ($v) => \App\Support\Money::rp($v); $tz = $f->timezone; @endphp
 <div class="y-report text-[14px] text-[#0B1B3F]">
-@include('reports.fin._period', ['exports' => ['Excel' => 'xlsx'], 'extra' => '<label class="block"><span class="mb-1 block text-xs font-semibold text-[#64748B]">Jenis</span><select name="status" class="h-10 rounded-lg text-sm">'.collect(['all' => 'Refund + batal', 'refunded' => 'Refund', 'cancelled' => 'Batal'])->map(fn ($l, $k) => '<option value="'.$k.'"'.($status === $k ? ' selected' : '').'>'.$l.'</option>')->implode('').'</select></label><label class="block"><span class="mb-1 block text-xs font-semibold text-[#64748B]">No. order</span><input type="search" name="q" value="'.e(request('q')).'" class="h-10 rounded-lg text-sm"></label>'])
+@include('reports.fin._period', ['exports' => ['Excel' => 'xlsx'], 'extra' => '<label class="block"><span class="mb-1 block text-xs font-semibold text-[#64748B]">Jenis</span><select name="status" class="h-10 rounded-lg text-sm">'.collect(['all' => 'Refund + batal', 'refunded' => 'Refund', 'cancelled' => 'Dibatalkan'])->map(fn ($l, $k) => '<option value="'.$k.'"'.($status === $k ? ' selected' : '').'>'.$l.'</option>')->implode('').'</select></label><label class="block"><span class="mb-1 block text-xs font-semibold text-[#64748B]">No. order</span><input type="search" name="q" value="'.e(request('q')).'" class="h-10 rounded-lg text-sm"></label>'])
 
 <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <div class="{{ $card }} p-5"><p class="text-xs font-semibold uppercase tracking-wide text-[#64748B]">Order refund</p><p class="mt-1 text-2xl font-bold tabular-nums">{{ $r['refunded']['orders'] }}</p><p class="mt-1 text-xs text-[#64748B]">{{ $rp($r['refunded']['grand_total']) }} dikembalikan</p></div>
@@ -25,7 +25,7 @@
             @forelse($orders as $o)
                 <tr><td class="px-4 py-2.5"><a href="{{ route('reports.sales.order', ['orderId' => $o->id, 'back' => request()->fullUrl()]) }}" class="font-semibold text-[#16A34A] hover:underline">{{ $o->order_number }}</a></td>
                     <td class="whitespace-nowrap px-4 py-2.5 text-[#475569]">{{ $o->created_at->setTimezone($tz)->format('d M H:i') }}@if($o->refunded_at)<span class="block text-xs text-[#94A3B8]">refund {{ $o->refunded_at->setTimezone($tz)->format('d M H:i') }}</span>@endif</td>
-                    <td class="px-4 py-2.5"><x-pill :tone="$o->status === 'refunded' ? 'amber' : 'gray'">{{ $o->status === 'refunded' ? 'Refund' : 'Batal' }}</x-pill></td>
+                    <td class="px-4 py-2.5"><x-pill :tone="$o->status === 'refunded' ? 'amber' : 'gray'">{{ $o->status === 'refunded' ? 'Refund' : 'Dibatalkan' }}</x-pill></td>
                     <td class="px-4 py-2.5 text-[#475569]">{{ $o->status === 'refunded' ? ($o->refund_reason ?: '-') : ($o->cancel_reason ?: '-') }}</td>
                     <td class="px-4 py-2.5">{{ $o->user?->name }}</td><td class="px-4 py-2.5 text-right tabular-nums">{{ $rp((float) $o->grand_total) }}</td></tr>
             @empty

@@ -1,8 +1,8 @@
 @props(['type'])
 @php
     $map = [
-        'in'         => ['green', 'Masuk'],
-        'out'        => ['red',   'Keluar'],
+        'in'         => ['green', 'Stok masuk'],
+        'out'        => ['red',   'Stok keluar'],
         'adjustment' => ['blue',  'Penyesuaian'],
         'sale'       => ['amber', 'Penjualan'],
         'return'     => ['blue',  'Retur'],

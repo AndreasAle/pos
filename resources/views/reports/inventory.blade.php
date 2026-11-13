@@ -6,7 +6,7 @@
 @php
     $rp = fn ($v) => 'Rp ' . number_format((float) $v, 0, ',', '.');
     $value = $ingredients->sum(fn ($i) => $i->current_stock * $i->average_cost);
-    $mvTone = ['in' => ['green', 'Masuk'], 'out' => ['red', 'Keluar'], 'adjustment' => ['blue', 'Penyesuaian'], 'sale' => ['amber', 'Penjualan'], 'return' => ['blue', 'Retur'], 'waste' => ['gray', 'Terbuang']];
+    $mvTone = ['in' => ['green', 'Stok masuk'], 'out' => ['red', 'Stok keluar'], 'adjustment' => ['blue', 'Penyesuaian'], 'sale' => ['amber', 'Penjualan'], 'return' => ['blue', 'Retur'], 'waste' => ['gray', 'Terbuang']];
 @endphp
 <div class="y-report">
 @include('reports._nav')
