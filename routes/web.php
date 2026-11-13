@@ -162,6 +162,8 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('ai-team/agents/{agent}/run', [\App\Http\Controllers\Platform\AiTeamController::class, 'run'])->middleware('throttle:20,1')->name('ai-team.run');
             Route::patch('ai-team/agents/{agent}', [\App\Http\Controllers\Platform\AiTeamController::class, 'updateAgent'])->name('ai-team.agent');
             Route::post('ai-team/records', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeRecord'])->middleware('throttle:30,1')->name('ai-team.records');
+            Route::post('ai-team/tasks', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeTask'])->middleware('throttle:30,1')->name('ai-team.tasks.store');
+            Route::patch('ai-team/tasks/{task}/move', [\App\Http\Controllers\Platform\AiTeamController::class, 'moveTask'])->name('ai-team.tasks.move');
             Route::patch('ai-team/tasks/{task}/decision', [\App\Http\Controllers\Platform\AiTeamController::class, 'decide'])->name('ai-team.decision');
 
             Route::prefix('withdrawals')->name('withdrawals.')->group(function () {

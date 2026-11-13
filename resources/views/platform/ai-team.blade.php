@@ -2,7 +2,7 @@
 @section('title', 'Tim AI')
 
 @section('content')
-<div x-data="{ intake: false }" class="space-y-6">
+<div x-data="{ intake: false, newTask: false, moveTask: null }" class="space-y-6">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">AI Operations Control Plane</p>
@@ -93,29 +93,50 @@
         </div>
     </section>
 
-    <div class="grid gap-6 xl:grid-cols-[1.35fr_.65fr]">
-        <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="border-b border-slate-200 px-5 py-4"><h2 class="font-black text-[#0B1B3F]">Antrean keputusan</h2><p class="mt-1 text-xs text-slate-500">Tidak ada tindakan eksternal yang dieksekusi diam-diam.</p></div>
-            <div class="divide-y divide-slate-100">
-                @forelse($tasks as $task)
-                <article class="p-5">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div><div class="flex flex-wrap items-center gap-2"><span class="text-xs font-black uppercase tracking-wider text-emerald-700">{{ $task->agent->name }}</span><span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-600">{{ $task->status }}</span><span class="rounded-full px-2 py-0.5 text-[11px] font-bold {{ $task->risk === 'high' ? 'bg-red-100 text-red-700' : ($task->risk === 'medium' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700') }}">Risiko {{ $task->risk }}</span></div><h3 class="mt-2 font-bold text-slate-900">{{ $task->title }}</h3></div>
-                        <time class="text-xs text-slate-400">{{ $task->created_at->diffForHumans() }}</time>
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div class="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div><p class="text-xs font-bold uppercase tracking-[.16em] text-emerald-700">Marketing dan Sales / Tugas</p><h2 class="mt-1 text-xl font-black text-[#0B1B3F]">Kanban Tim AI</h2></div>
+            <div class="flex gap-2"><span class="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600">{{ $tasks->count() }} tugas</span><button type="button" @click="newTask = true" class="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white">+ Buat Tugas</button></div>
+        </div>
+        @php
+            $kanban = [
+                'proposed' => ['To Do List', 'bg-amber-400', 'Belum dikerjakan'],
+                'approved' => ['Doing', 'bg-sky-500', 'Sedang dikerjakan'],
+                'completed' => ['Done', 'bg-emerald-500', 'Selesai'],
+                'rejected' => ['Blocked', 'bg-red-500', 'Ditolak / terhambat'],
+            ];
+            $agentColors = ['chief'=>'bg-emerald-600','marketing'=>'bg-cyan-500','ads'=>'bg-sky-600','finance'=>'bg-amber-500','accounting'=>'bg-teal-600','cs'=>'bg-rose-500','sales'=>'bg-violet-600'];
+        @endphp
+        <div class="overflow-x-auto bg-slate-100 p-4">
+            <div class="grid min-w-[1180px] grid-cols-4 gap-3">
+                @foreach($kanban as $status => [$label, $dot, $hint])
+                @php $columnTasks = $tasks->where('status', $status); @endphp
+                <div class="flex max-h-[720px] min-h-[520px] flex-col rounded-xl bg-slate-200/80">
+                    <div class="flex items-center justify-between border-b border-slate-300 px-4 py-3"><div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full {{ $dot }}"></span><h3 class="text-sm font-black text-slate-800">{{ $label }}</h3><span class="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500">{{ $columnTasks->count() }}</span></div><span class="text-lg font-black text-slate-500">•••</span></div>
+                    <div class="flex-1 space-y-3 overflow-y-auto p-3">
+                        @forelse($columnTasks as $task)
+                        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="flex items-start justify-between gap-2"><span class="rounded-md px-2 py-1 text-[11px] font-black text-white {{ $agentColors[$task->agent->key] ?? 'bg-slate-600' }}">{{ $task->agent->name }}</span><button type="button" @click="moveTask = {{ $task->id }}" class="rounded-lg px-2 text-lg font-black text-slate-400 hover:bg-slate-100">•••</button></div>
+                            <h4 class="mt-3 text-sm font-black leading-snug text-slate-900">[AI-{{ str_pad($task->id, 3, '0', STR_PAD_LEFT) }}] {{ $task->title }}</h4>
+                            <p class="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-500">{{ $task->summary }}</p>
+                            <div class="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                                <span class="rounded-md px-2 py-1 {{ $task->risk === 'high' ? 'bg-red-100 text-red-700' : ($task->risk === 'medium' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700') }}">{{ ucfirst($task->risk) }} risk</span>
+                                <span class="text-slate-500">{{ $task->scheduled_for?->translatedFormat('d M') ?? $task->created_at->translatedFormat('d M') }}</span>
+                                @if($task->requires_approval)<span class="text-slate-500">Approval</span>@endif
+                            </div>
+                            @if($task->recommendation)<div class="mt-3 border-l-2 border-emerald-400 pl-2 text-[11px] leading-relaxed text-slate-600">{{ $task->recommendation }}</div>@endif
+                            <button type="button" @click="moveTask = {{ $task->id }}" class="mt-4 w-full rounded-lg border border-slate-200 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Pindahkan Tugas</button>
+                        </article>
+                        @empty<div class="rounded-xl border border-dashed border-slate-300 p-6 text-center text-xs text-slate-400">{{ $hint }}</div>@endforelse
                     </div>
-                    <p class="mt-2 text-sm leading-relaxed text-slate-600">{{ $task->summary }}</p>
-                    @if($task->recommendation)<div class="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-950"><strong>Rekomendasi:</strong> {{ $task->recommendation }}</div>@endif
-                    @if($task->status === 'proposed')
-                    <div class="mt-4 flex gap-2">
-                        <form method="POST" action="{{ route('platform.ai-team.decision', $task) }}">@csrf @method('PATCH')<input type="hidden" name="decision" value="approve"><button class="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white">Setujui</button></form>
-                        <form method="POST" action="{{ route('platform.ai-team.decision', $task) }}">@csrf @method('PATCH')<input type="hidden" name="decision" value="reject"><button class="rounded-xl border border-red-200 px-4 py-2 text-xs font-bold text-red-700">Tolak</button></form>
-                    </div>
-                    @endif
-                </article>
-                @empty <div class="p-10 text-center text-sm text-slate-400">Jalankan agen untuk membuat analisis pertama.</div> @endforelse
+                    <button type="button" @click="newTask = true" class="border-t border-slate-300 px-4 py-3 text-left text-sm font-bold text-slate-600 hover:bg-slate-300/40">+ Buat Tugas</button>
+                </div>
+                @endforeach
             </div>
-        </section>
+        </div>
+    </section>
 
+    <div class="grid gap-6 xl:grid-cols-2">
         <div class="space-y-6">
             <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 class="font-black text-[#0B1B3F]">Koneksi eksekusi</h2><p class="mt-1 text-xs leading-relaxed text-slate-500">Credential tidak disimpan pada tugas atau browser.</p>
@@ -130,6 +151,30 @@
                 <ul class="mt-3 space-y-2 text-sm leading-relaxed text-slate-200"><li>• Campaign baru selalu perlu approval.</li><li>• Pesan massal dan scraping dilarang.</li><li>• Refund dan perubahan harga tidak otomatis.</li><li>• Semua keputusan dicatat di audit log.</li><li>• Agen dapat dijeda kapan saja.</li></ul>
             </section>
         </div>
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><h2 class="font-black text-[#0B1B3F]">Cara kerja board</h2><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><strong>To Do</strong><p class="mt-1 text-xs leading-relaxed">Usulan baru dan pekerjaan yang menunggu keputusan.</p></div><div class="rounded-xl bg-sky-50 p-4 text-sm text-sky-950"><strong>Doing</strong><p class="mt-1 text-xs leading-relaxed">Sudah disetujui dan sedang diproses.</p></div><div class="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Done</strong><p class="mt-1 text-xs leading-relaxed">Analisis atau pekerjaan internal selesai.</p></div><div class="rounded-xl bg-red-50 p-4 text-sm text-red-950"><strong>Blocked</strong><p class="mt-1 text-xs leading-relaxed">Ditolak, gagal, atau menunggu integrasi.</p></div></div></section>
+    </div>
+
+    <div x-show="newTask" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4" @keydown.escape.window="newTask=false">
+        <div @click.outside="newTask=false" class="w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl"><div class="flex items-center justify-between"><div><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Tugas baru</p><h2 class="mt-1 text-xl font-black text-[#0B1B3F]">Delegasikan ke Tim AI</h2></div><button type="button" @click="newTask=false" class="text-2xl text-slate-400">×</button></div>
+            <form method="POST" action="{{ route('platform.ai-team.tasks.store') }}" class="mt-5 space-y-4">@csrf
+                <label class="block text-sm font-bold text-slate-700">Pilih agen<select name="platform_ai_agent_id" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm">@foreach($agents as $agent)<option value="{{ $agent->id }}">{{ $agent->name }} · {{ $agent->department }}</option>@endforeach</select></label>
+                <label class="block text-sm font-bold text-slate-700">Nama tugas<input name="title" required maxlength="180" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Contoh: Analisis 10 video TikTok terakhir"></label>
+                <label class="block text-sm font-bold text-slate-700">Instruksi<textarea name="summary" required maxlength="2000" rows="4" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Jelaskan hasil yang kamu harapkan"></textarea></label>
+                <div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-bold text-slate-700">Risiko<select name="risk" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label><label class="text-sm font-bold text-slate-700">Target selesai<input name="scheduled_for" type="datetime-local" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label></div>
+                <button class="w-full rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">Masukkan ke To Do</button>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="moveTask !== null" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4" @keydown.escape.window="moveTask=null">
+        @foreach($tasks as $task)
+        <form x-show="moveTask === {{ $task->id }}" @click.outside="moveTask=null" method="POST" action="{{ route('platform.ai-team.tasks.move', $task) }}" class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl">@csrf @method('PATCH')
+            <div class="flex items-start justify-between gap-4"><div><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Pindahkan tugas</p><h2 class="mt-1 text-lg font-black text-[#0B1B3F]">{{ $task->title }}</h2></div><button type="button" @click="moveTask=null" class="text-2xl text-slate-400">×</button></div>
+            <label class="mt-5 block text-sm font-bold text-slate-700">Pilih list tujuan<select name="status" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="proposed" @selected($task->status==='proposed')>To Do List</option><option value="approved" @selected($task->status==='approved')>Doing</option><option value="completed" @selected($task->status==='completed')>Done</option><option value="rejected" @selected($task->status==='rejected')>Blocked</option></select></label>
+            <div class="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Tim: <strong>{{ $task->agent->name }}</strong> · Risiko: <strong>{{ ucfirst($task->risk) }}</strong></div>
+            <button class="mt-5 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">Pindahkan</button>
+        </form>
+        @endforeach
     </div>
 
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

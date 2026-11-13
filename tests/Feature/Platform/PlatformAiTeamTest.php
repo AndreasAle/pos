@@ -69,4 +69,24 @@ class PlatformAiTeamTest extends TestCase
         $this->assertDatabaseHas('platform_ai_tasks', ['id' => $task->id, 'status' => 'approved', 'approved_by' => $admin->id]);
         $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.task.approve']);
     }
+
+    public function test_manual_task_can_move_across_the_kanban_board(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'sales')->firstOrFail();
+
+        $this->platformSession($admin)->post(route('platform.ai-team.tasks.store'), [
+            'platform_ai_agent_id' => $agent->id,
+            'title' => 'Riset prospek kafe Jakarta',
+            'summary' => 'Cari prospek yang cocok tanpa mengirim pesan.',
+            'risk' => 'low',
+        ])->assertRedirect();
+
+        $task = $agent->tasks()->where('type', 'manual')->firstOrFail();
+        $this->platformSession($admin)->patch(route('platform.ai-team.tasks.move', $task), ['status' => 'approved'])->assertRedirect();
+
+        $this->assertDatabaseHas('platform_ai_tasks', ['id' => $task->id, 'status' => 'approved', 'approved_by' => $admin->id]);
+        $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.task.move']);
+    }
 }

@@ -81,4 +81,40 @@ class AiTeamController extends Controller
 
         return back()->with('success', $decision === 'approve' ? 'Tugas disetujui. Eksekusi eksternal tetap menunggu koneksi resmi.' : 'Tugas ditolak.');
     }
+
+    public function storeTask(Request $request)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $data = $request->validate([
+            'platform_ai_agent_id' => 'required|exists:platform_ai_agents,id',
+            'title' => 'required|string|max:180',
+            'summary' => 'required|string|max:2000',
+            'risk' => 'required|in:low,medium,high',
+            'scheduled_for' => 'nullable|date',
+        ]);
+        $task = PlatformAiTask::create($data + [
+            'type' => 'manual', 'status' => 'proposed', 'requires_approval' => true,
+            'payload' => ['created_manually' => true],
+        ]);
+        PlatformActivityLog::record('ai.task.create', "Membuat tugas {$task->title}.", $task);
+
+        return back()->with('success', 'Tugas baru masuk To Do List.');
+    }
+
+    public function moveTask(Request $request, PlatformAiTask $task)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $status = $request->validate(['status' => 'required|in:proposed,approved,completed,rejected'])['status'];
+        $changes = ['status' => $status];
+        if ($status === 'approved') {
+            $changes += ['approved_by' => auth('platform')->id(), 'approved_at' => now()];
+        }
+        if ($status === 'completed') {
+            $changes['executed_at'] = now();
+        }
+        $task->update($changes);
+        PlatformActivityLog::record('ai.task.move', "Memindahkan {$task->title} ke {$status}.", $task, metadata: ['status' => $status]);
+
+        return back()->with('success', 'Tugas berhasil dipindahkan.');
+    }
 }
