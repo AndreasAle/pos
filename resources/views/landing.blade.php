@@ -350,36 +350,131 @@
         </div>
     </section>
 
-    {{-- ================= KASIR CEPAT ================= --}}
-    <section id="kasir" class="py-12 md:py-24 px-5 sm:px-6 bg-[#f2f9f5]">
-        <div class="max-w-[1100px] mx-auto grid lg:grid-cols-[1.15fr_1fr] gap-7 lg:gap-14 items-center">
-            <div class="relative order-2 lg:order-1">
-                <img src="{{ asset('images/photos/kasir-pelanggan.webp') }}" alt="Barista menyerahkan kopi ke pelanggan di depan kasir Yoka POS"
-                     class="w-full aspect-[4/3] lg:aspect-[5/4] object-cover object-[55%_40%] rounded-2xl md:rounded-3xl shadow-[0_14px_34px_rgba(15,23,42,.16)]" loading="lazy">
-                <span class="absolute left-3 bottom-3 md:left-5 md:bottom-5 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 text-xs md:text-sm font-bold text-emerald-800 shadow-md">
-                    <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Struk tercetak
-                </span>
+    {{-- ================= YOKA IN ACTION ================= --}}
+    @php
+        $yokaStories = [
+            [
+                'label' => 'Antrean lancar',
+                'eyebrow' => 'Kasir yang siap saat ramai',
+                'title' => 'Lebih banyak pesanan,',
+                'accent' => 'tetap terkendali',
+                'description' => 'Saat pelanggan berdatangan bersamaan, alur pesanan tetap rapi. Kasir bisa fokus melayani tanpa sibuk menghitung atau mencatat ulang.',
+                'video' => 'videos/landing/yoka-antrean-kafe.mp4',
+                'position' => 'center',
+            ],
+            [
+                'label' => 'Layanan cepat',
+                'eyebrow' => 'Dari pembayaran sampai struk',
+                'title' => 'Satu transaksi selesai,',
+                'accent' => 'pelanggan langsung dilayani',
+                'description' => 'Tunai atau QRIS tercatat dalam satu alur. Kembalian dihitung otomatis dan struk siap dicetak atau dibagikan sebagai PDF.',
+                'video' => 'videos/landing/yoka-pelayanan-kasir.mp4',
+                'position' => 'center',
+            ],
+            [
+                'label' => 'Tim terhubung',
+                'eyebrow' => 'Operasional dalam satu sistem',
+                'title' => 'Semua tim bergerak,',
+                'accent' => 'data tetap satu',
+                'description' => 'Kasir, dapur, stok, dan pemilik bekerja dari informasi yang sama. Aktivitas toko bisa dipantau tanpa menunggu rekap akhir hari.',
+                'video' => 'videos/landing/yoka-operasional-tim.mp4',
+                'position' => 'center',
+            ],
+        ];
+    @endphp
+    <section id="kasir" class="overflow-hidden bg-[#F5F8F6] px-5 py-20 sm:px-6 md:py-28"
+             x-data="{
+                active: 0,
+                count: {{ count($yokaStories) }},
+                timer: null,
+                go(index) {
+                    this.active = (index + this.count) % this.count;
+                    this.$nextTick(() => this.playActive());
+                },
+                playActive() {
+                    this.$root.querySelectorAll('video').forEach((video, index) => {
+                        if (index === this.active) { video.currentTime = 0; video.play().catch(() => {}); }
+                        else { video.pause(); }
+                    });
+                },
+                start() {
+                    this.playActive();
+                    this.timer = setInterval(() => this.go(this.active + 1), 7000);
+                },
+                restart() {
+                    clearInterval(this.timer);
+                    this.timer = setInterval(() => this.go(this.active + 1), 7000);
+                }
+             }"
+             x-init="start()" @mouseenter="clearInterval(timer)" @mouseleave="restart()">
+        <div class="mx-auto max-w-[1180px]">
+            <div class="flex flex-col gap-7 md:flex-row md:items-end md:justify-between">
+                <div class="max-w-[760px]">
+                    <p class="text-sm font-bold uppercase tracking-[.13em] text-emerald-700">Yoka POS dalam keseharian</p>
+                    <h2 class="mt-3 text-[36px] font-extrabold leading-[1.08] tracking-[-.035em] text-slate-950 md:text-[54px]">Saat kerja cepat<br class="hidden sm:block"> berubah jadi hasil</h2>
+                    <p class="mt-4 max-w-[670px] text-base leading-relaxed text-slate-600 md:text-[18px]">Dari antrean pertama sampai toko tutup, Yoka menjaga transaksi dan operasional tetap bergerak dalam satu alur.</p>
+                </div>
+                <a href="{{ route('register') }}" class="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-emerald-700">
+                    Coba Yoka gratis
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                </a>
             </div>
 
-            <div class="order-1 lg:order-2">
-                <p class="text-xs md:text-sm font-bold uppercase tracking-wide text-emerald-700">Kasir</p>
-                <h2 class="mt-2 text-[26px] md:text-[36px] font-extrabold leading-[1.15] text-slate-900">Pesanan masuk, struk <em class="font-black italic text-emerald-700">langsung keluar</em></h2>
+            <div class="mt-10 flex flex-wrap items-center gap-x-7 gap-y-3 border-y border-emerald-950/10 py-4 md:mt-12">
+                @foreach ($yokaStories as $k => $story)
+                    <button type="button" @click="go({{ $k }}); restart()" class="group inline-flex items-center gap-2.5 text-sm font-semibold transition-colors"
+                            :class="active === {{ $k }} ? 'text-emerald-700' : 'text-slate-400 hover:text-slate-700'">
+                        <span class="h-2 w-2 rounded-full transition-all" :class="active === {{ $k }} ? 'scale-100 bg-emerald-600' : 'scale-75 bg-slate-300'"></span>
+                        {{ $story['label'] }}
+                    </button>
+                @endforeach
+            </div>
 
-                <ol class="mt-5 md:mt-7 grid grid-cols-3 lg:grid-cols-1 gap-2.5 lg:gap-3">
-                    @foreach ([
-                        ['1', 'Pilih menu', 'Ukuran, topping, nomor meja.'],
-                        ['2', 'Bayar', 'Tunai atau QRIS, kembalian otomatis.'],
-                        ['3', 'Cetak struk', 'Printer atau PDF.'],
-                    ] as [$no, $title, $desc])
-                        <li class="flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4 rounded-xl bg-white p-3 lg:px-4 lg:py-3.5 ring-1 ring-emerald-900/10">
-                            <span class="flex h-7 w-7 lg:h-9 lg:w-9 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-sm font-extrabold text-white">{{ $no }}</span>
-                            <div class="min-w-0">
-                                <h3 class="text-[14px] lg:text-base font-bold leading-tight text-slate-900">{{ $title }}</h3>
-                                <p class="mt-0.5 hidden text-sm text-slate-500 sm:block">{{ $desc }}</p>
-                            </div>
-                        </li>
+            <div class="mt-7 flex h-[360px] gap-2.5 sm:h-[430px] md:h-[520px] md:gap-3" aria-live="polite">
+                @foreach ($yokaStories as $k => $story)
+                    <button type="button" @click="go({{ $k }}); restart()"
+                            class="group relative min-w-0 overflow-hidden rounded-[22px] border text-left shadow-[0_18px_45px_rgba(15,23,42,.12)] transition-[flex,filter,border-color] duration-700 ease-[cubic-bezier(.2,.75,.25,1)] md:rounded-[28px]"
+                            :class="[active === {{ $k }} ? 'border-emerald-500' : 'border-white/60 grayscale-[.2] hover:grayscale-0', active !== {{ $k }} ? 'max-md:hidden' : '']"
+                            :style="active === {{ $k }} ? 'flex: 1 1 72%;' : 'flex: 0 1 14%;'"
+                            :aria-label="active === {{ $k }} ? '{{ $story['label'] }}, sedang aktif' : 'Tampilkan {{ $story['label'] }}'">
+                        <video muted loop playsinline preload="metadata" class="absolute inset-0 h-full w-full object-cover" style="object-position: {{ $story['position'] }}">
+                            <source src="{{ asset($story['video']) }}" type="video/mp4">
+                        </video>
+                        <div class="absolute inset-0 bg-gradient-to-t transition-opacity duration-500"
+                             :class="active === {{ $k }} ? 'from-slate-950/85 via-slate-950/5 to-transparent opacity-100' : 'from-slate-950/65 via-transparent to-transparent opacity-80'"></div>
+
+                        <div x-show="active === {{ $k }}" x-transition.opacity.duration.500ms class="absolute inset-x-0 bottom-0 p-6 text-white sm:p-8 md:p-10">
+                            <p class="text-xs font-bold uppercase tracking-[.14em] text-emerald-300 sm:text-sm">{{ $story['eyebrow'] }}</p>
+                            <h3 class="mt-2 max-w-[760px] text-[29px] font-extrabold leading-[1.06] tracking-[-.035em] sm:text-[40px] md:text-[52px]">
+                                {{ $story['title'] }}<br><span class="text-emerald-300">{{ $story['accent'] }}</span>
+                            </h3>
+                        </div>
+
+                        <div x-show="active !== {{ $k }}" class="absolute inset-x-0 bottom-0 hidden p-4 md:block">
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-xs font-extrabold text-emerald-800 shadow">0{{ $k + 1 }}</span>
+                        </div>
+                    </button>
+                @endforeach
+            </div>
+
+            <div class="mt-7 grid items-start gap-6 md:grid-cols-[1fr_auto] md:gap-10">
+                <div class="relative min-h-[92px] max-w-[820px]">
+                    @foreach ($yokaStories as $k => $story)
+                        <div x-show="active === {{ $k }}" x-cloak x-transition.opacity.duration.300ms>
+                            <p class="text-[18px] font-semibold leading-relaxed text-slate-800 md:text-[21px]">“{{ $story['description'] }}”</p>
+                            <p class="mt-3 text-xs font-bold uppercase tracking-[.12em] text-emerald-700">Yoka POS · {{ $story['label'] }}</p>
+                        </div>
                     @endforeach
-                </ol>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button type="button" @click="go(active - 1); restart()" class="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-600 text-emerald-700 transition hover:bg-emerald-600 hover:text-white" aria-label="Cerita sebelumnya">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m6-6-6 6 6 6"/></svg>
+                    </button>
+                    <button type="button" @click="go(active + 1); restart()" class="flex h-12 w-12 items-center justify-center rounded-full border border-emerald-600 bg-emerald-600 text-white transition hover:bg-emerald-700" aria-label="Cerita berikutnya">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
     </section>
