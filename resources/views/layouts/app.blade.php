@@ -76,7 +76,8 @@
             <x-nav-item route="dashboard" icon="home" data-tour="dashboard">Dashboard</x-nav-item>
             @if(in_array($role, ['owner','admin']))
             @if(config('pos.features.intelligence'))
-                <x-nav-item route="intelligence.index" icon="sparkles" data-yoka-enter>Tanya Yoka</x-nav-item>
+                <x-nav-ai route="intelligence.index" label="Tanya Yoka" data-yoka-enter />
+
             @endif
             @endif
             @if(in_array($role, ['owner','admin','cashier']))
