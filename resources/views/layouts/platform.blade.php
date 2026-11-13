@@ -56,6 +56,9 @@
                 <span class="h-2 w-2 bg-violet-600"></span> Aktivitas Tim
             </a>
             @if($platformAdmin->isSuperAdmin())
+            <a href="{{ route('platform.ai-team.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.ai-team.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
+                <span class="h-2 w-2 bg-fuchsia-600"></span> Tim AI
+            </a>
             <a href="{{ route('platform.team') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.team*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-teal-600"></span> Tim Yoka
             </a>

@@ -65,3 +65,12 @@ Schedule::call(function () {
 // Detak cron: halaman Platform > Sistem membaca ini untuk memastikan schedule:run benar-benar berjalan tiap menit.
 Schedule::call(fn () => \Illuminate\Support\Facades\Cache::put(\App\Services\PlatformHealth::HEARTBEAT_KEY, now()->timestamp, 3600))
     ->everyMinute()->name('scheduler-heartbeat');
+
+// Tim AI platform bekerja pada data internal. Tindakan eksternal tetap masuk antrean approval.
+Schedule::call(function () {
+    $operations = app(\App\Services\PlatformAiOperations::class);
+    $operations->ensureAgents();
+    \App\Models\PlatformAiAgent::where('status', 'active')
+        ->where(fn ($q) => $q->whereNull('next_run_at')->orWhere('next_run_at', '<=', now()))
+        ->each(fn ($agent) => $operations->run($agent));
+})->hourly()->name('platform-ai-team')->withoutOverlapping();

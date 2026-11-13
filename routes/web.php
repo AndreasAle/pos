@@ -158,6 +158,11 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::patch('team/{admin}/role', [\App\Http\Controllers\Platform\TeamController::class, 'role'])->name('team.role');
             Route::get('system', [\App\Http\Controllers\Platform\SystemController::class, 'index'])->name('system');
             Route::post('system/test-mail', [\App\Http\Controllers\Platform\SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
+            Route::get('ai-team', [\App\Http\Controllers\Platform\AiTeamController::class, 'index'])->name('ai-team.index');
+            Route::post('ai-team/agents/{agent}/run', [\App\Http\Controllers\Platform\AiTeamController::class, 'run'])->middleware('throttle:20,1')->name('ai-team.run');
+            Route::patch('ai-team/agents/{agent}', [\App\Http\Controllers\Platform\AiTeamController::class, 'updateAgent'])->name('ai-team.agent');
+            Route::post('ai-team/records', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeRecord'])->middleware('throttle:30,1')->name('ai-team.records');
+            Route::patch('ai-team/tasks/{task}/decision', [\App\Http\Controllers\Platform\AiTeamController::class, 'decide'])->name('ai-team.decision');
 
             Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
                 Route::get('/', [WithdrawalAdminController::class, 'index'])->name('index');

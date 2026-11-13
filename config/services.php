@@ -37,6 +37,24 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI', rtrim(env('APP_URL', 'http://localhost'), '/').'/auth/google/callback'),
     ],
 
+    // Kredensial tim AI hanya disimpan di environment server.
+    'meta_marketing' => [
+        'access_token' => env('META_MARKETING_ACCESS_TOKEN'),
+        'ad_account_id' => env('META_AD_ACCOUNT_ID'),
+        'instagram_account_id' => env('META_INSTAGRAM_ACCOUNT_ID'),
+    ],
+
+    'tiktok_marketing' => [
+        'access_token' => env('TIKTOK_MARKETING_ACCESS_TOKEN'),
+        'advertiser_id' => env('TIKTOK_ADVERTISER_ID'),
+    ],
+
+    'whatsapp_business' => [
+        'access_token' => env('WHATSAPP_BUSINESS_ACCESS_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+    ],
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],
