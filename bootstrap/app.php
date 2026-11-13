@@ -28,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             '/midtrans/callback',
             '/telegram/webhook',
+            'api/shopeefood/*',
         ]);
 
         $middleware->web(append: [

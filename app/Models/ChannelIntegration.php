@@ -24,11 +24,21 @@ class ChannelIntegration extends Model
     protected $fillable = [
         'business_id', 'outlet_id', 'provider', 'merchant_id', 'merchant_name',
         'status', 'consented_at', 'consented_by',
+        'access_token', 'refresh_token', 'token_expires_at', 'scopes', 'connected_at', 'last_error',
     ];
+
+    // Token tidak boleh ikut ke JSON / log.
+    protected $hidden = ['access_token', 'refresh_token'];
 
     protected function casts(): array
     {
-        return ['consented_at' => 'datetime'];
+        return [
+            'consented_at'     => 'datetime',
+            'connected_at'     => 'datetime',
+            'token_expires_at' => 'datetime',
+            'access_token'     => 'encrypted',
+            'refresh_token'    => 'encrypted',
+        ];
     }
 
     public function outlet()

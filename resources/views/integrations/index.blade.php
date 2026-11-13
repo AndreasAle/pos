@@ -36,6 +36,10 @@
 
 <div class="page text-[#0B1B3F] pt-2" x-data="{ open: null }">
 
+    @if($errors->any())
+    <div class="fade-up mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">{{ $errors->first() }}</div>
+    @endif
+
     {{-- Ringkasan --}}
     <div class="fade-up grid grid-cols-1 gap-3 sm:grid-cols-3" style="--i:1">
         <x-kpi label="Outlet terdaftar" :value="number_format($cntAll)" sub="di semua platform" />
@@ -84,6 +88,7 @@
                     <div class="min-w-0">
                         <p class="truncate text-sm font-semibold">{{ $row->outlet->name ?? '-' }}</p>
                         <p class="truncate text-[13px] text-[#64748B]">{{ $row->merchant_name ? $row->merchant_name . ' · ' : '' }}<span class="font-mono">{{ $row->merchant_id }}</span></p>
+                        @if($row->last_error)<p class="mt-0.5 truncate text-[13px] text-red-600" title="{{ $row->last_error }}">{{ $row->last_error }}</p>@endif
                     </div>
                     <div class="flex items-center gap-2">
                         <x-pill :tone="$statusTone[$row->status] ?? 'gray'">{{ $statusLabel[$row->status] ?? $row->status }}</x-pill>

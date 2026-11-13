@@ -55,6 +55,15 @@ Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('featur
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
 Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 
+// ShopeeFood memanggil endpoint ini (Vendor API Requirements). Dikunci oleh
+// SHOPEEFOOD_INBOUND_* dan SHOPEEFOOD_INDICATOR; kosong = 404.
+Route::prefix('api/shopeefood/{indicator}')->name('shopeefood.')->middleware(['json', 'throttle:240,1'])->group(function () {
+    Route::post('gettoken', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'token'])->name('token');
+    Route::post('orders', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'order'])->name('orders');
+    Route::post('order/status', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'orderStatus'])->name('order-status');
+    Route::post('menu/notification/result', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'menuResult'])->name('menu-result');
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.post');
@@ -367,7 +376,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     // Integrasi GoFood / ShopeeFood
     Route::prefix('integrasi')->name('integrations.')->middleware('role:owner,admin')->group(function () {
         Route::get('/', [\App\Http\Controllers\IntegrationController::class, 'index'])->name('index');
-        Route::post('{provider}', [\App\Http\Controllers\IntegrationController::class, 'connect'])->name('connect');
+        // Redirect URI GoBiz: harus sama dengan GOBIZ_REDIRECT_URI yang didaftarkan ke Gojek.
+        Route::get('gofood/callback', [\App\Http\Controllers\GoBizOAuthController::class, 'callback'])->name('gofood.callback');
+        Route::post('{provider}',[\App\Http\Controllers\IntegrationController::class, 'connect'])->name('connect');
         Route::delete('{integration}', [\App\Http\Controllers\IntegrationController::class, 'disconnect'])->name('disconnect');
     });
 
