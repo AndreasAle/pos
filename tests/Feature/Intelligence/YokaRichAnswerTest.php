@@ -55,6 +55,16 @@ class YokaRichAnswerTest extends TestCase
         $this->assertStringContainsString('"nama"', $clean);
     }
 
+    public function test_bare_fenced_card_json_is_rendered_not_leaked(): void
+    {
+        $text = "Intro\n\n```\n{\"type\":\"chart\",\"kind\":\"line\",\"title\":\"Tren\",\"items\":[{\"label\":\"1 Nov\",\"value\":10},{\"label\":\"2 Nov\",\"value\":20}]}\n```\n\nOutro";
+        [$clean, $visuals] = (new VisualBlocks)->extract($text);
+
+        $this->assertCount(1, $visuals);
+        $this->assertStringNotContainsString('"type"', $clean);
+        $this->assertStringContainsString('[[visual:0]]', $clean);
+    }
+
     public function test_web_research_strips_personal_data_and_returns_sources(): void
     {
         config(['services.yoka_ai.key' => 'k']);

@@ -262,7 +262,7 @@ function yokaChat(initialConversation, initialMessages, initialQuestion) {
             const sending=this.files.slice(); const form=new FormData(); form.append('question',text); if(this.conversationId)form.append('conversation_id',this.conversationId); sending.forEach(f=>form.append('files[]',f));
             this.messages.push({role:'user',content:text,attachments:sending.map(f=>f.name)}); this.question=''; this.files=[]; this.loading=true; this.scroll();
             this.status='Memahami pertanyaan…'; let live=null, raw='', done=null;
-            const view=t=>t.replace(/```(?:yoka|json\s*\{\s*"type")[\s\S]*?```/g,'').replace(/```(?:yoka|json\s*\{\s*"type")[\s\S]*$/,'').replace(/\n\s*\**\s*SARAN\s*\**\s*:[\s\S]*$/i,'');
+            const view=t=>t.replace(/```(?:yoka|(?:json)?\s*\{\s*"type")[\s\S]*?```/g,'').replace(/```(?:yoka|(?:json)?\s*\{\s*"type")[\s\S]*$/,'').replace(/\n\s*\**\s*SARAN\s*\**\s*:[\s\S]*$/i,'');
             try{
                 const response=await fetch('{{ route('intelligence.ask.stream') }}',{method:'POST',headers:{'Accept':'text/event-stream','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:form});
                 if(!response.ok||!response.body){let m='Yoka gagal membaca data.';try{const j=await response.json();m=j.message||(j.errors?Object.values(j.errors).flat()[0]:m)}catch{}throw new Error(m)}

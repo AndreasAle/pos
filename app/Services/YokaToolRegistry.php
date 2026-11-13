@@ -171,7 +171,7 @@ class YokaToolRegistry
     {
         $id = hash('sha256', implode('|', [$u->business_id, $tool, $p['inclusive_start'], $p['exclusive_end'], implode(',', $o), now()->format('Y-m-d H:i')]));
 
-        return ['schema_version' => self::SCHEMA_VERSION, 'tool' => $tool, 'data' => $payload['data'], 'scope' => ['business_id' => $u->business_id, 'outlet_ids' => $o], 'period' => ['label' => $p['label'], 'start' => $p['inclusive_start'], 'end_exclusive' => $p['exclusive_end']], 'timezone' => $p['timezone'], 'currency' => $u->business->currency, 'metric_definitions' => $this->metrics->definitions($payload['metrics']), 'completeness' => ['status' => $payload['completeness']], 'generated_at' => now($p['timezone'])->toIso8601String(), 'evidence_refs' => [['id' => $id, 'source' => 'yoka_pos', 'tool' => $tool]], 'warnings' => $payload['warnings']];
+        return ['schema_version' => self::SCHEMA_VERSION, 'tool' => $tool, 'data' => $this->withPerDay($tool, $payload['data'], $p), 'scope' => ['business_id' => $u->business_id, 'outlet_ids' => $o], 'period' => ['label' => $p['label'], 'days' => $this->periodDays($p), 'start' => $p['inclusive_start'], 'end_exclusive' => $p['exclusive_end']], 'timezone' => $p['timezone'], 'currency' => $u->business->currency, 'metric_definitions' => $this->metrics->definitions($payload['metrics']), 'completeness' => ['status' => $payload['completeness']], 'generated_at' => now($p['timezone'])->toIso8601String(), 'evidence_refs' => [['id' => $id, 'source' => 'yoka_pos', 'tool' => $tool]], 'warnings' => $payload['warnings']];
     }
 
     private function payload(array $data, array $metrics = [], string $completeness = 'complete', array $warnings = []): array
@@ -223,5 +223,27 @@ class YokaToolRegistry
         }
 
         return array_filter($args, fn ($value) => $value !== null);
+    }
+
+    /** Whole calendar days covered by a resolved period (a running month counts days so far). */
+    private function periodDays(array $p): int
+    {
+        return max(1, (int) ceil((strtotime((string) $p['exclusive_end']) - strtotime((string) $p['inclusive_start'])) / 86400));
+    }
+
+    /** Sales summaries carry server-computed per-day averages so the model never does that arithmetic itself. */
+    private function withPerDay(string $tool, $data, array $p)
+    {
+        if ($tool !== 'sales_summary' || ! is_array($data) || ! isset($data['net_sales'])) {
+            return $data;
+        }
+        $days = $this->periodDays($p);
+        $data['per_day'] = [
+            'days' => $days,
+            'net_sales_per_day' => round((float) $data['net_sales'] / $days),
+            'transactions_per_day' => round((int) ($data['transactions'] ?? 0) / $days, 1),
+        ];
+
+        return $data;
     }
 }

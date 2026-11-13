@@ -20,9 +20,10 @@ class VisualBlocks
     public function extract(string $text): array
     {
         $visuals = [];
-        // Models sometimes label the fence ```json; accept it only when the object is a known card type,
+        // Models sometimes label the fence ```json or leave it bare; accept it only when the object is a known card type,
         // so ordinary code blocks stay untouched.
-        $text = preg_replace_callback('/```json\s*(\{\s*"type"\s*:\s*"(?:chart|kpi|steps|roadmap|callout)".*?\})\s*```/su', fn ($m) => "```yoka\n".$m[1]."\n```", $text);
+        $text = preg_replace_callback('/```(?:json)?[ 	]*
+?\s*(\{\s*"type"\s*:\s*"(?:chart|kpi|steps|roadmap|callout)".*?\})\s*```/su', fn ($m) => "```yoka\n".$m[1]."\n```", $text);
         $text = preg_replace_callback('/```yoka\s*(\{.*?\})\s*```/su', function ($m) use (&$visuals) {
             $block = $this->validate(json_decode($m[1], true));
             if (! $block || count($visuals) >= 6) {
