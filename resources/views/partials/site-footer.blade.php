@@ -93,8 +93,9 @@
                 <div class="flex flex-col gap-4 pt-7 text-xs text-slate-400 md:flex-row md:items-center md:justify-between">
                     <p>&copy; {{ date('Y') }} {{ $companyName }}. Seluruh hak cipta dilindungi.</p>
                     <div class="flex flex-wrap gap-x-6 gap-y-2">
-                        <a href="#" class="transition hover:text-emerald-700">Kebijakan Privasi</a>
-                        <a href="#" class="transition hover:text-emerald-700">Syarat Layanan</a>
+                        <a href="{{ route('legal.privacy') }}" class="transition hover:text-emerald-700">Kebijakan Privasi</a>
+                        <a href="{{ route('legal.terms') }}" class="transition hover:text-emerald-700">Syarat Layanan</a>
+                        <a href="{{ route('legal.delete') }}" class="transition hover:text-emerald-700">Hapus Akun</a>
                         <a href="{{ $home ?? '' }}#faq" class="transition hover:text-emerald-700">Pusat Bantuan</a>
                     </div>
                 </div>

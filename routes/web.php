@@ -51,6 +51,11 @@ Route::get('/lang/{locale}', function (string $locale) {
 })->name('lang.switch');
 Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('features.show');
 
+// Halaman legal: wajib untuk Google Play (kebijakan privasi, syarat, hapus akun).
+Route::view('/privasi', 'legal.privacy')->name('legal.privacy');
+Route::view('/syarat', 'legal.terms')->name('legal.terms');
+Route::view('/hapus-akun', 'legal.delete-account')->name('legal.delete');
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
 Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
