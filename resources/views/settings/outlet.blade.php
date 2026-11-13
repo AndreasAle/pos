@@ -1,45 +1,53 @@
 @extends('layouts.app')
 @section('title','Pengaturan Outlet')
 @section('page-title','Pengaturan Outlet')
-@section('content')
-@include('settings._nav')
 
-<div class="space-y-4">
-    @forelse($outlets as $outlet)
-    <x-card title="{{ $outlet->name }} {{ $outlet->code ? '('.$outlet->code.')' : '' }}">
-        <form method="POST" action="{{ route('settings.outlet.update') }}" class="space-y-4">
-            @csrf
-            <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Outlet</label>
-                    <input type="text" name="name" value="{{ old('name', $outlet->name) }}" required
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+@section('content')
+<div class="page text-[#0B1B3F] pt-2">
+    @include('settings._nav')
+
+    <div class="space-y-4 max-w-4xl">
+        @forelse($outlets as $outlet)
+        <x-panel class="fade-up" style="--i:{{ min($loop->index, 5) + 1 }}">
+            <form method="POST" action="{{ route('settings.outlet.update') }}">
+                @csrf
+                <input type="hidden" name="outlet_id" value="{{ $outlet->id }}">
+
+                <div class="mb-5 flex items-center gap-3">
+                    <span class="flex h-10 w-10 items-center justify-center rounded-lg bg-[#ECFDF3] text-[#16A34A]">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 22V12h6v10"/></svg>
+                    </span>
+                    <div class="min-w-0">
+                        <h2 class="truncate text-base font-semibold">{{ $outlet->name }}</h2>
+                        @if($outlet->code)<p class="font-mono text-xs text-[#64748B]">{{ $outlet->code }}</p>@endif
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kode Outlet</label>
-                    <input type="text" name="code" value="{{ old('code', $outlet->code) }}"
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <x-field label="Nama Outlet" name="name">
+                        <x-input name="name" :value="old('name', $outlet->name)" required />
+                    </x-field>
+                    <x-field label="Kode Outlet" name="code">
+                        <x-input name="code" :value="old('code', $outlet->code)" class="font-mono" />
+                    </x-field>
+                    <x-field label="No. Telepon" name="phone">
+                        <x-input name="phone" type="tel" :value="old('phone', $outlet->phone)" />
+                    </x-field>
+                    <x-field label="Alamat" name="address">
+                        <x-input name="address" :value="old('address', $outlet->address)" />
+                    </x-field>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
-                    <input type="text" name="phone" value="{{ old('phone', $outlet->phone) }}"
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-                    <input type="text" name="address" value="{{ old('address', $outlet->address) }}"
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-            </div>
-            <button type="submit"
-                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
-                Simpan Outlet
-            </button>
-        </form>
-    </x-card>
-    @empty
-    <p class="text-sm text-gray-400">Belum ada outlet. <a href="{{ route('outlets.create') }}" class="text-emerald-600 hover:underline">Tambah outlet</a></p>
-    @endforelse
+
+                <div class="mt-5"><x-btn type="submit">Simpan Outlet</x-btn></div>
+            </form>
+        </x-panel>
+        @empty
+        <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white" style="--i:1">
+            <x-empty title="Belum ada outlet" text="Tambahkan outlet untuk mulai beroperasi." icon="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2zM9 22V12h6v10">
+                <x-btn :href="route('outlets.create')">Tambah outlet</x-btn>
+            </x-empty>
+        </section>
+        @endforelse
+    </div>
 </div>
 @endsection

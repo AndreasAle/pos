@@ -1,70 +1,66 @@
 @extends('layouts.app')
 @section('title','Profil Bisnis')
 @section('page-title','Pengaturan Bisnis')
+
 @section('content')
-@include('settings._nav')
+<div class="page text-[#0B1B3F] pt-2">
+    @include('settings._nav')
 
-<div class="max-w-2xl">
-    <x-card title="Profil Bisnis">
-        <form method="POST" action="{{ route('settings.business.update') }}" enctype="multipart/form-data" class="space-y-5">
-            @csrf
+    <form method="POST" action="{{ route('settings.business.update') }}" enctype="multipart/form-data"
+          x-data="{ preview: @js($business->logo ? asset('storage/'.$business->logo) : null), pick(e) { const f = e.target.files[0]; if (f) this.preview = URL.createObjectURL(f) } }"
+          class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
+        @csrf
 
-            {{-- Logo --}}
-            <div class="flex items-center gap-5">
-                <div class="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200 flex-shrink-0">
-                    @if($business->logo)
-                    <img src="{{ asset('storage/'.$business->logo) }}" class="w-full h-full object-cover">
-                    @else
-                    <svg class="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5"/>
-                    </svg>
-                    @endif
+        <div class="space-y-4 min-w-0">
+            <x-panel title="Informasi Bisnis" sub="Data ini tampil di struk dan laporan." class="fade-up" style="--i:1">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <x-field label="Nama Bisnis" name="name" :required="true" class="sm:col-span-2">
+                        <x-input name="name" :value="old('name', $business->name)" required />
+                    </x-field>
+                    <x-field label="No. Telepon" name="phone">
+                        <x-input name="phone" type="tel" :value="old('phone', $business->phone)" placeholder="08xx-xxxx-xxxx" />
+                    </x-field>
+                    <x-field label="Email" name="email">
+                        <x-input name="email" type="email" :value="old('email', $business->email)" placeholder="nama@bisnis.com" />
+                    </x-field>
+                    <x-field label="Alamat" name="address" class="sm:col-span-2">
+                        <x-textarea name="address" placeholder="Alamat lengkap bisnis">{{ old('address', $business->address) }}</x-textarea>
+                    </x-field>
                 </div>
-                <div class="flex-1">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Logo Bisnis</label>
-                    <input type="file" name="logo" accept="image/*"
-                           class="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
-                    <p class="text-xs text-gray-400 mt-1">JPEG, PNG, WebP — maks 2MB. Akan tampil di struk.</p>
-                </div>
-            </div>
+            </x-panel>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Nama Bisnis <span class="text-red-500">*</span></label>
-                <input type="text" name="name" value="{{ old('name', $business->name) }}" required
-                       class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">No. Telepon</label>
-                    <input type="text" name="phone" value="{{ old('phone', $business->phone) }}"
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <x-panel title="Jenis Bisnis" sub="Menentukan menu yang tampil di aplikasi." class="fade-up" style="--i:2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <x-radio name="business_type" value="fnb" label="Makanan & Minuman" desc="Cafe, resto, bakery. Ada Dine In, Dapur, Resep, dan Bahan Baku." :checked="! $business->isRetail()" />
+                    <x-radio name="business_type" value="retail" label="Toko / Retail" desc="Baju, tas, aksesoris. Menyembunyikan Dine In, Dapur, Resep, dan Bahan Baku." :checked="$business->isRetail()" />
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" value="{{ old('email', $business->email) }}"
-                           class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
+                @error('business_type')<p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>@enderror
+            </x-panel>
+        </div>
+
+        <div class="space-y-4 lg:sticky lg:top-20">
+            <x-panel title="Logo Bisnis" class="fade-up" style="--i:2">
+                <label class="group relative block cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-[#E5E7EB] bg-slate-50 transition-colors hover:border-[#16A34A]/60">
+                    <div class="aspect-square w-full">
+                        <template x-if="preview"><img :src="preview" alt="" class="h-full w-full object-contain p-4"></template>
+                        <div x-show="!preview" class="flex h-full w-full flex-col items-center justify-center gap-2 p-6 text-center">
+                            <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ECFDF3] text-[#16A34A]">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1"/></svg>
+                            </span>
+                            <p class="text-sm font-semibold">Pilih logo bisnis</p>
+                            <p class="text-xs text-[#64748B]">JPEG, PNG, atau WebP, maks 2 MB</p>
+                        </div>
+                    </div>
+                    <input type="file" name="logo" accept="image/*" class="sr-only" @change="pick($event)">
+                </label>
+                <p class="mt-2 text-xs text-[#64748B]">Logo tampil di struk. Pilih gambar baru untuk mengganti.</p>
+                @error('logo')<p class="mt-2 text-xs font-medium text-red-600">{{ $message }}</p>@enderror
+            </x-panel>
+
+            <div class="fade-up" style="--i:3">
+                <x-btn type="submit" size="lg" class="w-full">Simpan Perubahan</x-btn>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
-                <textarea name="address" rows="3"
-                          class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">{{ old('address', $business->address) }}</textarea>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Bisnis</label>
-                <select name="business_type" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="fnb" {{ !$business->isRetail() ? 'selected' : '' }}>Makanan & Minuman (cafe, resto)</option>
-                    <option value="retail" {{ $business->isRetail() ? 'selected' : '' }}>Toko / Retail (baju, tas, aksesoris)</option>
-                </select>
-                <p class="text-xs text-gray-400 mt-0.5">Retail menyembunyikan Dine In, Dapur (KDS), Resep dan Bahan Baku.</p>
-            </div>
-            <div class="flex items-center gap-3 pt-2 border-t border-gray-100">
-                <button type="submit"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors">
-                    Simpan Perubahan
-                </button>
-            </div>
-        </form>
-    </x-card>
+        </div>
+    </form>
 </div>
 @endsection

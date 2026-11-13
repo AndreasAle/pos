@@ -3,160 +3,134 @@
 @section('page-title','Audit Log Aktivitas')
 
 @section('content')
-{{-- Filter --}}
-<form method="GET" class="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-5 grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-3">
-    <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Dari</label>
-        <input type="date" name="date_from" value="{{ request('date_from') }}"
-               class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-    </div>
-    <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Sampai</label>
-        <input type="date" name="date_to" value="{{ request('date_to') }}"
-               class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-    </div>
-    <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">User</label>
-        <select name="user_id" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <option value="">Semua User</option>
-            @foreach($users as $u)
-            <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
-                {{ $u->name }} ({{ $u->role }})
-            </option>
-            @endforeach
-        </select>
-    </div>
-    <div>
-        <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Aksi</label>
-        <select name="action" class="w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-            <option value="">Semua Aksi</option>
-            @foreach($actions as $a)
-            <option value="{{ $a }}" {{ request('action') === $a ? 'selected' : '' }}>{{ ucfirst($a) }}</option>
-            @endforeach
-        </select>
-    </div>
-    <div class="col-span-2 sm:flex-1 sm:min-w-48">
-        <label class="block text-xs font-medium text-gray-500 mb-1 uppercase">Pencarian</label>
-        <div class="relative">
-            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-            </svg>
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari aktivitas..."
-                   class="pl-9 w-full px-3 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-        </div>
-    </div>
-    <button type="submit"
-            class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-colors">
-        Cari
-    </button>
-    <a href="{{ route('audit.index') }}" class="text-center text-sm text-gray-500 hover:text-gray-700 py-2.5 px-3 rounded-xl hover:bg-gray-100">Reset</a>
-</form>
+@php
+    $tones = [
+        'created' => 'green', 'updated' => 'blue', 'deleted' => 'red', 'void' => 'red',
+        'login' => 'gray', 'logout' => 'gray', 'shift_open' => 'green', 'shift_close' => 'amber',
+        'stock_in' => 'green', 'stock_adjust' => 'amber', 'order_paid' => 'green',
+    ];
+    $dots = ['green' => 'bg-[#16A34A]', 'blue' => 'bg-sky-500', 'red' => 'bg-red-500', 'amber' => 'bg-amber-500', 'gray' => 'bg-slate-400'];
+    $hasFilter = request()->hasAny(['date_from', 'date_to', 'user_id', 'action', 'search']) && (request('date_from') || request('date_to') || request('user_id') || request('action') || request('search'));
+    $label = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#64748B]';
+@endphp
 
-<x-card :padding="false">
-    <div class="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-1">
-        <h3 class="text-sm font-semibold text-gray-900">{{ $logs->total() }} aktivitas ditemukan</h3>
-        <span class="text-xs text-gray-400">Menampilkan 50 per halaman</span>
+<div class="page text-[#0B1B3F] pt-2">
+
+    <div class="fade-up flex flex-wrap items-end justify-between gap-2 mb-4" style="--i:0">
+        <p class="text-sm text-[#64748B]">Jejak aktivitas staf: siapa melakukan apa, dan kapan.</p>
+        <span class="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#ECFDF3] text-[#15803D] text-sm font-semibold">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span>{{ number_format($logs->total()) }} aktivitas
+        </span>
     </div>
-    <div class="divide-y divide-gray-50">
-        @forelse($logs as $log)
-        @php
-        $colors = [
-            'created' => ['dot'=>'bg-emerald-500','text'=>'text-emerald-700','bg'=>'bg-emerald-50'],
-            'updated' => ['dot'=>'bg-blue-500',   'text'=>'text-blue-700',   'bg'=>'bg-blue-50'],
-            'deleted' => ['dot'=>'bg-red-500',    'text'=>'text-red-700',    'bg'=>'bg-red-50'],
-            'void'    => ['dot'=>'bg-red-500',    'text'=>'text-red-700',    'bg'=>'bg-red-50'],
-            'login'   => ['dot'=>'bg-gray-400',   'text'=>'text-gray-600',   'bg'=>'bg-gray-50'],
-            'logout'  => ['dot'=>'bg-gray-400',   'text'=>'text-gray-600',   'bg'=>'bg-gray-50'],
-            'shift_open'  => ['dot'=>'bg-emerald-500','text'=>'text-emerald-700','bg'=>'bg-emerald-50'],
-            'shift_close' => ['dot'=>'bg-orange-500', 'text'=>'text-orange-700', 'bg'=>'bg-orange-50'],
-            'stock_in'    => ['dot'=>'bg-emerald-500','text'=>'text-emerald-700','bg'=>'bg-emerald-50'],
-            'stock_adjust'=> ['dot'=>'bg-yellow-500', 'text'=>'text-yellow-700', 'bg'=>'bg-yellow-50'],
-            'order_paid'  => ['dot'=>'bg-emerald-500','text'=>'text-emerald-700','bg'=>'bg-emerald-50'],
-        ];
-        $c = $colors[$log->action] ?? ['dot'=>'bg-gray-400','text'=>'text-gray-600','bg'=>'bg-gray-50'];
-        @endphp
-        <div class="flex items-start gap-4 px-5 py-3.5 hover:bg-gray-50/50 transition-colors" x-data="{open:false}">
-            {{-- Timeline dot --}}
-            <div class="flex-shrink-0 mt-1">
-                <span class="w-2.5 h-2.5 rounded-full {{ $c['dot'] }} block mt-0.5"></span>
+
+    {{-- Filter --}}
+    <form method="GET" class="fade-up mb-4 rounded-xl border border-[#E5E7EB] bg-white p-3 sm:p-4" style="--i:1">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div>
+                <label class="{{ $label }}" for="date_from">Dari</label>
+                <input type="date" id="date_from" name="date_from" value="{{ request('date_from') }}"
+                       class="h-10 w-full rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/30 transition">
             </div>
+            <div>
+                <label class="{{ $label }}" for="date_to">Sampai</label>
+                <input type="date" id="date_to" name="date_to" value="{{ request('date_to') }}"
+                       class="h-10 w-full rounded-lg border border-[#E5E7EB] bg-white px-3 text-sm focus:outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/30 transition">
+            </div>
+            <div>
+                <label class="{{ $label }}" for="user_id">User</label>
+                <x-select name="user_id" :compact="true">
+                    <option value="">Semua user</option>
+                    @foreach($users as $u)
+                    <option value="{{ $u->id }}" @selected(request('user_id') == $u->id)>{{ $u->name }} ({{ $u->role }})</option>
+                    @endforeach
+                </x-select>
+            </div>
+            <div>
+                <label class="{{ $label }}" for="action">Aksi</label>
+                <x-select name="action" :compact="true">
+                    <option value="">Semua aksi</option>
+                    @foreach($actions as $a)
+                    <option value="{{ $a }}" @selected(request('action') === $a)>{{ ucfirst(str_replace('_', ' ', $a)) }}</option>
+                    @endforeach
+                </x-select>
+            </div>
+        </div>
+        <div class="mt-3 flex flex-col sm:flex-row gap-2">
+            <div class="relative flex-1">
+                <svg class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari aktivitas..."
+                       class="h-10 w-full rounded-lg border border-[#E5E7EB] bg-white pl-10 pr-3 text-sm placeholder:text-slate-400 focus:outline-none focus:border-[#16A34A] focus:ring-2 focus:ring-[#16A34A]/30 transition">
+            </div>
+            <div class="flex gap-2">
+                <x-btn type="submit" variant="dark" class="flex-1 sm:flex-none">Cari</x-btn>
+                @if($hasFilter)<x-btn :href="route('audit.index')" variant="ghost">Reset</x-btn>@endif
+            </div>
+        </div>
+    </form>
 
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center flex-wrap gap-2 mb-0.5">
-                    {{-- Action badge --}}
-                    <span class="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full {{ $c['text'] }} {{ $c['bg'] }}">
-                        {{ ucfirst($log->action) }}
-                    </span>
-                    {{-- Description --}}
-                    <p class="text-sm text-gray-900">{{ $log->description }}</p>
-                    @if($log->subject_label)
-                    <span class="text-xs text-gray-400">— {{ $log->subject_label }}</span>
-                    @endif
+    {{-- Timeline --}}
+    <section class="fade-up rounded-xl border border-[#E5E7EB] bg-white overflow-hidden" style="--i:2">
+        <div class="flex flex-wrap items-center justify-between gap-1 border-b border-[#E5E7EB] px-5 py-4">
+            <h2 class="text-base font-semibold">Riwayat aktivitas</h2>
+            <span class="text-xs text-[#64748B]">50 per halaman</span>
+        </div>
+
+        @forelse($logs as $log)
+        @php $tone = $tones[$log->action] ?? 'gray'; $hasChange = $log->old_values || $log->new_values; @endphp
+        <div class="flex items-start gap-4 border-b border-[#E5E7EB] px-5 py-4 last:border-0 hover:bg-[#ECFDF3]/40 transition-colors" x-data="{ open: false }">
+            <span class="mt-2 h-2.5 w-2.5 shrink-0 rounded-full {{ $dots[$tone] }}"></span>
+
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <x-pill :tone="$tone">{{ ucfirst(str_replace('_', ' ', $log->action)) }}</x-pill>
+                    <p class="text-sm font-medium">{{ $log->description }}</p>
+                    @if($log->subject_label)<span class="text-xs text-[#64748B]">&mdash; {{ $log->subject_label }}</span>@endif
                 </div>
-                <div class="flex items-center gap-3 text-xs text-gray-400">
-                    <span class="flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                        </svg>
+
+                <div class="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[#64748B]">
+                    <span class="inline-flex items-center gap-1.5">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                         {{ $log->user_name ?? 'System' }}
                     </span>
-                    <span class="flex items-center gap-1">
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        {{ $log->created_at->format('d/m/Y H:i:s') }}
-                        ({{ $log->created_at->diffForHumans() }})
+                    <span class="inline-flex items-center gap-1.5">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {{ $log->created_at->format('d/m/Y H:i:s') }} ({{ $log->created_at->diffForHumans() }})
                     </span>
-                    @if($log->ip_address)
-                    <span>IP: {{ $log->ip_address }}</span>
-                    @endif
-                    @if($log->old_values || $log->new_values)
-                    <button @click="open=!open" class="text-emerald-600 hover:underline">
-                        <span x-show="!open">Lihat perubahan ▼</span>
-                        <span x-show="open">Sembunyikan ▲</span>
+                    @if($log->ip_address)<span class="font-mono">IP {{ $log->ip_address }}</span>@endif
+                    @if($hasChange)
+                    <button type="button" @click="open = !open" class="inline-flex items-center gap-1 font-semibold text-[#16A34A] hover:underline">
+                        <span x-text="open ? 'Sembunyikan perubahan' : 'Lihat perubahan'"></span>
+                        <svg class="h-3.5 w-3.5 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                     </button>
                     @endif
                 </div>
 
-                {{-- Change detail (collapsible) --}}
-                @if($log->old_values || $log->new_values)
-                <div x-show="open" x-cloak class="mt-2 bg-gray-50 rounded-xl border border-gray-200 p-3 text-xs font-mono">
+                @if($hasChange)
+                <div x-show="open" x-cloak class="mt-3 rounded-lg border border-[#E5E7EB] bg-slate-50 p-3.5 font-mono text-xs">
                     @if($log->old_values && $log->new_values)
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <p class="font-semibold text-red-600 mb-1 font-sans">Sebelum</p>
+                            <p class="mb-1.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-red-600">Sebelum</p>
                             @foreach($log->old_values as $key => $val)
-                            <div class="flex gap-2 py-0.5">
-                                <span class="text-gray-500 min-w-24">{{ $key }}:</span>
-                                <span class="text-red-700">{{ is_array($val) ? json_encode($val) : $val }}</span>
-                            </div>
+                            <div class="flex gap-2 py-0.5"><span class="min-w-24 text-[#64748B]">{{ $key }}:</span><span class="break-all text-red-700">{{ is_array($val) ? json_encode($val) : $val }}</span></div>
                             @endforeach
                         </div>
                         <div>
-                            <p class="font-semibold text-emerald-600 mb-1 font-sans">Sesudah</p>
+                            <p class="mb-1.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-[#15803D]">Sesudah</p>
                             @foreach($log->new_values as $key => $val)
-                            <div class="flex gap-2 py-0.5">
-                                <span class="text-gray-500 min-w-24">{{ $key }}:</span>
-                                <span class="text-emerald-700">{{ is_array($val) ? json_encode($val) : $val }}</span>
-                            </div>
+                            <div class="flex gap-2 py-0.5"><span class="min-w-24 text-[#64748B]">{{ $key }}:</span><span class="break-all text-[#15803D]">{{ is_array($val) ? json_encode($val) : $val }}</span></div>
                             @endforeach
                         </div>
                     </div>
                     @elseif($log->new_values)
-                    <p class="font-semibold text-emerald-600 mb-1 font-sans">Data dibuat</p>
+                    <p class="mb-1.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-[#15803D]">Data dibuat</p>
                     @foreach($log->new_values as $key => $val)
-                    <div class="flex gap-2 py-0.5">
-                        <span class="text-gray-500 min-w-24">{{ $key }}:</span>
-                        <span class="text-gray-700">{{ is_array($val) ? json_encode($val) : $val }}</span>
-                    </div>
+                    <div class="flex gap-2 py-0.5"><span class="min-w-24 text-[#64748B]">{{ $key }}:</span><span class="break-all text-slate-700">{{ is_array($val) ? json_encode($val) : $val }}</span></div>
                     @endforeach
                     @elseif($log->old_values)
-                    <p class="font-semibold text-red-600 mb-1 font-sans">Data dihapus</p>
+                    <p class="mb-1.5 font-sans text-[11px] font-semibold uppercase tracking-wider text-red-600">Data dihapus</p>
                     @foreach($log->old_values as $key => $val)
-                    <div class="flex gap-2 py-0.5">
-                        <span class="text-gray-500 min-w-24">{{ $key }}:</span>
-                        <span class="text-red-700 line-through">{{ is_array($val) ? json_encode($val) : $val }}</span>
-                    </div>
+                    <div class="flex gap-2 py-0.5"><span class="min-w-24 text-[#64748B]">{{ $key }}:</span><span class="break-all text-red-700 line-through">{{ is_array($val) ? json_encode($val) : $val }}</span></div>
                     @endforeach
                     @endif
                 </div>
@@ -164,14 +138,10 @@
             </div>
         </div>
         @empty
-        <div class="px-5 py-16 text-center text-sm text-gray-400">
-            <svg class="w-12 h-12 mx-auto mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-            <p>Tidak ada aktivitas ditemukan</p>
-        </div>
+        <x-empty title="Tidak ada aktivitas" :text="$hasFilter ? 'Coba ubah filter pencarian.' : 'Aktivitas staf akan tercatat di sini.'" icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         @endforelse
-    </div>
-</x-card>
-<div class="mt-4">{{ $logs->links() }}</div>
+    </section>
+
+    <div class="mt-5">{{ $logs->links() }}</div>
+</div>
 @endsection
