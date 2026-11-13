@@ -13,7 +13,7 @@
     $duration = null;
     if ($shift->opened_at) {
         $end = $shift->closed_at ?? now();
-        $mins = $shift->opened_at->diffInMinutes($end);
+        $mins = (int) floor(abs($shift->opened_at->diffInMinutes($end)));
         $duration = intdiv($mins, 60) . ' jam ' . ($mins % 60) . ' menit';
     }
 @endphp

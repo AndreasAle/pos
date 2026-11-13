@@ -3,87 +3,112 @@
 @section('page-title','Kitchen Display System (KDS)')
 
 @section('content')
-<div x-data="kds()" x-init="init()">
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span class="text-sm text-gray-500">Auto-refresh setiap 15 detik</span>
+@php
+    $counts = [
+        'pending'   => $orders->where('kitchen_status', 'pending')->count(),
+        'preparing' => $orders->where('kitchen_status', 'preparing')->count(),
+        'ready'     => $orders->where('kitchen_status', 'ready')->count(),
+    ];
+    $statusTone  = ['pending' => 'amber', 'preparing' => 'blue', 'ready' => 'green', 'completed' => 'gray'];
+    $statusLabel = ['pending' => 'Menunggu', 'preparing' => 'Dimasak', 'ready' => 'Siap', 'completed' => 'Selesai'];
+@endphp
+
+<div class="page text-[#0B1B3F] pt-2" x-data="kds()" x-init="init()">
+
+    {{-- Header --}}
+    <div class="fade-up flex flex-wrap items-end justify-between gap-3 mb-4" style="--i:0">
+        <div class="flex flex-wrap items-center gap-3">
+            <p class="text-sm text-[#64748B]">Pesanan masuk dari kasir, urut dari yang paling lama.</p>
+            <span class="inline-flex items-center gap-2 h-8 px-3 rounded-full bg-[#ECFDF3] text-[#15803D] text-sm font-semibold">
+                <span class="relative flex h-2 w-2"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#16A34A] opacity-60"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-[#16A34A]"></span></span>
+                Auto-refresh 15 detik
+            </span>
         </div>
-        <button @click="refresh()" class="text-sm font-medium text-emerald-600 hover:text-emerald-700 border border-emerald-200 px-4 py-2 rounded-xl hover:bg-emerald-50">
-            🔄 Refresh
-        </button>
+        <x-btn variant="secondary" @click="refresh()">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+        </x-btn>
     </div>
 
-    <div id="kitchen-orders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    {{-- Ringkasan --}}
+    <div class="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+        <x-kpi class="fade-up" style="--i:1" tone="warn" label="Menunggu" :value="$counts['pending']" />
+        <x-kpi class="fade-up" style="--i:2" label="Sedang dimasak" :value="$counts['preparing']" />
+        <x-kpi class="fade-up" style="--i:3" tone="brand" label="Siap diantar" :value="$counts['ready']" />
+    </div>
+
+    <div id="kitchen-orders" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
         @forelse($orders as $order)
         @php
-        $elapsed = $order->created_at->diffInMinutes(now());
-        $urgencyClass = $elapsed > 20 ? 'border-red-400 bg-red-50' : ($elapsed > 10 ? 'border-yellow-400 bg-yellow-50' : 'border-gray-200 bg-white');
-        $statusColors = ['pending' => 'yellow', 'preparing' => 'blue', 'ready' => 'green', 'completed' => 'gray'];
+            $elapsed = (int) floor(abs($order->created_at->diffInMinutes(now())));
+            $late    = $elapsed > 20;
+            $warn    = $elapsed > 10 && ! $late;
+            $status  = $order->kitchen_status;
         @endphp
-        <div class="rounded-2xl border-2 {{ $urgencyClass }} shadow-sm overflow-hidden" id="order-{{ $order->id }}">
-            <div class="px-4 py-3 border-b {{ $elapsed > 20 ? 'border-red-300 bg-red-100' : ($elapsed > 10 ? 'border-yellow-300 bg-yellow-100' : 'border-gray-100 bg-gray-50') }}">
-                <div class="flex items-center justify-between">
-                    <p class="font-bold text-gray-900 font-mono">#{{ substr($order->order_number, -6) }}</p>
+        <article id="order-{{ $order->id }}" class="fade-up flex flex-col overflow-hidden rounded-xl border-2 bg-white
+                    {{ $late ? 'border-red-300' : ($warn ? 'border-amber-300' : 'border-[#E5E7EB]') }}" style="--i:{{ min($loop->index, 8) + 3 }}">
+
+            <div class="border-b px-4 py-3 {{ $late ? 'border-red-200 bg-red-50' : ($warn ? 'border-amber-200 bg-amber-50' : 'border-[#E5E7EB] bg-slate-50') }}">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="font-mono text-base font-bold">#{{ substr($order->order_number, -6) }}</p>
                     <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-500">{{ $elapsed }}m ago</span>
-                        @php $sc = $statusColors[$order->kitchen_status] ?? 'gray'; @endphp
-                        <x-badge :color="$sc">{{ ucfirst($order->kitchen_status) }}</x-badge>
+                        <span class="inline-flex items-center gap-1 text-xs font-bold tabular-nums {{ $late ? 'text-red-700' : ($warn ? 'text-amber-700' : 'text-[#64748B]') }}">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            {{ $elapsed }} mnt
+                        </span>
+                        <x-pill :tone="$statusTone[$status] ?? 'gray'">{{ $statusLabel[$status] ?? ucfirst($status) }}</x-pill>
                     </div>
                 </div>
-                @if($order->outlet)
-                <p class="text-xs text-gray-500 mt-0.5">{{ $order->outlet->name }}</p>
-                @endif
+                @if($order->outlet)<p class="mt-1 text-xs text-[#64748B]">{{ $order->outlet->name }}</p>@endif
                 @if($order->notes)
-                <p class="text-xs text-orange-600 mt-0.5 font-medium">📝 {{ $order->notes }}</p>
+                <p class="mt-2 flex items-start gap-1.5 text-xs font-semibold text-amber-800">
+                    <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 112.8 2.8L11.8 15H9v-2.8l8.6-8.6z"/></svg>
+                    {{ $order->notes }}
+                </p>
                 @endif
             </div>
 
-            <div class="p-4 space-y-2">
+            <ul class="flex-1 space-y-3 p-4">
                 @foreach($order->items as $item)
-                <div class="flex items-start gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                        {{ number_format($item->qty,0) }}
-                    </span>
-                    <div>
-                        <p class="text-sm font-semibold text-gray-900">{{ $item->product_name }}</p>
-                        @if($item->variant_name)<p class="text-xs text-gray-500">↳ {{ $item->variant_name }}</p>@endif
-                        @foreach($item->addons as $addon)
-                        <p class="text-xs text-emerald-600">+ {{ $addon->addon_name }}</p>
-                        @endforeach
-                        @if($item->notes)<p class="text-xs text-orange-500 italic font-medium">📝 {{ $item->notes }}</p>@endif
+                <li class="flex items-start gap-3">
+                    <span class="flex h-8 min-w-[2rem] shrink-0 items-center justify-center rounded-lg bg-[#0B1B3F] px-1.5 text-sm font-bold text-white">{{ number_format($item->qty, 0) }}</span>
+                    <div class="min-w-0">
+                        <p class="text-sm font-semibold leading-tight">{{ $item->product_name }}</p>
+                        @if($item->variant_name)<p class="mt-0.5 text-xs text-[#64748B]">{{ $item->variant_name }}</p>@endif
+                        @foreach($item->addons as $addon)<p class="mt-0.5 text-xs font-medium text-[#15803D]">+ {{ $addon->addon_name }}</p>@endforeach
+                        @if($item->notes)<p class="mt-1 rounded bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800">Catatan: {{ $item->notes }}</p>@endif
                     </div>
-                </div>
+                </li>
                 @endforeach
-            </div>
+            </ul>
 
-            <div class="px-4 pb-4 grid grid-cols-{{ $order->kitchen_status === 'pending' ? '3' : '2' }} gap-2">
-                @if($order->kitchen_status === 'pending')
-                <button onclick="updateKitchenStatus({{ $order->id }}, 'preparing')"
-                        class="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 py-2 rounded-xl transition-colors">
-                    👨‍🍳 Masak
+            <div class="flex gap-2 px-4 pb-4">
+                @if($status === 'pending')
+                <button type="button" onclick="updateKitchenStatus({{ $order->id }}, 'preparing')"
+                        class="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 text-[13px] font-semibold text-sky-700 transition-colors hover:bg-sky-100">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/></svg>
+                    Masak
                 </button>
                 @endif
-                @if(in_array($order->kitchen_status, ['pending','preparing']))
-                <button onclick="updateKitchenStatus({{ $order->id }}, 'ready')"
-                        class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 py-2 rounded-xl transition-colors">
-                    ✅ Siap
+                @if(in_array($status, ['pending','preparing']))
+                <button type="button" onclick="updateKitchenStatus({{ $order->id }}, 'ready')"
+                        class="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#16A34A] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#15803D]">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    Siap
                 </button>
                 @endif
-                <button onclick="updateKitchenStatus({{ $order->id }}, 'completed')"
-                        class="text-xs font-bold text-gray-600 bg-gray-100 border border-gray-200 hover:bg-gray-200 py-2 rounded-xl transition-colors">
-                    🏁 Selesai
+                <button type="button" onclick="updateKitchenStatus({{ $order->id }}, 'completed')"
+                        class="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-white text-[13px] font-semibold text-[#64748B] transition-colors hover:bg-slate-50 hover:text-[#0B1B3F]">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg>
+                    Selesai
                 </button>
             </div>
-        </div>
+        </article>
         @empty
-        <div class="col-span-4 flex flex-col items-center justify-center py-24 text-gray-300">
-            <svg class="w-20 h-20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-            </svg>
-            <p class="text-xl font-medium">Tidak ada order masuk</p>
-            <p class="text-sm mt-1">Semua pesanan sudah selesai 🎉</p>
-        </div>
+        <section class="fade-up col-span-full rounded-xl border border-[#E5E7EB] bg-white" style="--i:3">
+            <x-empty title="Tidak ada order masuk" text="Semua pesanan sudah selesai. Pesanan baru dari kasir akan muncul di sini otomatis."
+                     icon="M5 13l4 4L19 7" class="py-20" />
+        </section>
         @endforelse
     </div>
 </div>

@@ -3,108 +3,124 @@
 @section('page-title', $ingredient->name)
 
 @section('content')
-<div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-    <a href="{{ route('ingredients.index') }}" class="text-sm text-gray-500 hover:text-gray-700">← Bahan Baku</a>
-    <a href="{{ route('ingredients.edit', $ingredient) }}"
-       class="text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl">Edit</a>
-</div>
+@php
+    $rp    = fn($v) => 'Rp ' . number_format($v, 0, ',', '.');
+    $low   = $ingredient->isLowStock();
+    $u     = $ingredient->unit;
+    $plus  = 'M12 4v16m8-8H4';
+@endphp
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-    <x-stat-card label="Stok Saat Ini" value="{{ number_format($ingredient->current_stock,2) }} {{ $ingredient->unit }}"
-                 :color="$ingredient->isLowStock() ? 'orange' : 'emerald'"/>
-    <x-stat-card label="Stok Minimum" value="{{ number_format($ingredient->minimum_stock,2) }} {{ $ingredient->unit }}" color="blue"/>
-    <x-stat-card label="Harga Rata-rata" value="Rp {{ number_format($ingredient->average_cost,0,',','.') }} / {{ $ingredient->unit }}" color="purple"/>
-</div>
+<div class="page text-[#0B1B3F] pt-2">
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-    <div class="space-y-4">
-        {{-- Stock In --}}
-        <x-card title="Stok Masuk">
-            <form method="POST" action="{{ route('ingredients.stock-in', $ingredient) }}" class="space-y-3">
-                @csrf
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Jumlah ({{ $ingredient->unit }})</label>
-                    <input type="number" name="qty" min="0.001" step="0.001" required placeholder="0"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Harga per {{ $ingredient->unit }}</label>
-                    <div class="relative">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">Rp</span>
-                        <input type="number" name="unit_cost" min="0" step="any" value="{{ $ingredient->average_cost }}"
-                               class="pl-7 w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Catatan</label>
-                    <input type="text" name="notes" placeholder="Supplier, referensi..."
-                           class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2.5 rounded-xl">
-                    + Tambah Stok
-                </button>
-            </form>
-        </x-card>
+    <x-page-head :title="$ingredient->name" :back="route('ingredients.index')" backLabel="Bahan Baku" style="--i:0">
+        <x-slot:badge>
+            <x-pill :tone="$ingredient->is_active ? 'green' : 'gray'">{{ $ingredient->is_active ? 'Aktif' : 'Nonaktif' }}</x-pill>
+            @if($low)<x-pill tone="amber">Stok menipis</x-pill>@endif
+        </x-slot:badge>
+        <x-slot:actions>
+            <x-btn :href="route('ingredients.edit', $ingredient)">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.4-9.4a2 2 0 112.8 2.8L11.8 15H9v-2.8l8.6-8.6z"/></svg>
+                Edit
+            </x-btn>
+        </x-slot:actions>
+    </x-page-head>
 
-        {{-- Adjustment --}}
-        <x-card title="Penyesuaian Stok">
-            <form method="POST" action="{{ route('ingredients.adjustment', $ingredient) }}" class="space-y-3">
-                @csrf
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Stok Aktual Baru</label>
-                    <input type="number" name="new_stock" min="0" step="0.001" value="{{ $ingredient->current_stock }}"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Alasan</label>
-                    <input type="text" name="notes" placeholder="Stok opname, koreksi..."
-                           class="w-full px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <button type="submit" class="w-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold py-2.5 rounded-xl">
-                    Sesuaikan Stok
-                </button>
-            </form>
-        </x-card>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
+        <x-kpi class="fade-up" style="--i:1" :tone="$low ? 'warn' : 'brand'" label="Stok Saat Ini" :value="number_format($ingredient->current_stock, 2) . ' ' . $u" />
+        <x-kpi class="fade-up" style="--i:2" label="Stok Minimum" :value="number_format($ingredient->minimum_stock, 2) . ' ' . $u" />
+        <x-kpi class="fade-up" style="--i:3" label="Harga Rata-rata" :value="$rp($ingredient->average_cost) . ' / ' . $u" />
     </div>
 
-    {{-- Movement history --}}
-    <div class="lg:col-span-2">
-        <x-card title="Riwayat Pergerakan Stok" :padding="false">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-gray-50 border-b border-gray-100">
-                        <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Tipe</th>
-                        <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                        <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Stok Sebelum</th>
-                        <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Stok Sesudah</th>
-                        <th class="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Catatan</th>
-                        <th class="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase">Waktu</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @forelse($movements as $mv)
-                    @php
-                    $mvColors = ['in'=>'green','out'=>'red','adjustment'=>'blue','sale'=>'orange','return'=>'purple','waste'=>'gray'];
-                    @endphp
-                    <tr class="hover:bg-gray-50/50">
-                        <td class="px-4 py-2.5">
-                            <x-badge :color="$mvColors[$mv->type]??'gray'">{{ ucfirst($mv->type) }}</x-badge>
-                        </td>
-                        <td class="px-4 py-2.5 text-right font-bold {{ $mv->qty >= 0 ? 'text-emerald-600' : 'text-red-600' }}">
-                            {{ $mv->qty >= 0 ? '+' : '' }}{{ number_format($mv->qty, 3) }}
-                        </td>
-                        <td class="px-4 py-2.5 text-right text-gray-500">{{ number_format($mv->stock_before, 3) }}</td>
-                        <td class="px-4 py-2.5 text-right font-semibold text-gray-900">{{ number_format($mv->stock_after, 3) }}</td>
-                        <td class="px-4 py-2.5 text-gray-600 text-xs max-w-xs truncate">{{ $mv->notes ?: '-' }}</td>
-                        <td class="px-4 py-2.5 text-right text-gray-500 text-xs">{{ $mv->created_at->format('d/m/Y H:i') }}</td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="6" class="px-4 py-8 text-center text-sm text-gray-400">Belum ada riwayat</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </x-card>
-        <div class="mt-3">{{ $movements->links() }}</div>
+    <div class="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4 items-start">
+
+        {{-- Kiri: aksi stok --}}
+        <div class="space-y-4">
+            <x-panel title="Stok Masuk" sub="Catat pembelian atau penambahan stok." class="fade-up" style="--i:2">
+                <form method="POST" action="{{ route('ingredients.stock-in', $ingredient) }}" class="space-y-4">
+                    @csrf
+                    <x-field :label="'Jumlah (' . $u . ')'" name="qty">
+                        <x-input name="qty" type="number" min="0.001" step="0.001" required placeholder="0" class="h-10" />
+                    </x-field>
+                    <x-field :label="'Harga per ' . $u" name="unit_cost">
+                        <x-input name="unit_cost" type="number" prefix="Rp" min="0" step="any" :value="$ingredient->average_cost" class="h-10" />
+                    </x-field>
+                    <x-field label="Catatan" name="notes">
+                        <x-input name="notes" placeholder="Supplier, referensi..." class="h-10" />
+                    </x-field>
+                    <x-btn type="submit" class="w-full">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $plus }}"/></svg>
+                        Tambah Stok
+                    </x-btn>
+                </form>
+            </x-panel>
+
+            <x-panel title="Penyesuaian Stok" sub="Samakan stok sistem dengan hasil hitung fisik." class="fade-up" style="--i:3">
+                <form method="POST" action="{{ route('ingredients.adjustment', $ingredient) }}" class="space-y-4">
+                    @csrf
+                    <x-field label="Stok aktual baru" name="new_stock">
+                        <x-input name="new_stock" type="number" min="0" step="0.001" :value="$ingredient->current_stock" class="h-10" />
+                    </x-field>
+                    <x-field label="Alasan" name="notes">
+                        <x-input name="notes" placeholder="Stok opname, koreksi..." class="h-10" />
+                    </x-field>
+                    <x-btn type="submit" variant="secondary" class="w-full">Sesuaikan Stok</x-btn>
+                </form>
+            </x-panel>
+        </div>
+
+        {{-- Kanan: riwayat --}}
+        <div class="min-w-0">
+            <section class="fade-up overflow-hidden rounded-xl border border-[#E5E7EB] bg-white" style="--i:3">
+                <div class="flex items-center justify-between gap-3 border-b border-[#E5E7EB] px-5 py-4">
+                    <h2 class="text-base font-semibold">Riwayat Pergerakan Stok</h2>
+                    <x-pill tone="green">{{ number_format($movements->total()) }} catatan</x-pill>
+                </div>
+
+                @if($movements->count())
+                <div class="hidden md:block overflow-x-auto">
+                    <table class="w-full text-sm whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-[#E5E7EB]">
+                                <th class="text-left px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Tipe</th>
+                                <th class="text-right px-4 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Qty</th>
+                                <th class="text-right px-4 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Sebelum</th>
+                                <th class="text-right px-4 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Sesudah</th>
+                                <th class="text-left px-4 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Catatan</th>
+                                <th class="text-right px-6 py-3.5 text-xs font-semibold text-[#64748B] uppercase tracking-wider">Waktu</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[#E5E7EB]">
+                            @foreach($movements as $mv)
+                            <tr class="hover:bg-[#ECFDF3]/50 transition-colors">
+                                <td class="px-6 py-4"><x-movement-type :type="$mv->type" /></td>
+                                <td class="px-4 py-4 text-right font-bold tabular-nums {{ $mv->qty >= 0 ? 'text-[#15803D]' : 'text-red-600' }}">{{ $mv->qty >= 0 ? '+' : '' }}{{ number_format($mv->qty, 3) }}</td>
+                                <td class="px-4 py-4 text-right tabular-nums text-[#64748B]">{{ number_format($mv->stock_before, 3) }}</td>
+                                <td class="px-4 py-4 text-right font-semibold tabular-nums">{{ number_format($mv->stock_after, 3) }}</td>
+                                <td class="max-w-[14rem] truncate px-4 py-4 text-xs text-[#64748B]">{{ $mv->notes ?: '-' }}</td>
+                                <td class="px-6 py-4 text-right text-xs text-[#64748B]">{{ $mv->created_at->format('d/m/Y H:i') }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <ul class="md:hidden divide-y divide-[#E5E7EB]">
+                    @foreach($movements as $mv)
+                    <li class="px-5 py-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <x-movement-type :type="$mv->type" />
+                            <span class="font-bold tabular-nums {{ $mv->qty >= 0 ? 'text-[#15803D]' : 'text-red-600' }}">{{ $mv->qty >= 0 ? '+' : '' }}{{ number_format($mv->qty, 3) }} {{ $u }}</span>
+                        </div>
+                        <p class="mt-2 text-xs text-[#64748B]">{{ number_format($mv->stock_before, 3) }} &rarr; <span class="font-semibold text-[#0B1B3F]">{{ number_format($mv->stock_after, 3) }}</span> &middot; {{ $mv->created_at->format('d/m/Y H:i') }}</p>
+                        @if($mv->notes)<p class="mt-1 text-xs text-[#64748B]">{{ $mv->notes }}</p>@endif
+                    </li>
+                    @endforeach
+                </ul>
+                @else
+                <x-empty title="Belum ada riwayat" text="Stok masuk, penjualan, dan penyesuaian akan tercatat di sini." icon="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                @endif
+            </section>
+            <div class="mt-4">{{ $movements->links() }}</div>
+        </div>
     </div>
 </div>
 @endsection

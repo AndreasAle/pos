@@ -16,7 +16,7 @@
 </div>
 
 <p style="color:#4b5563; font-size:13px;">
-    Shift ini sudah terbuka lebih dari <strong>{{ $shift->opened_at->diffInHours(now()) }} jam</strong>.
+    Shift ini sudah terbuka lebih dari <strong>{{ (int) floor(abs($shift->opened_at->diffInHours(now()))) }} jam</strong>.
     Harap segera tutup shift untuk memastikan laporan keuangan akurat.
 </p>
 
