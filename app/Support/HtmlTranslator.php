@@ -87,7 +87,12 @@ class HtmlTranslator
                 continue;
             }
             if (preg_match($p['regex'], $key, $m)) {
-                $captures = array_slice($m, 1);
+                // Bagian dinamis yang kebetulan ada di kamus (mis. nama fitur) ikut diterjemahkan.
+                $captures = array_map(function ($c) {
+                    $k = self::normalize($c);
+
+                    return ($k !== '' && isset($this->exact[$k]) && ! preg_match('/^[\d.,%\s]+$/', $k)) ? $this->exact[$k] : $c;
+                }, array_slice($m, 1));
                 $out = $p['to'];
 
                 // Bentuk tunggal/jamak: {0|item|items} memilih kata menurut angka di penampung 0.

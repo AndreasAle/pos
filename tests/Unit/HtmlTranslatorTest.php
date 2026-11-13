@@ -95,4 +95,16 @@ class HtmlTranslatorTest extends TestCase
         $t = new HtmlTranslator(['Tombol' => 'Save & <close>']);
         $this->assertSame('<b>Save &amp; &lt;close&gt;</b>', $t->translate('<b>Tombol</b>'));
     }
+
+    public function test_dynamic_part_of_a_pattern_is_translated_when_it_is_in_the_dictionary(): void
+    {
+        $t = new HtmlTranslator([
+            'Ilustrasi · {0}' => 'Illustration · {0}',
+            'Pelanggan & Promosi' => 'Customers & Promotions',
+        ]);
+
+        $this->assertSame('<p>Illustration · Customers &amp; Promotions</p>', $t->translate('<p>Ilustrasi · Pelanggan &amp; Promosi</p>'));
+        // data yang tidak ada di kamus dibiarkan
+        $this->assertSame('<p>Illustration · Kopi Susu</p>', $t->translate('<p>Ilustrasi · Kopi Susu</p>'));
+    }
 }

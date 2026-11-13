@@ -140,11 +140,12 @@
                     </div>
                 </div>
                 <a href="#keunggulan" class="hover:opacity-70 transition-opacity">Keunggulan</a>
-                <a href="#harga" class="hover:opacity-70 transition-opacity">Harga</a>
+                <a href="#harga" class="hover:opacity-70 transition-opacity">Paket Harga</a>
                 <a href="#faq" class="hover:opacity-70 transition-opacity">FAQ</a>
             </nav>
 
             <div class="hidden lg:flex items-center gap-7 ml-auto">
+                <x-lang-switch variant="light" />
                 <a href="{{ url('/login') }}" class="text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">Masuk</a>
                 <a href="{{ $waLink }}" target="_blank"
                    class="px-7 py-3 rounded-full text-[15px] font-bold transition-colors duration-300"
@@ -182,8 +183,9 @@
                 @endforeach
             </div>
             <a @click="mobileOpen=false" href="#keunggulan" class="block text-sm font-medium text-slate-700">Keunggulan</a>
-            <a @click="mobileOpen=false" href="#harga" class="block text-sm font-medium text-slate-700">Harga</a>
+            <a @click="mobileOpen=false" href="#harga" class="block text-sm font-medium text-slate-700">Paket Harga</a>
             <a @click="mobileOpen=false" href="#faq" class="block text-sm font-medium text-slate-700">FAQ</a>
+            <x-lang-switch variant="light" />
             <a href="https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka" target="_blank"
                class="block text-center px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold">Coba Demo Sekarang</a>
         </div>

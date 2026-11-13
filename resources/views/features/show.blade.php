@@ -44,11 +44,12 @@
                     </div>
                 </div>
                 <a href="{{ route('landing') }}#usaha" class="hover:text-emerald-700">Solusi Bisnis</a>
-                <a href="{{ route('landing') }}#harga" class="hover:text-emerald-700">Harga</a>
+                <a href="{{ route('landing') }}#harga" class="hover:text-emerald-700">Paket Harga</a>
                 <a href="{{ route('landing') }}#faq" class="hover:text-emerald-700">FAQ</a>
             </nav>
 
             <div class="hidden lg:flex items-center gap-7 ml-auto">
+                <x-lang-switch variant="light" />
                 <a href="{{ route('login') }}" class="text-sm font-bold text-slate-800">Masuk</a>
                 <a href="{{ route('register') }}" class="border-2 border-emerald-700 bg-emerald-700 px-6 py-2.5 text-sm font-bold text-white hover:bg-white hover:text-emerald-700 transition-colors">Coba Gratis</a>
             </div>

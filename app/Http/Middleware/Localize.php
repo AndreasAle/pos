@@ -50,8 +50,8 @@ class Localize
         if (! $response instanceof \Illuminate\Http\Response || $response->isRedirection()) {
             return false;
         }
-        // Back office tim Yoka dan halaman pemasaran publik (belum diterjemahkan penuh) tetap Indonesia.
-        if ($request->is('platform') || $request->is('platform/*') || $request->is('/') || $request->is('fitur/*')) {
+        // Back office tim Yoka tetap Indonesia.
+        if ($request->is('platform') || $request->is('platform/*')) {
             return false;
         }
         $type = (string) $response->headers->get('Content-Type');
