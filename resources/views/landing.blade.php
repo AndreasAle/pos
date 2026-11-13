@@ -51,7 +51,7 @@
 <body class="bg-white text-slate-800 antialiased" x-data="{ mobileOpen: false }">
 
     {{-- ================= NAVBAR ================= --}}
-    @php $waLink = 'https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka'; @endphp
+    @php $waLink = 'https://wa.me/6285891111795?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka'; @endphp
     <header
         x-data="{ scrolled: false, featureOpen: false, mobileFeatures: false }"
         x-init="scrolled = window.scrollY > 40; window.addEventListener('scroll', () => scrolled = window.scrollY > 40, { passive: true })"
@@ -186,7 +186,7 @@
             <a @click="mobileOpen=false" href="#harga" class="block text-sm font-medium text-slate-700">Paket Harga</a>
             <a @click="mobileOpen=false" href="#faq" class="block text-sm font-medium text-slate-700">FAQ</a>
             <x-lang-switch variant="light" />
-            <a href="https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka" target="_blank"
+            <a href="{{ $waLink }}" target="_blank"
                class="block text-center px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold">Coba Demo Sekarang</a>
         </div>
     </header>
@@ -841,7 +841,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <a href="https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka" target="_blank"
+                        <a href="{{ $waLink }}" target="_blank"
                            class="block text-center px-4 py-3 rounded-xl font-semibold transition-colors {{ $highlight ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">
                             {{ $cta }}
                         </a>
@@ -972,7 +972,7 @@
     @include('partials.site-footer', ['waLink' => $waLink])
 
     {{-- Floating WhatsApp CTA --}}
-    <a href="https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka" target="_blank"
+    <a href="{{ $waLink }}" target="_blank"
        class="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-5 py-3.5 rounded-full bg-emerald-600 text-white font-semibold shadow-2xl shadow-emerald-300 hover:bg-emerald-700 transition-all hover:-translate-y-0.5">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.79.47 3.47 1.36 4.95L2 22l5.27-1.38a9.9 9.9 0 0 0 4.77 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C21.96 6.45 17.5 2 12.04 2zm5.84 14.16c-.25.7-1.45 1.34-2 1.43-.51.08-1.16.11-1.87-.12-.43-.14-.99-.32-1.7-.63-2.99-1.29-4.94-4.31-5.09-4.51-.15-.2-1.22-1.62-1.22-3.09 0-1.47.77-2.19 1.05-2.49.27-.3.6-.37.8-.37.2 0 .4 0 .57.01.18.01.43-.07.67.51.25.6.85 2.07.92 2.22.07.15.12.33.02.53-.1.2-.15.32-.3.49-.15.17-.31.38-.45.51-.15.15-.3.31-.13.6.17.3.76 1.25 1.63 2.02 1.12 1 2.06 1.31 2.36 1.46.3.15.48.13.65-.08.18-.2.75-.87.95-1.17.2-.3.4-.25.67-.15.27.1 1.73.82 2.03.97.3.15.5.22.57.35.07.13.07.74-.18 1.43z"/></svg>
         <span class="hidden sm:inline">Chat WhatsApp</span>

@@ -2,8 +2,8 @@
     @php
         $companyName = 'Conwebid Indonesia Digital';
         $companyEmail = 'conwebid@gmail.com';
-        $companyPhone = '08xx-xxxx-xxxx'; // TODO: isi nomor lengkap
-        $companyPhoneDigits = '628xxxxxxxxxx'; // TODO: format 62..., tanpa + dan spasi
+        $companyPhone = '0858-9111-1795';
+        $companyPhoneDigits = '6285891111795';
     @endphp
     <footer class="overflow-hidden bg-[#073e2d] text-white">
         <section class="relative min-h-[620px] overflow-hidden rounded-t-[34px] md:min-h-[690px] md:rounded-t-[54px]">

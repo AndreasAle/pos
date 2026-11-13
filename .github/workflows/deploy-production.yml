@@ -59,14 +59,13 @@ jobs:
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
             "$SSH_USER@$SSH_HOST" \
-            'cd /home/u598194357/pos_app && ./deploy.sh'
+            'cd /home/u598194357/yokapos_app && ./deploy.sh'
 
-      - name: Verify both domains
+      - name: Verify Yoka POS
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --silent --show-error --retry 3 --max-time 20 https://yokapos.com/up
-          curl --fail --silent --show-error --retry 3 --max-time 20 https://pos.conweb.id/up
 
       - name: Remove SSH material
         if: always()

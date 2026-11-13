@@ -13,7 +13,7 @@
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
 </head>
 <body class="bg-white text-slate-800 antialiased" x-data="{ mobileOpen: false, featuresOpen: false }">
-    @php $waLink = 'https://wa.me/628xxxxxxxxxx?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka'; @endphp
+    @php $waLink = 'https://wa.me/6285891111795?text=Halo%20saya%20tertarik%20dengan%20aplikasi%20POS%20Yoka'; @endphp
 
     <header class="fixed inset-x-0 top-0 z-40 border-b border-[#d9e1dd] bg-white">
         <div class="max-w-[1200px] mx-auto px-5 sm:px-6 h-[60px] sm:h-[68px] lg:h-[72px] flex items-center">
