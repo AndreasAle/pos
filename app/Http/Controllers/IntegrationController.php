@@ -27,6 +27,7 @@ class IntegrationController extends Controller
             'outlets'   => $outlets,
             'links'     => $links,
             'gobizLive' => app(GoBizAuth::class)->enabled(),
+            'sheetFeed' => \App\Models\SheetFeed::where('business_id', $businessId)->first(),
         ]);
     }
 

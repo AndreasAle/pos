@@ -60,6 +60,10 @@ Route::view('/hapus-akun', 'legal.delete-account')->name('legal.delete');
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
 Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 
+// Google Sheets menarik CSV lewat IMPORTDATA. Dikunci token acak per bisnis; hanya baca.
+Route::get('feed/sheets/{token}/{dataset}.csv', [\App\Http\Controllers\SheetFeedController::class, 'csv'])
+    ->middleware('throttle:60,1')->name('sheets.feed');
+
 // ShopeeFood memanggil endpoint ini (Vendor API Requirements). Dikunci oleh
 // SHOPEEFOOD_INBOUND_* dan SHOPEEFOOD_INDICATOR; kosong = 404.
 Route::prefix('api/shopeefood/{indicator}')->name('shopeefood.')->middleware(['json', 'throttle:240,1'])->group(function () {
@@ -383,6 +387,8 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::get('/', [\App\Http\Controllers\IntegrationController::class, 'index'])->name('index');
         // Redirect URI GoBiz: harus sama dengan GOBIZ_REDIRECT_URI yang didaftarkan ke Gojek.
         Route::get('gofood/callback', [\App\Http\Controllers\GoBizOAuthController::class, 'callback'])->name('gofood.callback');
+        Route::post('google-sheets', [\App\Http\Controllers\SheetFeedController::class, 'generate'])->name('sheets.generate');
+        Route::delete('google-sheets', [\App\Http\Controllers\SheetFeedController::class, 'revoke'])->name('sheets.revoke');
         Route::post('{provider}',[\App\Http\Controllers\IntegrationController::class, 'connect'])->name('connect');
         Route::delete('{integration}', [\App\Http\Controllers\IntegrationController::class, 'disconnect'])->name('disconnect');
     });

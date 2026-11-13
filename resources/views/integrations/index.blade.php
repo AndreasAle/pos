@@ -170,5 +170,75 @@
     </div>
     @endforeach
     @endif
+
+    {{-- Google Sheets: tidak butuh izin partner, aktif langsung --}}
+    @php
+        $sheetDatasets = [
+            'penjualan' => ['Data penjualan', 'Satu baris per pesanan: tanggal, outlet, pembayaran, total.'],
+            'item'      => ['Data item terjual', 'Satu baris per produk: nama, harga, jumlah, subtotal.'],
+        ];
+    @endphp
+    <article class="fade-up mt-4 rounded-xl border border-[#E5E7EB] bg-white" style="--i:5" x-data="{ copied: null }">
+        <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 p-5">
+            <div class="flex items-center gap-3.5">
+                <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white">
+                    <svg class="h-8 w-8 text-[#16A34A]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path stroke-linecap="round" d="M4 9h16M4 15h16M10 9v12"/></svg>
+                </span>
+                <div>
+                    <h3 class="text-lg font-semibold">Google Sheets</h3>
+                    <p class="text-sm text-[#64748B]">Olah data penjualan di spreadsheet Anda sendiri</p>
+                </div>
+            </div>
+            <x-pill :tone="$sheetFeed ? 'green' : 'gray'">{{ $sheetFeed ? 'Aktif' : 'Belum dibuat' }}</x-pill>
+        </div>
+
+        @if(! $sheetFeed)
+        <ul class="space-y-2 px-5 pb-5">
+            @foreach(['Data penjualan dan item terjual masuk ke Google Sheets', 'Tanpa login Google atau izin tambahan', 'Pivot, grafik, dan rumus sesuka Anda'] as $b)
+            <li class="flex items-start gap-2 text-sm text-[#64748B]">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>{{ $b }}
+            </li>
+            @endforeach
+        </ul>
+        <div class="border-t border-[#E5E7EB] p-4">
+            <form method="POST" action="{{ route('integrations.sheets.generate') }}">
+                @csrf
+                <button class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-[#16A34A] text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#15803D]">Buat tautan Google Sheets</button>
+            </form>
+        </div>
+        @else
+        <div class="space-y-4 border-t border-[#E5E7EB] p-5">
+            <ol class="list-decimal space-y-1 pl-5 text-sm text-[#64748B]">
+                <li>Buka Google Sheets, pilih sel kosong (misalnya A1).</li>
+                <li>Tempel rumus di bawah, lalu tekan Enter.</li>
+                <li>Data diperbarui otomatis sekitar tiap satu jam oleh Google.</li>
+            </ol>
+
+            @foreach($sheetDatasets as $ds => [$label, $desc])
+            @php $formula = '=IMPORTDATA("' . route('sheets.feed', ['token' => $sheetFeed->token, 'dataset' => $ds]) . '?hari=31")'; @endphp
+            <div>
+                <p class="text-sm font-semibold">{{ $label }} <span class="font-normal text-[#64748B]">· {{ $desc }}</span></p>
+                <div class="mt-1.5 flex items-stretch gap-2">
+                    <input readonly value="{{ $formula }}" onfocus="this.select()" class="h-10 min-w-0 flex-1 rounded-lg border border-[#E5E7EB] bg-slate-50 px-3 font-mono text-[12px] text-[#0B1B3F]">
+                    <button type="button" class="h-10 shrink-0 rounded-lg border border-[#E5E7EB] px-4 text-sm font-semibold hover:bg-slate-50"
+                            @click="navigator.clipboard.writeText(@js($formula)).then(() => { copied = '{{ $ds }}'; setTimeout(() => copied = null, 1800) })"
+                            x-text="copied === '{{ $ds }}' ? 'Tersalin' : 'Salin'">Salin</button>
+                </div>
+            </div>
+            @endforeach
+
+            <p class="text-[13px] text-[#64748B]">Ubah <span class="font-mono">hari=31</span> untuk rentang lain (maksimal 366 hari). Siapa pun yang memegang tautan ini bisa membaca data penjualan, jadi jangan dibagikan. Bila bocor, buat ulang tautan dan yang lama langsung mati.
+                @if($sheetFeed->last_accessed_at) Terakhir diambil {{ $sheetFeed->last_accessed_at->diffForHumans() }}.@else Belum pernah diambil.@endif</p>
+        </div>
+        <div class="flex flex-wrap justify-end gap-2 border-t border-[#E5E7EB] px-5 py-3">
+            <form method="POST" action="{{ route('integrations.sheets.generate') }}" onsubmit="return confirm('Buat ulang tautan? Tautan lama berhenti bekerja dan rumus di spreadsheet perlu diganti.')">
+                @csrf <x-btn type="submit" size="sm" variant="secondary">Buat ulang tautan</x-btn>
+            </form>
+            <form method="POST" action="{{ route('integrations.sheets.revoke') }}" onsubmit="return confirm('Cabut tautan? Spreadsheet tidak akan menerima data lagi.')">
+                @csrf @method('DELETE') <x-btn type="submit" size="sm" variant="danger-outline">Cabut</x-btn>
+            </form>
+        </div>
+        @endif
+    </article>
 </div>
 @endsection
