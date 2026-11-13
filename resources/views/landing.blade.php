@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Yoka POS — Kasir Modern untuk Cafe, Resto, Bakery & Bisnis F&B</title>
-    <meta name="description" content="Kelola transaksi, QRIS, stok, shift kasir, laporan profit, dan insight bisnis Yoka Intelligence dalam satu sistem POS untuk cafe, resto, bakery, dan UMKM.">
+    <meta name="description" content="Kelola transaksi, QRIS, stok, shift kasir, laporan profit, dan insight bisnis dalam satu sistem POS untuk cafe, resto, bakery, dan UMKM.">
 
 
     @include('layouts._fonts')
@@ -128,9 +128,9 @@
                                     </span>
                                     <span class="rounded-full bg-amber-300 px-2.5 py-1 text-[12px] font-extrabold uppercase tracking-wider text-amber-950">Unggulan</span>
                                 </div>
-                                <p class="mt-5 text-lg font-extrabold">Yoka Intelligence</p>
+                                <p class="mt-5 text-lg font-extrabold">Laporan &amp; Insight</p>
                                 <p class="mt-2 text-xs font-medium leading-relaxed text-emerald-50/85">Tanya omzet, profit, stok, produk terlaris, dan dapatkan insight langsung dari data tokomu.</p>
-                                <a href="#yoka-intelligence" @click="featureOpen = false" class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white hover:gap-3 transition-all">
+                                <a href="{{ route('features.show', 'laporan') }}" @click="featureOpen = false" class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-white hover:gap-3 transition-all">
                                     Lihat cara kerjanya
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m-6-6 6 6-6 6"/></svg>
                                 </a>
@@ -172,11 +172,10 @@
                     [route('features.show', 'pembayaran-qris'), 'Pembayaran & QRIS'],
                     [route('features.show', 'stok-resep'), 'Stok & Resep'],
                     [route('features.show', 'kitchen-display'), 'Kitchen Display'],
-                    ['#yoka-intelligence', 'Yoka Intelligence'],
                     [route('features.show', 'laporan'), 'Laporan Penjualan & Profit'],
                 ] as [$href, $label])
                     <a @click="mobileOpen=false; mobileFeatures=false" href="{{ $href }}"
-                       class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold {{ $label === 'Yoka Intelligence' ? 'bg-emerald-700 text-white' : 'text-slate-700 hover:bg-white' }}">
+                       class="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-white">
                         {{ $label }}
                         <span aria-hidden="true">→</span>
                     </a>
@@ -479,7 +478,22 @@
         </div>
     </section>
 
-    {{-- ================= YOKA INTELLIGENCE DEMO ================= --}}
+    {{-- ================= INTERACTIVE PRODUCT EXPERIENCE ================= --}}
+    <section id="demo-kasir" class="overflow-hidden bg-white py-20 md:py-28" aria-labelledby="product-experience-title">
+        <div class="w-full">
+            <div class="mx-auto max-w-[780px] px-6 text-center">
+                <h2 id="product-experience-title" class="mt-6 text-[34px] font-extrabold leading-[1.08] tracking-[-.035em] text-[#0B1B3F] sm:text-[44px] md:text-[56px]">Rasakan alur kasir Yoka,<br><span class="text-emerald-600">langsung dari browser.</span></h2>
+            </div>
+            <div class="mt-12 min-h-[580px] w-full overflow-hidden border-y border-slate-200 bg-[#2b241f] shadow-[0_30px_80px_rgba(15,23,42,.12)] sm:min-h-[680px]" data-yoka-product-experience data-signup-url="{{ route('register') }}">
+                <div class="flex min-h-[580px] items-center justify-center text-sm font-bold text-slate-400 sm:min-h-[680px]" role="status">
+                    <span class="mr-3 h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span>Menyiapkan pengalaman 3D…
+                </div>
+            </div>
+            <noscript><p class="mt-4 text-center text-sm text-slate-300">Aktifkan JavaScript untuk mencoba demo kasir interaktif.</p></noscript>
+        </div>
+    </section>
+
+    {{-- ================= INSIGHT BISNIS DEMO ================= --}}
     <section id="yoka-intelligence" class="relative overflow-hidden bg-white px-6 py-20 md:py-28">
         <div class="pointer-events-none absolute left-1/2 top-[46%] h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-100/55 blur-[100px]"></div>
         <div class="relative mx-auto max-w-[1120px]" x-data="yokaAiDemo()" x-init="observe($el)">
@@ -488,12 +502,11 @@
                     <span class="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-600 text-white">
                         <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg>
                     </span>
-                    Yoka Intelligence
+                    Insight Bisnis
                 </span>
                 <h2 class="mt-6 text-[34px] font-extrabold leading-[1.12] tracking-[-.03em] text-slate-950 md:text-[50px]">
                     Data bisnis bicara lebih jelas,<br class="hidden sm:block"> keputusan jadi lebih cepat
                 </h2>
-                <p class="mx-auto mt-5 max-w-[650px] text-[17px] leading-relaxed text-slate-600">Tanyakan kondisi toko dengan bahasa sehari-hari. Yoka membaca penjualan, produk, dan stok lalu mengubahnya menjadi jawaban yang mudah ditindaklanjuti.</p>
             </div>
 
             <div class="mt-14 grid items-center gap-10 lg:grid-cols-[600px_1fr] lg:gap-14">

@@ -1,13 +1,22 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-Bx8DkOwX.css",
+    "file": "assets/app-VGJby7tS.css",
     "src": "resources/css/app.css",
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-UyRVujZY.js",
+    "file": "assets/app-D2brUllq.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/product-experience/YokaProductExperience.jsx"
+    ]
+  },
+  "resources/js/product-experience/YokaProductExperience.jsx": {
+    "file": "assets/YokaProductExperience-C_F0YWcM.js",
+    "name": "YokaProductExperience",
+    "src": "resources/js/product-experience/YokaProductExperience.jsx",
+    "isDynamicEntry": true
   }
 }
