@@ -31,62 +31,13 @@
         'Laporan penjualan online dan offline satu tempat',
     ];
 
-    $steps = [
-        ['Pilih platform', 'GoFood atau ShopeeFood.'],
-        ['Isi ID dan setujui', 'Pilih outlet, isi ID merchant, lalu setujui.'],
-        ['Aktivasi oleh Yoka', 'Tim Yoka menyambungkan, status berubah jadi Tersambung.'],
-    ];
     $arrow = 'M13 7l5 5m0 0l-5 5m5-5H6';
 @endphp
 
 <div class="page text-[#0B1B3F] pt-2" x-data="{ open: null }">
 
-    {{-- Hero --}}
-    <section class="fade-up relative overflow-hidden rounded-xl border border-[#BBF7D0] bg-gradient-to-br from-[#ECFDF3] via-white to-white p-5 sm:p-8" style="--i:0">
-        <div class="grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div class="min-w-0">
-                <span class="inline-flex h-8 items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-white px-3 text-sm font-semibold text-[#64748B]">
-                    <span class="h-1.5 w-1.5 rounded-full {{ $cntOk ? 'bg-[#16A34A]' : 'bg-slate-400' }}"></span>
-                    {{ $cntOk ? $cntOk . ' outlet tersambung' : 'Belum ada yang tersambung' }}
-                </span>
-                <h2 class="mt-4 text-2xl font-semibold sm:text-[28px] sm:leading-9">Terima pesanan online langsung di kasir</h2>
-                <p class="mt-2 max-w-xl text-[15px] text-[#64748B]">Hubungkan outlet ke GoFood dan ShopeeFood. Menu tersinkron, pesanan masuk ke Yoka POS tanpa input ulang, dan semua penjualan tercatat di satu laporan.</p>
-
-                <ol class="mt-6 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
-                    @foreach($steps as $i => [$t, $d])
-                    <li class="flex items-start gap-3 rounded-lg border border-[#E5E7EB] bg-white/80 p-3">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">{{ $i + 1 }}</span>
-                        <span class="min-w-0"><span class="block text-sm font-semibold leading-tight">{{ $t }}</span><span class="mt-0.5 block text-[13px] text-[#64748B]">{{ $d }}</span></span>
-                    </li>
-                    @endforeach
-                </ol>
-            </div>
-
-            {{-- Ilustrasi alur: Yoka -> platform --}}
-            <div class="hidden justify-center lg:flex" aria-hidden="true">
-                <div class="float w-full max-w-[300px] rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-lg">
-                    <div class="flex items-center justify-between">
-                        <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="h-11 w-11 rounded-xl border border-[#E5E7EB] object-contain p-1.5">
-                        <svg class="h-5 w-5 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4-4m-4 4l4 4"/></svg>
-                        <div class="flex -space-x-2">
-                            @foreach($providers as $key => $p)
-                            <span class="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl border border-[#E5E7EB] bg-white">
-                                @if($src = $logo($key))<img src="{{ $src }}" alt="" class="h-full w-full object-contain p-1.5">@else<span class="text-sm font-bold text-[#64748B]">{{ substr($p['name'], 0, 1) }}</span>@endif
-                            </span>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="mt-4 space-y-2 text-[13px]">
-                        <div class="pop-in rounded-lg bg-[#ECFDF3] px-3 py-2" style="--d:0"><span class="font-semibold text-[#15803D]">Pesanan baru</span><span class="block text-[#64748B]">2x Es Kopi Susu, 1x Roti Bakar</span></div>
-                        <div class="pop-in rounded-lg bg-slate-50 px-3 py-2" style="--d:1.2"><span class="font-semibold">Menu tersinkron</span><span class="block text-[#64748B]">24 item, harga per platform</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
     {{-- Ringkasan --}}
-    <div class="fade-up mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3" style="--i:1">
+    <div class="fade-up grid grid-cols-1 gap-3 sm:grid-cols-3" style="--i:1">
         <x-kpi label="Outlet terdaftar" :value="number_format($cntAll)" sub="di semua platform" />
         <x-kpi label="Menunggu aktivasi" :value="number_format($cntPend)" sub="diproses tim Yoka" :tone="$cntPend ? 'warn' : 'default'" />
         <x-kpi label="Tersambung" :value="number_format($cntOk)" sub="pesanan masuk otomatis" :tone="$cntOk ? 'brand' : 'default'" />
