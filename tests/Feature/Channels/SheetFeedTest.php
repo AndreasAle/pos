@@ -124,7 +124,7 @@ class SheetFeedTest extends TestCase
     public function test_integration_page_shows_the_formula_once_a_link_exists(): void
     {
         $this->actingAs($this->owner)->get(route('integrations.index'))
-            ->assertOk()->assertSee('Hubungkan Google Sheets')->assertSee('Minta bantuan tim Yoka');
+            ->assertOk()->assertSee('Hubungkan Google Sheets')->assertSee('Butuh bantuan?');
 
         $token = SheetFeed::issueFor($this->business->id)->token;
 

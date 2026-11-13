@@ -26,9 +26,8 @@
     };
 
     $benefits = [
-        'Menu dan harga tersinkron otomatis',
-        'Pesanan masuk langsung ke kasir dan dapur',
-        'Laporan penjualan online dan offline satu tempat',
+        'Menu dan harga sinkron otomatis',
+        'Pesanan masuk ke kasir dan dapur',
     ];
 
     $arrow = 'M13 7l5 5m0 0l-5 5m5-5H6';
@@ -42,9 +41,9 @@
 
     {{-- Ringkasan --}}
     <div class="fade-up grid grid-cols-1 gap-3 sm:grid-cols-3" style="--i:1">
-        <x-kpi label="Outlet terdaftar" :value="number_format($cntAll)" sub="di semua platform" />
-        <x-kpi label="Menunggu aktivasi" :value="number_format($cntPend)" sub="diproses tim Yoka" :tone="$cntPend ? 'warn' : 'default'" />
-        <x-kpi label="Tersambung" :value="number_format($cntOk)" sub="pesanan masuk otomatis" :tone="$cntOk ? 'brand' : 'default'" />
+        <x-kpi label="Terdaftar" :value="number_format($cntAll)" />
+        <x-kpi label="Menunggu" :value="number_format($cntPend)" :tone="$cntPend ? 'warn' : 'default'" />
+        <x-kpi label="Tersambung" :value="number_format($cntOk)" :tone="$cntOk ? 'brand' : 'default'" />
     </div>
 
     @if($outlets->isEmpty())
@@ -113,8 +112,6 @@
         @endforeach
     </section>
 
-    <p class="fade-up mt-4 text-[13px] text-[#64748B]" style="--i:4">Sambungan data langsung ke platform diaktifkan oleh tim Yoka setelah izin partner dari GoFood dan ShopeeFood keluar. Sampai saat itu, outlet yang didaftarkan berstatus menunggu aktivasi.</p>
-
     {{-- Modal persetujuan dan penautan outlet --}}
     @foreach($providers as $key => $p)
     <div x-show="open === '{{ $key }}'" x-cloak x-transition.opacity
@@ -175,15 +172,11 @@
     @php
         $supportUrl = config('pos.support_url') ?: 'mailto:' . config('mail.from.address');
         $sheetLogo  = $logo('google-sheets');
-        $sheetBenefits = [
-            'Laporan penjualan dan item terjual masuk ke Google Sheets Anda',
-            'Diperbarui otomatis, sekitar tiap satu jam',
-            'Tanpa login Google atau izin tambahan',
-        ];
         $sheetFormulas = $sheetFeed ? [
-            'penjualan' => ['Salin rumus laporan penjualan', '=IMPORTDATA("' . route('sheets.feed', ['token' => $sheetFeed->token, 'dataset' => 'penjualan']) . '?hari=31")'],
-            'item'      => ['Salin rumus item terjual',      '=IMPORTDATA("' . route('sheets.feed', ['token' => $sheetFeed->token, 'dataset' => 'item']) . '?hari=31")'],
+            'penjualan' => ['Rumus penjualan',   '=IMPORTDATA("' . route('sheets.feed', ['token' => $sheetFeed->token, 'dataset' => 'penjualan']) . '?hari=31")'],
+            'item'      => ['Rumus item terjual', '=IMPORTDATA("' . route('sheets.feed', ['token' => $sheetFeed->token, 'dataset' => 'item']) . '?hari=31")'],
         ] : [];
+        $btnSm = 'inline-flex h-9 items-center rounded-lg border border-[#E5E7EB] px-3 text-sm font-semibold hover:bg-slate-50';
     @endphp
     <section class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <article class="fade-up flex min-w-0 flex-col rounded-xl border border-[#E5E7EB] bg-white transition-shadow hover:shadow-md" style="--i:5" x-data="{ copied: null, more: false }">
@@ -194,7 +187,7 @@
                     </span>
                     <div>
                         <h3 class="whitespace-nowrap text-lg font-semibold">Google Sheets</h3>
-                        <p class="whitespace-nowrap text-sm text-[#64748B]">Laporan penjualan otomatis</p>
+                        <p class="whitespace-nowrap text-sm text-[#64748B]">Laporan penjualan</p>
                     </div>
                 </div>
                 <x-pill class="whitespace-nowrap" :tone="$sheetFeed ? 'green' : 'gray'">{{ $sheetFeed ? 'Aktif' : 'Belum dihubungkan' }}</x-pill>
@@ -202,7 +195,7 @@
 
             @if(! $sheetFeed)
             <ul class="space-y-2 px-5 pb-5">
-                @foreach($sheetBenefits as $b)
+                @foreach(['Penjualan masuk ke Google Sheets Anda', 'Tanpa login atau izin tambahan'] as $b)
                 <li class="flex items-start gap-2 text-sm text-[#64748B]">
                     <svg class="mt-0.5 h-4 w-4 shrink-0 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>{{ $b }}
                 </li>
@@ -216,54 +209,28 @@
                         <svg class="h-4 w-4 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $arrow }}"/></svg>
                     </button>
                 </form>
-                <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="block text-center text-[13px] text-[#64748B] hover:text-[#16A34A]">Bingung? <span class="font-semibold underline">Minta bantuan tim Yoka</span></a>
+                <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="block text-center text-[13px] font-semibold text-[#64748B] hover:text-[#16A34A]">Butuh bantuan?</a>
             </div>
             @else
-            <div class="space-y-4 px-5 pb-5">
-                <ol class="space-y-3">
-                    <li class="flex items-start gap-3">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">1</span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold">Buka Google Sheets kosong</p>
-                            <a href="https://sheets.new" target="_blank" rel="noopener" class="mt-1.5 inline-flex h-9 items-center rounded-lg border border-[#E5E7EB] px-3 text-sm font-semibold hover:bg-slate-50">Buka Google Sheets</a>
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">2</span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold">Salin rumus laporan</p>
-                            <div class="mt-1.5 flex flex-wrap gap-2">
-                                @foreach($sheetFormulas as $ds => [$label, $formula])
-                                <button type="button" class="inline-flex h-9 items-center rounded-lg border border-[#E5E7EB] px-3 text-sm font-semibold hover:bg-slate-50"
-                                        @click="navigator.clipboard.writeText(@js($formula)).then(() => { copied = '{{ $ds }}'; setTimeout(() => copied = null, 2000) })"
-                                        x-text="copied === '{{ $ds }}' ? 'Tersalin' : '{{ $label }}'">{{ $label }}</button>
-                                @endforeach
-                            </div>
-                        </div>
-                    </li>
-                    <li class="flex items-start gap-3">
-                        <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#16A34A] text-xs font-bold text-white">3</span>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold">Tempel di kolom A1</p>
-                            <p class="text-[13px] text-[#64748B]">Klik sel A1, tekan Ctrl+V lalu Enter. Data langsung muncul.</p>
-                        </div>
-                    </li>
-                </ol>
+            <div class="space-y-3 px-5 pb-5">
+                <div class="flex flex-wrap gap-2">
+                    <a href="https://sheets.new" target="_blank" rel="noopener" class="{{ $btnSm }}">Buka Sheets baru</a>
+                    @foreach($sheetFormulas as $ds => [$label, $formula])
+                    <button type="button" class="{{ $btnSm }}"
+                            @click="navigator.clipboard.writeText(@js($formula)).then(() => { copied = '{{ $ds }}'; setTimeout(() => copied = null, 2000) })"
+                            x-text="copied === '{{ $ds }}' ? 'Tersalin' : '{{ $label }}'">{{ $label }}</button>
+                    @endforeach
+                </div>
+                <p class="text-[13px] text-[#64748B]">Salin rumus, tempel di sel A1.</p>
 
-                <div>
-                    <button type="button" @click="more = !more" class="text-[13px] font-semibold text-[#64748B] hover:text-[#16A34A]" x-text="more ? 'Sembunyikan pengaturan lanjutan' : 'Pengaturan lanjutan'">Pengaturan lanjutan</button>
-                    <div x-show="more" x-cloak class="mt-3 space-y-3 rounded-lg border border-[#E5E7EB] bg-slate-50 p-3">
-                        <p class="text-[13px] text-[#64748B]">Rentang default 31 hari. Ubah <span class="font-mono">hari=31</span> di rumus untuk rentang lain (maksimal 366). Tautan ini bisa dibaca siapa pun yang memegangnya, jangan dibagikan.
-                            @if($sheetFeed->last_accessed_at) Terakhir diambil {{ $sheetFeed->last_accessed_at->diffForHumans() }}.@else Belum pernah diambil.@endif</p>
-                        <div class="flex flex-wrap gap-2">
-                            <form method="POST" action="{{ route('integrations.sheets.generate') }}" onsubmit="return confirm('Buat ulang tautan? Tautan lama berhenti bekerja dan rumus di spreadsheet perlu diganti.')">
-                                @csrf <x-btn type="submit" size="sm" variant="secondary">Buat ulang tautan</x-btn>
-                            </form>
-                            <form method="POST" action="{{ route('integrations.sheets.revoke') }}" onsubmit="return confirm('Putuskan Google Sheets? Spreadsheet tidak akan menerima data lagi.')">
-                                @csrf @method('DELETE') <x-btn type="submit" size="sm" variant="danger-outline">Putuskan</x-btn>
-                            </form>
-                        </div>
-                    </div>
+                <button type="button" @click="more = !more" class="text-[13px] font-semibold text-[#64748B] hover:text-[#16A34A]" x-text="more ? 'Tutup' : 'Lainnya'">Lainnya</button>
+                <div x-show="more" x-cloak class="flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('integrations.sheets.generate') }}" onsubmit="return confirm('Buat ulang tautan? Tautan lama berhenti bekerja.')">
+                        @csrf <x-btn type="submit" size="sm" variant="secondary">Buat ulang tautan</x-btn>
+                    </form>
+                    <form method="POST" action="{{ route('integrations.sheets.revoke') }}" onsubmit="return confirm('Putuskan Google Sheets?')">
+                        @csrf @method('DELETE') <x-btn type="submit" size="sm" variant="danger-outline">Putuskan</x-btn>
+                    </form>
                 </div>
             </div>
             <div class="mt-auto border-t border-[#E5E7EB] p-4">
