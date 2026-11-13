@@ -205,7 +205,7 @@ function posPreviewTexture(state) {
 }
 
 function HardwareModel({ onScreenClick, onDetail, state, dispatch }) {
-    const source = useGLTF('/models/yokapos-full-set.glb');
+    const source = useGLTF('/images/3d/yokapos-full-set.glb');
     const model = useMemo(() => source.scene.clone(true), [source.scene]);
     const drawer = useMemo(() => model.getObjectByName('Drawer_Inner'), [model]);
     const receipt = useMemo(() => model.getObjectByName('Printer_Paper'), [model]);
@@ -546,4 +546,4 @@ export function mountYokaProductExperience(element) {
     createRoot(element).render(<Experience signupUrl={element.dataset.signupUrl || '/register'} />);
 }
 
-useGLTF.preload('/models/yokapos-full-set.glb');
+useGLTF.preload('/images/3d/yokapos-full-set.glb');

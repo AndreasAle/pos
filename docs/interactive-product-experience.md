@@ -4,7 +4,7 @@ The landing-page demo is mounted by `resources/js/app.js` only when its section 
 
 ## 3D assets
 
-The browser currently loads `public/models/yokapos-full-set.glb`. The procedural source is `tools/build-pos-models.mjs`; run `node tools/build-pos-models.mjs` after changing dimensions or materials. It produces:
+The browser loads the deploy-compatible copy at `public/images/3d/yokapos-full-set.glb`; canonical generated models remain in `public/models`. The procedural source is `tools/build-pos-models.mjs`; run `node tools/build-pos-models.mjs` after changing dimensions or materials. It produces:
 
 - `yokapos-terminal.glb` — 370 × 340 × 190 mm assembled terminal envelope
 - `yokapos-drawer.glb` — 410 × 100 × 420 mm

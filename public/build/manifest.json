@@ -5,7 +5,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-D2brUllq.js",
+    "file": "assets/app-BLKIzT3Y.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -14,7 +14,7 @@
     ]
   },
   "resources/js/product-experience/YokaProductExperience.jsx": {
-    "file": "assets/YokaProductExperience-C_F0YWcM.js",
+    "file": "assets/YokaProductExperience-DOFD_5ET.js",
     "name": "YokaProductExperience",
     "src": "resources/js/product-experience/YokaProductExperience.jsx",
     "isDynamicEntry": true
