@@ -9,7 +9,24 @@
     @foreach($categories as $category)
     @php $items=$products->where('product_category_id',$category->id); @endphp
     @if($items->isNotEmpty())<section id="cat-{{ $category->id }}" class="mb-7 scroll-mt-24"><h2 class="mb-3 text-lg font-bold">{{ $category->name }}</h2><div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        @foreach($items as $product)<button type="button" data-product='@json(["id"=>$product->id,"name"=>$product->name,"description"=>$product->description,"price"=>(float)$product->price,"image"=>$product->image_url,"variants"=>$product->variants->map(fn($v)=>["id"=>$v->id,"name"=>$v->name,"adjustment"=>(float)$v->price_adjustment])->values(),"addons"=>$product->addons->map(fn($a)=>["id"=>$a->id,"name"=>$a->name,"price"=>(float)$a->price])->values()])' class="product-card overflow-hidden rounded-xl border border-[#E5E7EB] bg-white text-left transition hover:-translate-y-0.5 hover:shadow-md"><img src="{{ $product->image_url }}" class="aspect-square w-full bg-slate-100 object-cover" alt="{{ $product->name }}"><div class="p-3"><p class="line-clamp-2 min-h-10 text-sm font-bold">{{ $product->name }}</p><p class="mt-2 text-sm font-black text-[#15803D]">Rp {{ number_format($product->price,0,',','.') }}</p></div></button>@endforeach
+        @foreach($items as $product)
+        @php
+            $productPayload = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'description' => $product->description,
+                'price' => (float) $product->price,
+                'image' => $product->image_url,
+                'variants' => $product->variants->map(function ($variant) {
+                    return ['id' => $variant->id, 'name' => $variant->name, 'adjustment' => (float) $variant->price_adjustment];
+                })->values()->all(),
+                'addons' => $product->addons->map(function ($addon) {
+                    return ['id' => $addon->id, 'name' => $addon->name, 'price' => (float) $addon->price];
+                })->values()->all(),
+            ];
+        @endphp
+        <button type="button" data-product="{{ json_encode($productPayload, JSON_HEX_APOS | JSON_HEX_QUOT) }}" class="product-card overflow-hidden rounded-xl border border-[#E5E7EB] bg-white text-left transition hover:-translate-y-0.5 hover:shadow-md"><img src="{{ $product->image_url }}" class="aspect-square w-full bg-slate-100 object-cover" alt="{{ $product->name }}"><div class="p-3"><p class="line-clamp-2 min-h-10 text-sm font-bold">{{ $product->name }}</p><p class="mt-2 text-sm font-black text-[#15803D]">Rp {{ number_format($product->price,0,',','.') }}</p></div></button>
+        @endforeach
     </div></section>@endif
     @endforeach
 </main>
