@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\PaymentProvider;
+use App\Services\Payments\BayarProProvider;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -14,7 +16,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(PaymentProvider::class, function () {
+            return match (config('services.payments.default', 'bayarpro')) {
+                'bayarpro' => app(BayarProProvider::class),
+                default => app(BayarProProvider::class),
+            };
+        });
     }
 
     /**
@@ -29,11 +36,11 @@ class AppServiceProvider extends ServiceProvider
             return (new MailMessage)->subject($subject)->view('emails.auth', [
                 'subject' => $subject,
                 'heading' => 'Konfirmasi email Anda',
-                'name'    => $notifiable->name,
-                'intro'   => 'Terima kasih sudah mendaftar di Yoka POS. Tekan tombol di bawah untuk mengonfirmasi email dan mulai memakai akun Anda.',
-                'button'  => 'Konfirmasi Email',
-                'url'     => $url,
-                'note'    => 'Tautan berlaku 60 menit. Kalau Anda tidak merasa mendaftar, abaikan saja email ini.',
+                'name' => $notifiable->name,
+                'intro' => 'Terima kasih sudah mendaftar di Yoka POS. Tekan tombol di bawah untuk mengonfirmasi email dan mulai memakai akun Anda.',
+                'button' => 'Konfirmasi Email',
+                'url' => $url,
+                'note' => 'Tautan berlaku 60 menit. Kalau Anda tidak merasa mendaftar, abaikan saja email ini.',
             ]);
         });
 
@@ -47,11 +54,11 @@ class AppServiceProvider extends ServiceProvider
             return (new MailMessage)->subject($subject)->view('emails.auth', [
                 'subject' => $subject,
                 'heading' => 'Atur ulang password',
-                'name'    => $notifiable->name,
-                'intro'   => 'Kami menerima permintaan untuk mengatur ulang password akun Yoka POS Anda. Tekan tombol di bawah untuk membuat password baru.',
-                'button'  => 'Buat Password Baru',
-                'url'     => $url,
-                'note'    => 'Tautan berlaku 60 menit. Kalau Anda tidak memintanya, abaikan email ini; password Anda tidak berubah.',
+                'name' => $notifiable->name,
+                'intro' => 'Kami menerima permintaan untuk mengatur ulang password akun Yoka POS Anda. Tekan tombol di bawah untuk membuat password baru.',
+                'button' => 'Buat Password Baru',
+                'url' => $url,
+                'note' => 'Tautan berlaku 60 menit. Kalau Anda tidak memintanya, abaikan email ini; password Anda tidak berubah.',
             ]);
         });
     }

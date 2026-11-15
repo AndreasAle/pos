@@ -84,6 +84,9 @@
             <x-nav-item route="pos.index" icon="shopping-cart" data-tour="pos">Kasir / POS</x-nav-item>
             <x-nav-item route="orders.index" icon="clipboard-list">Riwayat Order</x-nav-item>
             <x-nav-item route="shifts.index" icon="clock">Shift Kasir</x-nav-item>
+            @if(!$isRetail)
+            <x-nav-item route="qr-orders.index" icon="clipboard-list">Pesanan QR</x-nav-item>
+            @endif
             @endif
 
             @if(in_array($role, ['owner','admin']))
@@ -100,6 +103,9 @@
             <x-nav-group title="Operasional" :routes="['kitchen.*','ingredients.*','recipes.*','inventory.*']">
                 @if(in_array($role, ['owner','admin','kitchen']))
                 <x-nav-item route="kitchen.index" icon="fire">Dapur (KDS)</x-nav-item>
+                @if(in_array($role, ['owner','admin']))
+                <x-nav-item route="qr-tables.index" icon="building-storefront">QR Meja</x-nav-item>
+                @endif
                 @endif
                 @if(in_array($role, ['owner','admin','warehouse']))
                 <x-nav-item route="ingredients.index" icon="beaker">Bahan Baku</x-nav-item>

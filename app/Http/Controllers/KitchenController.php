@@ -11,10 +11,17 @@ class KitchenController extends Controller
     {
         $user = auth()->user();
         $orders = Order::forBusiness($user->business_id)
-            ->where('status', 'paid')
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('status', 'paid')->where('order_source', '!=', 'qr_table');
+                })
+                    ->orWhere(function ($q) {
+                        $q->where('order_source', 'qr_table')->where('acceptance_status', 'accepted');
+                    });
+            })
             ->whereNotIn('kitchen_status', ['completed'])
             ->with('items', 'outlet')
-            ->when($user->outlet_id, fn($q) => $q->where('outlet_id', $user->outlet_id))
+            ->when($user->outlet_id, fn ($q) => $q->where('outlet_id', $user->outlet_id))
             ->latest()
             ->get();
 
@@ -26,6 +33,7 @@ class KitchenController extends Controller
         abort_if($order->business_id !== auth()->user()->business_id, 403);
         $request->validate(['status' => 'required|in:preparing,ready,completed']);
         $order->update(['kitchen_status' => $request->status]);
+
         return response()->json(['success' => true]);
     }
 }

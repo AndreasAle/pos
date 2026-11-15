@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use App\Traits\Loggable;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
@@ -16,7 +16,10 @@ class Order extends Model
         return ['updated_at', 'created_at', 'cashier_shift_id', 'user_id', 'password'];
     }
 
-    public function getLogLabel(): string { return $this->order_number ?? '#'.$this->id; }
+    public function getLogLabel(): string
+    {
+        return $this->order_number ?? '#'.$this->id;
+    }
 
     protected $fillable = [
         'business_id', 'outlet_id', 'user_id', 'cashier_shift_id',
@@ -29,32 +32,80 @@ class Order extends Model
         'payment_token', 'qris_url', 'is_split_payment',
         'notes', 'cancel_reason', 'refund_reason', 'refunded_at', 'ordered_at',
         'hold_name', 'table_number',
+        'dining_table_id', 'table_session_id', 'order_source',
+        'acceptance_status', 'accepted_by', 'accepted_at', 'expires_at',
+        'payment_gateway', 'gateway_reference', 'payment_expires_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'subtotal'         => 'decimal:2',
-            'discount_amount'  => 'decimal:2',
-            'tax_amount'       => 'decimal:2',
-            'service_amount'   => 'decimal:2',
-            'grand_total'      => 'decimal:2',
-            'paid_amount'      => 'decimal:2',
-            'change_amount'    => 'decimal:2',
-            'delivery_fee'     => 'decimal:2',
+            'subtotal' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
+            'service_amount' => 'decimal:2',
+            'grand_total' => 'decimal:2',
+            'paid_amount' => 'decimal:2',
+            'change_amount' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
             'is_split_payment' => 'boolean',
-            'ordered_at'       => 'datetime',
-            'refunded_at'      => 'datetime',
+            'ordered_at' => 'datetime',
+            'refunded_at' => 'datetime',
+            'accepted_at' => 'datetime',
+            'expires_at' => 'datetime',
+            'payment_expires_at' => 'datetime',
         ];
     }
 
-    public function business()   { return $this->belongsTo(Business::class); }
-    public function outlet()     { return $this->belongsTo(Outlet::class); }
-    public function user()       { return $this->belongsTo(User::class); }
-    public function cashier()    { return $this->belongsTo(User::class, 'user_id'); }
-    public function shift()      { return $this->belongsTo(CashierShift::class, 'cashier_shift_id'); }
-    public function customer()   { return $this->belongsTo(Customer::class); }
-    public function promotion()  { return $this->belongsTo(Promotion::class); }
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    public function outlet()
+    {
+        return $this->belongsTo(Outlet::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function cashier()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function shift()
+    {
+        return $this->belongsTo(CashierShift::class, 'cashier_shift_id');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function promotion()
+    {
+        return $this->belongsTo(Promotion::class);
+    }
+
+    public function diningTable()
+    {
+        return $this->belongsTo(DiningTable::class);
+    }
+
+    public function tableSession()
+    {
+        return $this->belongsTo(TableSession::class);
+    }
+
+    public function acceptedBy()
+    {
+        return $this->belongsTo(User::class, 'accepted_by');
+    }
 
     public function items()
     {
@@ -83,8 +134,7 @@ class Order extends Model
 
     public function getEstimatedProfitAttribute(): float
     {
-        return $this->items->sum(fn($item) =>
-            ((float)$item->price - (float)$item->cost_price) * (float)$item->qty
+        return $this->items->sum(fn ($item) => ((float) $item->price - (float) $item->cost_price) * (float) $item->qty
         );
     }
 }

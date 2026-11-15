@@ -2,6 +2,17 @@
 
 return [
 
+    'payments' => [
+        'default' => env('PAYMENT_PROVIDER', 'bayarpro'),
+    ],
+
+    'bayarpro' => [
+        'url' => env('BAYARPRO_BASE_URL', 'https://bayar-pro.com'),
+        'server_key' => env('BAYARPRO_SERVER_KEY'),
+        'merchant_id' => env('BAYARPRO_MERCHANT_ID'),
+        'webhook_secret' => env('BAYARPRO_WEBHOOK_SECRET'),
+    ],
+
     'yoka_ai' => [
         'key' => env('YOKA_AI_API_KEY'),
         'url' => env('YOKA_AI_BASE_URL', 'https://api.openai.com/v1'),

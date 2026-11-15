@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             '/midtrans/callback',
             '/telegram/webhook',
             'api/shopeefood/*',
+            '/payments/bayarpro/webhook',
         ]);
 
         $middleware->web(append: [

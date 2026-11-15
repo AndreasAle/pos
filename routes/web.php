@@ -38,6 +38,10 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\QrTableController;
+use App\Http\Controllers\QrOrderController;
+use App\Http\Controllers\SelfOrderController;
+use App\Http\Controllers\BayarProWebhookController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public ───────────────────────────────────────────────────────────────────
@@ -55,6 +59,14 @@ Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('featur
 Route::view('/privasi', 'legal.privacy')->name('legal.privacy');
 Route::view('/syarat', 'legal.terms')->name('legal.terms');
 Route::view('/hapus-akun', 'legal.delete-account')->name('legal.delete');
+
+// Katalog publik QR meja. Token acak mengikat pelanggan ke meja/outlet dan
+// endpoint penempatan order dibatasi agar tidak mudah dibanjiri bot.
+Route::get('/pesan/{token}', [SelfOrderController::class, 'menu'])->name('self-order.menu');
+Route::post('/pesan/{token}', [SelfOrderController::class, 'place'])->middleware('throttle:12,1')->name('self-order.place');
+Route::get('/pesan/status/{sessionToken}/{orderNumber}', [SelfOrderController::class, 'status'])->name('self-order.status');
+Route::get('/pesan/status/{sessionToken}/{orderNumber}/qr', [SelfOrderController::class, 'paymentQr'])->name('self-order.payment-qr');
+Route::post('/payments/bayarpro/webhook', BayarProWebhookController::class)->middleware('throttle:120,1')->name('payments.bayarpro.webhook');
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
@@ -242,6 +254,21 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])
         ->name('categories.kitchen');
     Route::resource('categories', ProductCategoryController::class)->except(['create', 'show', 'edit']);
+
+    // QR meja & self order
+    Route::get('qr-tables', [QrTableController::class, 'index'])->middleware('role:owner,admin')->name('qr-tables.index');
+    Route::post('qr-tables/areas', [QrTableController::class, 'storeArea'])->middleware('role:owner,admin')->name('qr-tables.areas.store');
+    Route::post('qr-tables', [QrTableController::class, 'storeTable'])->middleware('role:owner,admin')->name('qr-tables.store');
+    Route::patch('qr-tables/{table}/rotate', [QrTableController::class, 'rotate'])->middleware('role:owner,admin')->name('qr-tables.rotate');
+    Route::patch('qr-tables/{table}/toggle', [QrTableController::class, 'toggle'])->middleware('role:owner,admin')->name('qr-tables.toggle');
+    Route::get('qr-tables/{table}/qr', [QrTableController::class, 'qr'])->middleware('role:owner,admin')->name('qr-tables.qr');
+    Route::get('qr-tables/{table}/print', [QrTableController::class, 'print'])->middleware('role:owner,admin')->name('qr-tables.print');
+    Route::post('qr-table-sessions/{session}/close', [QrTableController::class, 'closeSession'])->middleware('role:owner,admin')->name('qr-tables.sessions.close');
+    Route::get('qr-orders', [QrOrderController::class, 'index'])->middleware('role:owner,admin,cashier')->name('qr-orders.index');
+    Route::post('qr-orders/{order}/accept', [QrOrderController::class, 'accept'])->middleware('role:owner,admin,cashier')->name('qr-orders.accept');
+    Route::post('qr-orders/{order}/reject', [QrOrderController::class, 'reject'])->middleware('role:owner,admin,cashier')->name('qr-orders.reject');
+    Route::post('qr-orders/{order}/pay', [QrOrderController::class, 'pay'])->middleware('role:owner,admin,cashier')->name('qr-orders.pay');
+    Route::get('qr-orders/{order}/payment-qr', [QrOrderController::class, 'paymentQr'])->middleware('role:owner,admin,cashier')->name('qr-orders.payment-qr');
 
     // Products
     Route::resource('products', ProductController::class);
