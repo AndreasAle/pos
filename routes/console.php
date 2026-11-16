@@ -74,3 +74,6 @@ Schedule::call(function () {
         ->where(fn ($q) => $q->whereNull('next_run_at')->orWhere('next_run_at', '<=', now()))
         ->each(fn ($agent) => $operations->run($agent));
 })->hourly()->name('platform-ai-team')->withoutOverlapping();
+
+// Pengingat proaktif: agen menyapa lewat chat bila ada keputusan yang menggantung lebih dari sehari.
+Schedule::call(fn () => app(\App\Services\PlatformAiOperations::class)->nudges())->hourly()->name('platform-ai-nudges')->withoutOverlapping();

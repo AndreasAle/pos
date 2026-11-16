@@ -26,3 +26,13 @@ Situs klien dipakai outlet yang sedang berjalan (Relasi Coffee, KOPI MERTUAKU).
 
 ## Desain admin
 Ikuti sistem desain Yoka yang sudah ada (kartu putih `rounded-xl`, hijau `#16A34A`, navy `#0B1B3F`, komponen `x-kpi`, `x-panel`, `x-pill`, `x-empty`). Tanpa emoji.
+
+## Tim AI Yoka (`/platform/ai-team`)
+Tujuan jangka panjang: agen AI menjadi pekerja penuh tim Yoka. Dibangun bertahap, satu agen sampai benar-benar bekerja dulu.
+- Obrolan agen: persona, keahlian, dan tool baca-data ada di `app/Services/PlatformAgents/AgentBrain.php`. Gaya wajib seperti rekan kerja (aku/kamu, panggil "Bos", berani berpendapat); jangan kembalikan ke bahasa laporan.
+- Agen = loop LLM dengan tool (lihat `app/Services/PlatformAgents/TrialAgent.php`, dipakai Adit/CS). Batas keras (kuota, siapa boleh dihubungi, anti-duplikat) ditulis di kode, bukan di prompt.
+- Tiga tingkat otonomi: bebas (baca data, analisis, draf), perlu approve manusia (kirim pesan, iklan, uang), dilarang permanen (refund, ubah harga, scraping, pesan massal).
+- Agen hanya menyentuh data platform Yoka (`yokapos_app`). Jangan beri akses ke `pos_app` atau data klien live.
+- Pesan keluar hanya terkirim lewat tombol "Setujui & kirim"; jalan pintas via papan kanban diblokir.
+- Urutan: Trial/CS, lalu Finance dan Accounting, terakhir Marketing dan Ads (butuh token eksternal dan menyentuh uang).
+- Token (`YOKA_FONNTE_TOKEN`, Meta, TikTok, WhatsApp) hanya di `.env` server, tidak pernah di repo.

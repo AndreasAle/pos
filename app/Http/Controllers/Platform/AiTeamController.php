@@ -122,12 +122,36 @@ class AiTeamController extends Controller
     public function decide(Request $request, PlatformAiTask $task)
     {
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
-        $decision = $request->validate(['decision' => 'required|in:approve,reject'])['decision'];
+        $data = $request->validate(['decision' => 'required|in:approve,reject', 'message' => 'nullable|string|max:600']);
+        $decision = $data['decision'];
         abort_unless($task->status === 'proposed', 422);
-        $task->update($decision === 'approve' ? ['status' => 'approved', 'approved_by' => auth('platform')->id(), 'approved_at' => now()] : ['status' => 'rejected']);
-        PlatformActivityLog::record('ai.task.'.$decision, ($decision === 'approve' ? 'Menyetujui' : 'Menolak')." tugas {$task->title}.", $task);
 
-        return back()->with('success', $decision === 'approve' ? 'Tugas disetujui. Eksekusi eksternal tetap menunggu koneksi resmi.' : 'Tugas ditolak.');
+        if ($decision === 'reject') {
+            $task->update(['status' => 'rejected']);
+            PlatformActivityLog::record('ai.task.reject', "Menolak tugas {$task->title}.", $task);
+
+            return back()->with('success', 'Tugas ditolak.');
+        }
+
+        $task->update(['status' => 'approved', 'approved_by' => auth('platform')->id(), 'approved_at' => now()]);
+        PlatformActivityLog::record('ai.task.approve', "Menyetujui tugas {$task->title}.", $task);
+
+        if ($task->type !== 'whatsapp_draft') {
+            return back()->with('success', 'Tugas disetujui. Eksekusi eksternal tetap menunggu koneksi resmi.');
+        }
+
+        // Manusia boleh menyunting pesan sebelum kirim; yang terkirim adalah teks yang disetujui.
+        $message = trim($data['message'] ?? '') ?: $task->summary;
+        $result = app(\App\Services\PlatformWhatsApp::class)->send((string) data_get($task->payload, 'phone'), $message);
+        if ($result['ok']) {
+            $task->update(['summary' => $message, 'status' => 'completed', 'executed_at' => now(), 'result' => ['sent' => true], 'error' => null]);
+            PlatformActivityLog::record('ai.whatsapp.sent', "WhatsApp terkirim: {$task->title}.", $task, metadata: ['business_id' => data_get($task->payload, 'business_id')]);
+
+            return back()->with('success', 'Disetujui dan WhatsApp terkirim.');
+        }
+        $task->update(['summary' => $message, 'error' => $result['error']]);
+
+        return back()->with('success', 'Disetujui, tetapi belum terkirim: '.$result['error']);
     }
 
     public function storeTask(Request $request)
@@ -153,6 +177,8 @@ class AiTeamController extends Controller
     {
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
         $status = $request->validate(['status' => 'required|in:proposed,approved,completed,rejected'])['status'];
+        // Pesan keluar hanya boleh lewat tombol Setujui & kirim, supaya tidak ada jalan pintas tanpa pengiriman tercatat.
+        abort_if($task->type === 'whatsapp_draft' && in_array($status, ['approved', 'completed'], true), 422, 'Gunakan Setujui & kirim.');
         $changes = ['status' => $status];
         if ($status === 'approved') {
             $changes += ['approved_by' => auth('platform')->id(), 'approved_at' => now()];

@@ -66,6 +66,11 @@ return [
         'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
     ],
 
+    // WhatsApp resmi tim Yoka (Fonnte). Hanya dipakai setelah tugas disetujui manusia.
+    'yoka_fonnte' => [
+        'token' => env('YOKA_FONNTE_TOKEN'),
+    ],
+
     'postmark' => [
         'token' => env('POSTMARK_TOKEN'),
     ],

@@ -2,7 +2,11 @@
 
 namespace Tests\Feature\Platform;
 
+use App\Models\Business;
+use App\Models\BusinessSubscription;
 use App\Models\PlatformAdmin;
+use App\Models\PlatformAiTask;
+use App\Models\SubscriptionPlan;
 use App\Models\PlatformAiAgent;
 use App\Services\PlatformAiOperations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,8 +132,8 @@ class PlatformAiTeamTest extends TestCase
         Http::assertSent(fn ($request) => str_contains($request->url(), '/chat/completions')
             && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Namamu Luna')
             && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Finance Strategist')
-            && str_contains((string) data_get($request->data(), 'messages.0.content'), "Panggil pemilik bisnis dengan 'Pak'")
-            && str_contains((string) data_get($request->data(), 'messages.0.content'), "jangan pernah memakai 'bro'"));
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Panggil dia "Bos"')
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), 'KEAHLIAN'));
     }
 
     public function test_admin_can_attach_a_file_and_agent_can_read_its_contents(): void
@@ -197,5 +201,105 @@ class PlatformAiTeamTest extends TestCase
             'platform_ai_agent_id' => $agent->id,
             'content' => 'Pak, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti saya bantu memilih mana yang paling layak diuji.',
         ]);
+    }
+
+    private function trialBusiness(int $daysLeft = 3): Business
+    {
+        $b = Business::factory()->create(['name' => 'Kopi Senja', 'phone' => '081234567890']);
+        $plan = SubscriptionPlan::firstOrCreate(['slug' => 'test-plan'], ['name' => 'Test', 'price' => 0, 'max_outlets' => 1, 'max_users' => 5]);
+        BusinessSubscription::create(['business_id' => $b->id, 'subscription_plan_id' => $plan->id, 'starts_at' => now()->subDays(10), 'ends_at' => now()->addDays($daysLeft), 'status' => 'trial']);
+
+        return $b;
+    }
+
+    private function runCs(): void
+    {
+        app(PlatformAiOperations::class)->ensureAgents();
+        app(PlatformAiOperations::class)->run(PlatformAiAgent::where('key', 'cs')->firstOrFail(), true);
+    }
+
+    public function test_cs_agent_drafts_trial_whatsapp_but_never_sends_without_approval(): void
+    {
+        Http::fake();
+        $this->trialBusiness();
+        $this->runCs();
+        $this->runCs();
+
+        $this->assertSame(1, PlatformAiTask::where('type', 'whatsapp_draft')->count());
+        $this->assertDatabaseHas('platform_ai_tasks', ['type' => 'whatsapp_draft', 'status' => 'proposed', 'requires_approval' => true]);
+        Http::assertNothingSent();
+    }
+
+    public function test_trial_follow_up_ignores_trials_that_are_not_close_to_ending(): void
+    {
+        $this->trialBusiness(30);
+        $this->runCs();
+
+        $this->assertDatabaseMissing('platform_ai_tasks', ['type' => 'whatsapp_draft']);
+    }
+
+    public function test_approving_a_draft_sends_the_edited_message_once(): void
+    {
+        config(['services.yoka_fonnte.token' => 'tok']);
+        Http::fake(['api.fonnte.com/*' => Http::response(['status' => true])]);
+        $this->trialBusiness();
+        $admin = $this->admin();
+        $this->runCs();
+        $task = PlatformAiTask::where('type', 'whatsapp_draft')->firstOrFail();
+
+        $this->platformSession($admin)->patch(route('platform.ai-team.tasks.move', $task), ['status' => 'completed'])->assertStatus(422);
+        Http::assertNothingSent();
+
+        $this->platformSession($admin)->patch(route('platform.ai-team.decision', $task), ['decision' => 'approve', 'message' => 'Halo, pesan sunting.'])->assertRedirect();
+        Http::assertSent(fn ($r) => str_contains($r->url(), 'fonnte') && $r['target'] === '6281234567890' && $r['message'] === 'Halo, pesan sunting.');
+        $this->assertDatabaseHas('platform_ai_tasks', ['id' => $task->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.whatsapp.sent']);
+    }
+
+    public function test_approval_without_whatsapp_token_keeps_task_approved_with_error(): void
+    {
+        config(['services.yoka_fonnte.token' => null]);
+        Http::fake();
+        $this->trialBusiness();
+        $this->runCs();
+        $task = PlatformAiTask::where('type', 'whatsapp_draft')->firstOrFail();
+
+        $this->platformSession($this->admin())->patch(route('platform.ai-team.decision', $task), ['decision' => 'approve'])->assertRedirect();
+        $this->assertDatabaseHas('platform_ai_tasks', ['id' => $task->id, 'status' => 'approved']);
+        $this->assertNotNull($task->fresh()->error);
+        Http::assertNothingSent();
+    }
+
+    public function test_chat_agent_reads_real_tasks_through_tools_and_can_propose_a_task(): void
+    {
+        config(['services.yoka_ai.key' => 'k', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $agent->tasks()->create(['type' => 'manual', 'title' => 'Putuskan harga paket tahunan', 'summary' => 'Perlu keputusan harga.', 'risk' => 'high', 'status' => 'proposed', 'requires_approval' => true]);
+
+        Http::fakeSequence('https://ai.test/v1/chat/completions')
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [['id' => 'c1', 'type' => 'function', 'function' => ['name' => 'list_tasks', 'arguments' => '{}']]]]]]])
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [['id' => 'c2', 'type' => 'function', 'function' => ['name' => 'create_task', 'arguments' => json_encode(['title' => 'Strategi follow-up trial', 'summary' => 'Hubungi trial H-3.', 'kind' => 'strategy'])]]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Satu keputusan nunggu: harga paket tahunan. Strateginya sudah kuajukan, tinggal kamu setujui.']]]]);
+
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), ['message' => 'keputusan apa aja? sekalian bikin strategi'])
+            ->assertOk()->assertJsonPath('assistant.mode', 'ai')
+            ->assertJsonPath('assistant.content', 'Satu keputusan nunggu: harga paket tahunan. Strateginya sudah kuajukan, tinggal kamu setujui.');
+
+        Http::assertSent(fn ($r) => collect(data_get($r->data(), 'messages', []))->contains(fn ($m) => ($m['role'] ?? '') === 'tool' && str_contains((string) $m['content'], 'Putuskan harga paket tahunan')));
+        $this->assertDatabaseHas('platform_ai_tasks', ['title' => 'Strategi follow-up trial', 'type' => 'chat_strategy', 'status' => 'proposed', 'requires_approval' => true]);
+    }
+
+    public function test_agent_nudges_once_about_decisions_waiting_over_a_day(): void
+    {
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'ads')->firstOrFail();
+        $task = $agent->tasks()->create(['type' => 'analysis', 'title' => 'Uji iklan 3 hari', 'summary' => 's', 'risk' => 'high', 'status' => 'proposed', 'requires_approval' => true]);
+        $task->forceFill(['created_at' => now()->subDays(2)])->save();
+
+        $this->assertSame(1, app(PlatformAiOperations::class)->nudges());
+        $this->assertSame(0, app(PlatformAiOperations::class)->nudges());
+        $this->assertDatabaseHas('platform_ai_messages', ['platform_ai_agent_id' => $agent->id, 'role' => 'assistant']);
     }
 }
