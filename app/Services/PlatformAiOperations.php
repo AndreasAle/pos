@@ -24,13 +24,13 @@ class PlatformAiOperations
     ];
 
     public const PROFILES = [
-        'chief' => ['title' => 'Koordinator bisnis', 'initials' => 'CS', 'accent' => 'emerald', 'prompts' => ['Apa prioritas bisnis hari ini?', 'Keputusan apa yang tertunda?', 'Ringkas kondisi semua tim']],
-        'marketing' => ['title' => 'Strategi konten', 'initials' => 'MI', 'accent' => 'cyan', 'prompts' => ['Konten mana paling potensial?', 'Ide konten berikutnya apa?', 'Apa pola dari konten terbaik?']],
-        'ads' => ['title' => 'Eksperimen iklan', 'initials' => 'AM', 'accent' => 'sky', 'prompts' => ['Konten mana layak diiklankan?', 'Berapa anggaran uji aman?', 'Apa syarat campaign siap?']],
-        'finance' => ['title' => 'Strategi keuangan', 'initials' => 'FS', 'accent' => 'amber', 'prompts' => ['Bagaimana margin bulan ini?', 'Berapa batas belanja aman?', 'Apa risiko keuangan terbesar?']],
-        'accounting' => ['title' => 'Kontrol pembukuan', 'initials' => 'AC', 'accent' => 'teal', 'prompts' => ['Apa data yang belum lengkap?', 'Perlu rekonsiliasi apa?', 'Ringkas pencatatan bulan ini']],
-        'cs' => ['title' => 'Layanan pelanggan', 'initials' => 'CS', 'accent' => 'rose', 'prompts' => ['Ada tiket yang mendesak?', 'Buat draf balasan pelanggan', 'Apa yang perlu dieskalasi?']],
-        'sales' => ['title' => 'Pengembangan penjualan', 'initials' => 'SD', 'accent' => 'violet', 'prompts' => ['Lead mana harus dihubungi?', 'Buat pendekatan untuk lead terbaik', 'Bagaimana kondisi pipeline?']],
+        'chief' => ['title' => 'Koordinator bisnis', 'initials' => 'CS', 'accent' => 'emerald', 'voice' => 'partner strategi yang tenang, tegas, melihat gambaran besar, dan berani menyebut satu prioritas utama', 'prompts' => ['Apa prioritas bisnis hari ini?', 'Keputusan apa yang tertunda?', 'Ringkas kondisi semua tim']],
+        'marketing' => ['title' => 'Strategi konten', 'initials' => 'MI', 'accent' => 'cyan', 'voice' => 'rekan kreatif yang antusias tetapi tetap berbasis data, suka membahas hook, audiens, dan ide yang konkret', 'prompts' => ['Konten mana paling potensial?', 'Ide konten berikutnya apa?', 'Apa pola dari konten terbaik?']],
+        'ads' => ['title' => 'Eksperimen iklan', 'initials' => 'AM', 'accent' => 'sky', 'voice' => 'media buyer yang lugas, hati-hati memakai uang, dan selalu bicara hipotesis, batas rugi, serta ukuran keberhasilan', 'prompts' => ['Konten mana layak diiklankan?', 'Berapa anggaran uji aman?', 'Apa syarat campaign siap?']],
+        'finance' => ['title' => 'Strategi keuangan', 'initials' => 'FS', 'accent' => 'amber', 'voice' => 'partner keuangan yang membumi, terus terang soal risiko, dan menjelaskan angka dengan bahasa sederhana', 'prompts' => ['Bagaimana margin bulan ini?', 'Berapa batas belanja aman?', 'Apa risiko keuangan terbesar?']],
+        'accounting' => ['title' => 'Kontrol pembukuan', 'initials' => 'AC', 'accent' => 'teal', 'voice' => 'rekan pembukuan yang teliti, rapi, tidak menghakimi, dan langsung menunjukkan data mana yang perlu dibereskan', 'prompts' => ['Apa data yang belum lengkap?', 'Perlu rekonsiliasi apa?', 'Ringkas pencatatan bulan ini']],
+        'cs' => ['title' => 'Layanan pelanggan', 'initials' => 'CS', 'accent' => 'rose', 'voice' => 'rekan customer service yang hangat, sabar, peka pada nada pelanggan, tetapi tegas saat perlu eskalasi', 'prompts' => ['Ada tiket yang mendesak?', 'Buat draf balasan pelanggan', 'Apa yang perlu dieskalasi?']],
+        'sales' => ['title' => 'Pengembangan penjualan', 'initials' => 'SD', 'accent' => 'violet', 'voice' => 'rekan sales yang aktif dan percaya diri tanpa memaksa, fokus pada kebutuhan prospek dan langkah follow-up berikutnya', 'prompts' => ['Lead mana harus dihubungi?', 'Buat pendekatan untuk lead terbaik', 'Bagaimana kondisi pipeline?']],
     ];
 
     public function ensureAgents(): void
@@ -54,6 +54,7 @@ class PlatformAiOperations
     public function reply(PlatformAiAgent $agent, string $question): array
     {
         $snapshot = $this->snapshot($agent);
+        $voice = $this->voice($agent);
         $history = $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
             'role' => $message->role === 'assistant' ? 'assistant' : 'user',
             'content' => $message->content,
@@ -70,7 +71,7 @@ class PlatformAiOperations
 
         if ($agent->status !== 'active') {
             return [
-                'content' => "Agen ini sedang dijeda. Percakapan tetap tersimpan, tetapi saya tidak menjalankan model AI atau tindakan otomatis. Aktifkan kembali agen untuk melanjutkan analisis.\n\n".$this->offlineReply($agent, $question, $snapshot),
+                'content' => "Bro, status kerjaku sedang dijeda. Chat kita tetap aman, tapi aku belum menjalankan analisis baru sampai kamu mengaktifkanku lagi.\n\n".$this->offlineReply($agent, $question, $snapshot),
                 'mode' => 'internal',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -82,7 +83,7 @@ class PlatformAiOperations
         Cache::put($budgetKey, $requestCount, now()->endOfDay());
         if ($requestCount > (int) config('services.yoka_ai.daily_request_budget', 250)) {
             return [
-                'content' => "Batas penggunaan AI harian telah tercapai. Saya beralih ke data internal agar biaya tetap terkendali.\n\n".$this->offlineReply($agent, $question, $snapshot),
+                'content' => "Jatah analisis AI hari ini sudah penuh, bro. Biar biaya tetap terkontrol, untuk sementara aku pakai data internal yang sudah ada.\n\n".$this->offlineReply($agent, $question, $snapshot),
                 'mode' => 'internal',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -92,7 +93,7 @@ class PlatformAiOperations
         try {
             $messages = array_merge([[
                 'role' => 'system',
-                'content' => "Kamu adalah {$agent->name}, {$agent->department} di tim internal Yoka POS. Misi: {$agent->mission} Jawab dalam Bahasa Indonesia yang ringkas, hangat, dan operasional. Gunakan hanya snapshot dan riwayat yang tersedia. Jika data belum cukup, katakan tepat data apa yang dibutuhkan. Jangan mengklaim sudah menjalankan iklan, mengirim pesan, mengubah uang, atau tindakan eksternal lain. Maksimal 220 kata, tanpa emoji, tanpa tabel Markdown.",
+                'content' => "Kamu adalah {$agent->name}, rekan kerja sungguhan di tim internal Yoka POS, bukan chatbot layanan dan bukan sistem pelapor. Karaktermu: {$voice}. Misi: {$agent->mission} Bicara alami seperti kolega yang sudah mengenal pemilik bisnis. Ikuti gaya bahasa pengguna; kalau ia santai dan memakai kata bro, kamu boleh membalas santai tanpa berlebihan. Langsung tanggapi maksudnya, jangan membuka dengan 'berdasarkan data', 'sebagai AI', 'saya menerima instruksi', atau bahasa laporan. Pakai kalimat pendek dan 2-4 paragraf bila perlu. Boleh bertanya balik satu hal yang relevan. Gunakan hanya snapshot dan riwayat yang tersedia. Jika data kurang, jelaskan secara natural apa yang belum ada. Jangan mengklaim sudah menjalankan tindakan eksternal. Maksimal 220 kata, tanpa emoji dan tanpa tabel Markdown.",
             ]], $history, [[
                 'role' => 'user',
                 'content' => json_encode(['pertanyaan' => $question, 'snapshot_sistem' => $snapshot], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -115,7 +116,7 @@ class PlatformAiOperations
             Log::warning('Platform AI chat failed', ['agent' => $agent->key, 'error' => $e->getMessage()]);
 
             return [
-                'content' => "Koneksi AI sedang tidak tersedia. Saya tetap membaca data internal terbaru.\n\n".$this->offlineReply($agent, $question, $snapshot),
+                'content' => "Koneksi analisisku lagi bermasalah, bro. Aku tetap coba bantu dari data internal yang sudah masuk.\n\n".$this->offlineReply($agent, $question, $snapshot),
                 'mode' => 'fallback',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -156,15 +157,25 @@ class PlatformAiOperations
     {
         $records = collect($snapshot['records'])->map(fn ($total, $kind) => "{$total} {$kind}")->join(', ');
         $latest = $snapshot['latest_analysis'];
-        $answer = "Saya menerima instruksi: \"{$question}\". Saat ini model AI belum terhubung, jadi saya tidak akan mengarang analisis bebas.";
-        $answer .= "\n\nData yang bisa saya baca sekarang: ".($records ?: 'belum ada catatan operasional').", {$snapshot['open_tasks']} tugas terbuka, dan {$snapshot['completed_tasks']} tugas selesai.";
+        $opening = match ($agent->key) {
+            'chief' => 'Aku tangkap maksudmu. Untuk sekarang aku lihat dulu kondisi tim dari angka yang benar-benar ada.',
+            'marketing' => 'Oke, aku tangkap arah yang kamu mau. Bahan yang bisa kubaca sekarang masih terbatas.',
+            'ads' => 'Oke bro, aku cek dari sisi kesiapan iklan dulu. Aku nggak mau asal menyuruh belanja.',
+            'finance' => 'Aku paham pertanyaannya. Biar aman, aku jawab dari angka yang sudah tercatat dulu.',
+            'accounting' => 'Oke, aku cek dari catatan yang sudah masuk. Aku nggak akan menebak data yang belum ada.',
+            'cs' => 'Aku ngerti. Aku lihat dulu percakapan dan tiket yang memang sudah tercatat.',
+            'sales' => 'Sip, aku lihat dulu pipeline yang benar-benar ada supaya follow-up kita nggak asal.',
+            default => 'Aku paham maksudmu. Aku jawab dari data yang sudah ada dulu, ya.',
+        };
+        $answer = $opening;
+        $answer .= "\n\nSaat ini aku bisa melihat ".($records ?: 'belum ada catatan operasional').", {$snapshot['open_tasks']} tugas terbuka, dan {$snapshot['completed_tasks']} tugas selesai.";
         if ($latest) {
-            $answer .= "\n\nAnalisis terakhir: {$latest['summary']}";
+            $answer .= "\n\nTemuan terakhirku: {$latest['summary']}";
             if ($latest['recommendation']) {
-                $answer .= "\nSaran saat ini: {$latest['recommendation']}";
+                $answer .= " Menurutku, {$latest['recommendation']}";
             }
         } else {
-            $answer .= "\n\nBelum ada analisis untuk {$agent->name}. Jalankan analisis atau tambahkan data operasional agar saya memiliki dasar kerja.";
+            $answer .= "\n\nAku belum punya analisis sebelumnya. Tambahkan data yang relevan atau jalankan analisis, nanti kita bedah bareng di sini.";
         }
 
         return $answer;
@@ -197,6 +208,7 @@ class PlatformAiOperations
             $recommendation = $reasoning['recommendation'] ?? $recommendation;
             $payload['ai_used'] = true;
             $payload['priorities'] = $reasoning['priorities'] ?? [];
+            $payload['proactive_message'] = $reasoning['message'] ?? null;
         } else {
             $payload['ai_used'] = false;
         }
@@ -224,14 +236,27 @@ class PlatformAiOperations
 
     private function proactiveMessage(PlatformAiAgent $agent, PlatformAiTask $task): string
     {
-        $opening = "Saya baru selesai memeriksa area {$agent->department}.";
+        if (filled(data_get($task->payload, 'proactive_message'))) {
+            return trim((string) data_get($task->payload, 'proactive_message'));
+        }
+
+        $opening = match ($agent->key) {
+            'chief' => 'Bro, ada beberapa hal yang menurutku perlu kita rapikan hari ini.',
+            'marketing' => 'Bro, aku barusan lihat bahan konten yang kita punya.',
+            'ads' => 'Bro, aku sudah cek kesiapan bahan iklan dan batas belanjanya.',
+            'finance' => 'Bro, aku sudah lihat posisi uang dan catatan biaya kita.',
+            'accounting' => 'Bro, aku baru selesai mencocokkan catatan yang masuk.',
+            'cs' => 'Bro, aku sudah cek kondisi percakapan pelanggan kita.',
+            'sales' => 'Bro, aku sudah lihat pipeline dan calon pelanggan yang ada.',
+            default => 'Bro, aku menemukan sesuatu yang perlu kita bahas.',
+        };
         $message = "{$opening}\n\n{$task->summary}";
         if ($task->recommendation) {
-            $message .= "\n\nSaran saya: {$task->recommendation}";
+            $message .= "\n\nMenurutku langkah paling masuk akal sekarang: {$task->recommendation}";
         }
         $message .= $task->requires_approval
-            ? "\n\nSaya sudah menaruh usulan ini di Pekerjaan. Saya menunggu keputusanmu sebelum tindakan dilanjutkan."
-            : "\n\nHasil analisis ini sudah dicatat. Kamu bisa membalas pesan ini untuk membahas langkah berikutnya.";
+            ? "\n\nAku sudah siapkan tugasnya. Kalau kamu setuju, tinggal approve—aku belum akan melakukan tindakan keluar sebelum itu."
+            : "\n\nKalau kamu mau, kita bisa bedah angkanya bareng di sini.";
 
         return $message;
     }
@@ -321,6 +346,7 @@ class PlatformAiOperations
             return null;
         }
         Cache::put($budgetKey, Cache::get($budgetKey), now()->endOfDay());
+        $voice = $this->voice($agent);
 
         try {
             $response = Http::baseUrl(rtrim((string) config('services.yoka_ai.url'), '/'))
@@ -331,7 +357,7 @@ class PlatformAiOperations
                     'temperature' => 0.2,
                     'response_format' => ['type' => 'json_object'],
                     'messages' => [
-                        ['role' => 'system', 'content' => "Kamu adalah {$agent->name}, bagian dari tim internal Yoka POS. Analisis hanya fakta agregat yang diberikan. Jangan mengarang angka, jangan mengklaim tindakan eksternal sudah dilakukan, dan jangan meminta data rahasia. Balas JSON valid dengan key summary, recommendation, priorities (maksimal 3 string)."],
+                        ['role' => 'system', 'content' => "Kamu adalah {$agent->name}, rekan kerja internal Yoka POS. Karaktermu: {$voice}. Analisis hanya fakta agregat yang diberikan. Jangan mengarang angka atau mengklaim tindakan eksternal sudah dilakukan. Balas JSON valid dengan key summary, recommendation, priorities (maksimal 3 string), dan message. Summary dan recommendation tetap ringkas untuk kartu pekerjaan. Field message harus berupa pesan proaktif 60-140 kata dalam Bahasa Indonesia yang terdengar seperti chat manusia ke pemilik bisnis: mulai langsung dari temuan, santai bila cocok, boleh memakai 'bro' secara natural maksimal satu kali, tanpa heading, tanpa kata 'sebagai AI', tanpa kalimat 'saya baru selesai memeriksa', tanpa emoji. Tutup dengan satu langkah konkret atau pertanyaan yang mengundang balasan. Bila tindakan butuh approval, katakan secara natural bahwa kamu menunggu persetujuan."],
                         ['role' => 'user', 'content' => json_encode(['baseline_summary' => $summary, 'baseline_recommendation' => $recommendation, 'facts' => $facts], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)],
                     ],
                 ])->throw();
@@ -339,11 +365,16 @@ class PlatformAiOperations
             $content = data_get($response->json(), 'choices.0.message.content');
             $decoded = is_string($content) ? json_decode($content, true) : null;
 
-            return is_array($decoded) ? array_intersect_key($decoded, array_flip(['summary', 'recommendation', 'priorities'])) : null;
+            return is_array($decoded) ? array_intersect_key($decoded, array_flip(['summary', 'recommendation', 'priorities', 'message'])) : null;
         } catch (\Throwable $e) {
             Log::warning('Platform AI reasoning failed', ['agent' => $agent->key, 'error' => $e->getMessage()]);
 
             return null;
         }
+    }
+
+    private function voice(PlatformAiAgent $agent): string
+    {
+        return self::PROFILES[$agent->key]['voice'] ?? 'rekan kerja yang hangat, lugas, dan fokus pada langkah nyata';
     }
 }

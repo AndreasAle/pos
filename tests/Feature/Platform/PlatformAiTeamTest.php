@@ -141,4 +141,26 @@ class PlatformAiTeamTest extends TestCase
         $this->platformSession($admin)->patchJson(route('platform.ai-team.read', $agent))->assertNoContent();
         $this->assertNotNull($message->fresh()->read_at);
     }
+
+    public function test_proactive_message_uses_the_agents_human_chat_copy(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => json_encode([
+                'summary' => 'Belum ada data konten.',
+                'recommendation' => 'Masukkan tiga konten terakhir.',
+                'priorities' => ['Tambah data'],
+                'message' => 'Bro, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti aku bantu pilih mana yang paling layak diuji.',
+            ])]]],
+        ])]);
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'marketing')->firstOrFail();
+
+        app(PlatformAiOperations::class)->run($agent, true);
+
+        $this->assertDatabaseHas('platform_ai_messages', [
+            'platform_ai_agent_id' => $agent->id,
+            'content' => 'Bro, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti aku bantu pilih mana yang paling layak diuji.',
+        ]);
+    }
 }
