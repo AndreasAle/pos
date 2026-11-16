@@ -207,9 +207,33 @@ class PlatformAiOperations
             'status' => $approval ? 'proposed' : 'completed', 'payload' => $payload,
             'executed_at' => $approval ? null : now(),
         ]);
+        $agent->messages()->create([
+            'role' => 'assistant',
+            'content' => $this->proactiveMessage($agent, $task),
+            'meta' => [
+                'mode' => ($payload['ai_used'] ?? false) ? 'ai' : 'internal',
+                'proactive' => true,
+                'task_id' => $task->id,
+                'requires_approval' => $task->requires_approval,
+            ],
+        ]);
         $agent->update(['last_run_at' => now(), 'next_run_at' => now()->addDay()]);
 
         return $task;
+    }
+
+    private function proactiveMessage(PlatformAiAgent $agent, PlatformAiTask $task): string
+    {
+        $opening = "Saya baru selesai memeriksa area {$agent->department}.";
+        $message = "{$opening}\n\n{$task->summary}";
+        if ($task->recommendation) {
+            $message .= "\n\nSaran saya: {$task->recommendation}";
+        }
+        $message .= $task->requires_approval
+            ? "\n\nSaya sudah menaruh usulan ini di Pekerjaan. Saya menunggu keputusanmu sebelum tindakan dilanjutkan."
+            : "\n\nHasil analisis ini sudah dicatat. Kamu bisa membalas pesan ini untuk membahas langkah berikutnya.";
+
+        return $message;
     }
 
     private function chief(): array

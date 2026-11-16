@@ -20,6 +20,8 @@
         'time' => $message->created_at->translatedFormat('d M, H:i'),
     ])->values())->all();
     $routePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.chat', $agent)])->all();
+    $readRoutePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.read', $agent)])->all();
+    $unreadPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => (int) ($unreadCounts[$agent->id] ?? 0)])->all();
     $promptPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => data_get($profiles, $agent->key.'.prompts', [])])->all();
     $openTasks = $tasks->whereIn('status', ['proposed','approved'])->count();
     $yokaConnection = collect($connections)->firstWhere(0, 'Yoka AI');
@@ -27,7 +29,7 @@
 @endphp
 
 <div
-    x-data="aiTeamWorkspace(@js($selectedAgentId), @js($chatPayload), @js($routePayload), @js($promptPayload))"
+    x-data="aiTeamWorkspace(@js($selectedAgentId), @js($chatPayload), @js($routePayload), @js($readRoutePayload), @js($unreadPayload), @js($promptPayload))"
     class="space-y-5"
 >
     <header class="rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6">
@@ -65,7 +67,7 @@
                     @foreach($agents as $agent)
                         @php [$avatar,$badge] = $agentStyles[$agent->key] ?? ['bg-slate-700','bg-slate-50 text-slate-700 border-slate-200']; @endphp
                         <button type="button" @click="selectAgent({{ $agent->id }})" class="min-w-[230px] rounded-xl border p-3 text-left transition xl:w-full xl:min-w-0" :class="activeAgent === {{ $agent->id }} ? 'border-emerald-300 bg-white shadow-sm' : 'border-transparent hover:bg-white'">
-                            <span class="flex items-center gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white {{ $avatar }}">{{ data_get($profiles,$agent->key.'.initials','AI') }}</span><span class="min-w-0 flex-1"><b class="block truncate text-sm text-slate-900">{{ $agent->name }}</b><small class="mt-0.5 block truncate text-slate-500">{{ data_get($profiles,$agent->key.'.title',$agent->department) }}</small></span><span class="h-2 w-2 rounded-full {{ $agent->status === 'active' ? 'bg-emerald-500' : 'bg-slate-400' }}"></span></span>
+                            <span class="flex items-center gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white {{ $avatar }}">{{ data_get($profiles,$agent->key.'.initials','AI') }}</span><span class="min-w-0 flex-1"><b class="block truncate text-sm text-slate-900">{{ $agent->name }}</b><small class="mt-0.5 block truncate text-slate-500">{{ data_get($profiles,$agent->key.'.title',$agent->department) }}</small></span><span x-show="unread[{{ $agent->id }}] > 0" x-text="unread[{{ $agent->id }}]" class="flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white"></span><span x-show="unread[{{ $agent->id }}] === 0" class="h-2 w-2 rounded-full {{ $agent->status === 'active' ? 'bg-emerald-500' : 'bg-slate-400' }}"></span></span>
                             <span class="mt-3 flex items-center justify-between text-[11px]"><span class="text-slate-500">{{ $agent->open_tasks_count }} tugas terbuka</span><span class="font-bold {{ data_get($snapshots,$agent->id.'.ai_connected') ? 'text-emerald-700' : 'text-amber-700' }}">{{ data_get($snapshots,$agent->id.'.ai_connected') ? 'AI siap' : 'Mode internal' }}</span></span>
                         </button>
                     @endforeach
@@ -179,11 +181,12 @@
 </div>
 
 <script>
-function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, prompts) {
+function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, initialUnread, prompts) {
     return {
-        tab: 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, prompts,
+        tab: 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, readRoutes, unread: initialUnread, prompts,
         draft: '', sending: false, chatError: '', newTask: false, moveTask: null, intake: false,
-        selectAgent(id) { this.activeAgent=id; this.draft=''; this.chatError=''; this.$nextTick(()=>this.scrollMessages()); },
+        selectAgent(id) { this.activeAgent=id; this.draft=''; this.chatError=''; this.markRead(id); this.$nextTick(()=>this.scrollMessages()); },
+        async markRead(id) { if (!this.unread[id]) return; this.unread[id]=0; try { await fetch(this.readRoutes[id],{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}); } catch(error) { } },
         modeLabel(mode) { return mode === 'ai' ? 'AI + data' : (mode === 'fallback' ? 'Fallback data' : 'Data internal'); },
         sendPrompt(prompt) { this.draft=prompt; this.sendMessage(); },
         async sendMessage() {
@@ -201,7 +204,7 @@ function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, prompts) {
             } finally { this.sending=false; this.$nextTick(()=>this.scrollMessages()); }
         },
         scrollMessages() { const area=this.$refs['messageArea'+this.activeAgent]; if(area)area.scrollTop=area.scrollHeight; },
-        init() { this.$nextTick(()=>this.scrollMessages()); }
+        init() { this.markRead(this.activeAgent); this.$nextTick(()=>this.scrollMessages()); }
     }
 }
 </script>

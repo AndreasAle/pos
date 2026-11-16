@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Platform;
 use App\Http\Controllers\Controller;
 use App\Models\PlatformActivityLog;
 use App\Models\PlatformAiAgent;
+use App\Models\PlatformAiMessage;
 use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
 use App\Services\PlatformAiOperations;
@@ -33,8 +34,11 @@ class AiTeamController extends Controller
         $conversations = $agents->mapWithKeys(fn ($agent) => [
             $agent->id => $agent->messages()->with('admin:id,name')->latest()->limit(40)->get()->reverse()->values(),
         ]);
+        $unreadCounts = PlatformAiMessage::where('role', 'assistant')->whereNull('read_at')->get()
+            ->filter(fn ($message) => (bool) data_get($message->meta, 'proactive'))
+            ->countBy('platform_ai_agent_id');
 
-        return view('platform.ai-team', compact('agents', 'tasks', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations'));
+        return view('platform.ai-team', compact('agents', 'tasks', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts'));
     }
 
     public function chat(Request $request, PlatformAiAgent $agent, PlatformAiOperations $operations)
@@ -48,6 +52,7 @@ class AiTeamController extends Controller
         $assistantMessage = $agent->messages()->create([
             'role' => 'assistant', 'content' => $result['content'],
             'meta' => ['mode' => $result['mode'], 'snapshot' => $result['snapshot'], 'suggestions' => $result['suggestions']],
+            'read_at' => now(),
         ]);
         PlatformActivityLog::record('ai.agent.chat', "Berdiskusi dengan {$agent->name}.", $assistantMessage, metadata: ['mode' => $result['mode']]);
 
@@ -56,6 +61,14 @@ class AiTeamController extends Controller
             'assistant' => ['id' => $assistantMessage->id, 'role' => 'assistant', 'content' => $assistantMessage->content, 'mode' => $result['mode'], 'created_at' => $assistantMessage->created_at->toIso8601String()],
             'suggestions' => $result['suggestions'],
         ]);
+    }
+
+    public function markRead(PlatformAiAgent $agent)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $agent->messages()->where('role', 'assistant')->whereNull('read_at')->update(['read_at' => now()]);
+
+        return response()->noContent();
     }
 
     public function run(PlatformAiAgent $agent, PlatformAiOperations $operations)

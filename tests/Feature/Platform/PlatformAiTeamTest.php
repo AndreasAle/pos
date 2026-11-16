@@ -55,6 +55,7 @@ class PlatformAiTeamTest extends TestCase
         $this->platformSession($admin)->post(route('platform.ai-team.run', $agent))->assertRedirect();
 
         $this->assertDatabaseHas('platform_ai_tasks', ['platform_ai_agent_id' => $agent->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('platform_ai_messages', ['platform_ai_agent_id' => $agent->id, 'role' => 'assistant', 'read_at' => null]);
         $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.agent.run', 'platform_admin_id' => $admin->id]);
     }
 
@@ -124,5 +125,20 @@ class PlatformAiTeamTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/chat/completions')
             && data_get($request->data(), 'messages.0.content') !== null);
+    }
+
+    public function test_proactive_agent_message_can_be_marked_as_read(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'accounting')->firstOrFail();
+        app(PlatformAiOperations::class)->run($agent, true);
+
+        $message = $agent->messages()->where('role', 'assistant')->firstOrFail();
+        $this->assertTrue((bool) data_get($message->meta, 'proactive'));
+        $this->assertNull($message->read_at);
+
+        $this->platformSession($admin)->patchJson(route('platform.ai-team.read', $agent))->assertNoContent();
+        $this->assertNotNull($message->fresh()->read_at);
     }
 }

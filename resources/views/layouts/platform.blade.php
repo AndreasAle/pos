@@ -11,7 +11,14 @@
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
 </head>
 <body class="min-h-full bg-slate-100 text-slate-900 antialiased" x-data="{ menu: false }">
-    @php $platformAdmin = auth('platform')->user(); @endphp
+    @php
+        $platformAdmin = auth('platform')->user();
+        $platformAiUnread = 0;
+        if ($platformAdmin?->isSuperAdmin() && \Illuminate\Support\Facades\Schema::hasTable('platform_ai_messages')) {
+            $platformAiUnread = \App\Models\PlatformAiMessage::where('role', 'assistant')->whereNull('read_at')->get()
+                ->filter(fn ($message) => (bool) data_get($message->meta, 'proactive'))->count();
+        }
+    @endphp
 
     <header class="fixed inset-x-0 top-0 z-40 h-16 border-b border-emerald-950/30 bg-emerald-950 text-white">
         <div class="flex h-full items-center px-4 lg:px-7">
@@ -58,6 +65,7 @@
             @if($platformAdmin->isSuperAdmin())
             <a href="{{ route('platform.ai-team.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.ai-team.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-fuchsia-600"></span> Tim AI
+                @if($platformAiUnread > 0)<span class="ml-auto flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white">{{ $platformAiUnread > 99 ? '99+' : $platformAiUnread }}</span>@endif
             </a>
             <a href="{{ route('platform.team') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.team*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-teal-600"></span> Tim Yoka
