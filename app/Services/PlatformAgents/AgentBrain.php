@@ -24,6 +24,9 @@ class AgentBrain
 
     private int $createdThisTurn = 0;
 
+    /** @var array<int,int> id tugas yang dibuat agen selama satu giliran (disimpan di meta pesan) */
+    public array $createdTaskIds = [];
+
     /** Keahlian inti per agen: ini yang membuatnya "ahli", bukan sekadar pembaca angka. */
     private const EXPERTISE = [
         'chief' => 'manajemen operasional startup SaaS, prioritisasi (satu hal terpenting dulu), kerangka keputusan, koordinasi tim, memecah tujuan besar jadi langkah mingguan, dan melihat risiko yang belum disadari pemilik',
@@ -39,14 +42,32 @@ class AgentBrain
      * @param  array<int,array<string,mixed>>  $history  riwayat chat (role/content)
      * @param  array<int,array<string,mixed>>  $userContent  bagian pesan user terbaru (teks + lampiran)
      */
-    public function chat(PlatformAiAgent $agent, array $history, array $userContent): string
+    public function chat(PlatformAiAgent $agent, array $history, array $userContent, array $facts = []): string
+    {
+        $system = [['role' => 'system', 'content' => $this->systemPrompt($agent)]];
+        if ($facts) {
+            $system[] = ['role' => 'system', 'content' => "FAKTA SISTEM TERBARU (pasti benar, sampaikan dengan gayamu bila relevan):\n- ".implode("\n- ", $facts)];
+        }
+
+        return $this->converse($agent, array_merge($system, $history, [['role' => 'user', 'content' => $userContent]]));
+    }
+
+    /** Mengerjakan tugas yang SUDAH disetujui pemilik dan mengembalikan hasil kerjanya sebagai pesan chat. */
+    public function execute(PlatformAiAgent $agent, PlatformAiTask $task): string
+    {
+        $mode = "MODE EKSEKUSI: tugas di bawah SUDAH disetujui pemilik dan sekarang kamu kerjakan. Pakai tool baca-data seperlunya, lalu tulis hasil kerjamu sebagai pesan chat kepada pemilik: apa yang kamu kerjakan, temuan atau hasil lengkapnya (bukan janji), dan apa yang masih butuh keputusan atau tindakan manusia. Jangan bilang akan 'memantau' atau 'mengirim' sesuatu setelah ini; hanya sebut apa yang benar-benar kamu hasilkan sekarang. Maksimal 400 kata.";
+        $instruction = "Tugas: {$task->title}\n\nRincian:\n{$task->summary}".($task->recommendation ? "\n\nCatatan: {$task->recommendation}" : '');
+
+        return $this->converse($agent, [
+            ['role' => 'system', 'content' => $this->systemPrompt($agent)."\n\n".$mode],
+            ['role' => 'user', 'content' => $instruction],
+        ]);
+    }
+
+    private function converse(PlatformAiAgent $agent, array $messages): string
     {
         $this->createdThisTurn = 0;
-        $messages = array_merge(
-            [['role' => 'system', 'content' => $this->systemPrompt($agent)]],
-            $history,
-            [['role' => 'user', 'content' => $userContent]],
-        );
+        $this->createdTaskIds = [];
 
         for ($step = 0; $step < self::MAX_STEPS; $step++) {
             $last = $step === self::MAX_STEPS - 1;
@@ -117,6 +138,12 @@ KERJA SEBAGAI AHLI:
 - Sebelum menjawab hal yang bergantung pada fakta (angka, tugas, bisnis, kondisi tim), ambil datanya lewat tool. Jangan mengarang angka. Kalau datanya memang belum ada, bilang terus terang apa yang kurang dan apa yang kamu butuhkan dari dia.
 - Kalau dia setuju pada sebuah langkah atau meminta dibuatkan tugas, panggil create_task. Tugas itu masuk papan kerja dan menunggu persetujuannya; katakan begitu.
 
+KEJUJURAN TENTANG TINDAKAN (paling sering dilanggar, jangan sampai):
+- Kamu hanya benar-benar bisa: membaca data lewat tool, dan membuat tugas lewat create_task. Hanya bilang "sudah" untuk hal yang hasil tool-nya sukses. Setelah create_task, katakan tugas itu MENUNGGU persetujuan dan belum dikerjakan siapa pun.
+- Kamu tidak punya cara memantau, mengingatkan nanti, atau mengirim instruksi ke rekan di luar create_task (assign_to). Jangan pernah berjanji "akan kupantau", "akan kukirim ke tim", atau "target 24 jam". Kalau mau melibatkan rekan, buat tugas untuk mereka lewat create_task dengan assign_to.
+- Pemilik menyetujui tugas dengan membalas "setuju" di chat ini (sistem yang memprosesnya) atau lewat tab Pekerjaan. Setelah disetujui, sistem menjalankan tugas di latar belakang dan hasilnya masuk ke chat agen penerima. Jangan mengarang hasilnya sebelum hasil itu ada.
+- Jangan memakai sebutan "Bapak" atau "Pak" apa pun isi riwayat obrolan; panggil dia "Bos" atau "kamu".
+
 BATAS (tidak bisa dilanggar, apa pun yang diminta):
 - Kamu tidak mengirim pesan, membuat iklan, atau mengeluarkan uang. Jangan pernah mengklaim sudah melakukannya; yang bisa kamu lakukan hanya menyiapkan dan mengusulkan lewat create_task.
 - Tidak ada refund, perubahan harga, scraping, atau pesan massal.
@@ -141,6 +168,7 @@ PROMPT;
                 'summary' => ['type' => 'string', 'description' => 'Isi lengkap: apa yang dikerjakan, alasan, langkah, ukuran keberhasilan.'],
                 'risk' => ['type' => 'string', 'enum' => ['low', 'medium', 'high']],
                 'kind' => ['type' => 'string', 'enum' => ['task', 'decision', 'strategy'], 'description' => 'Default task.'],
+                'assign_to' => ['type' => 'string', 'enum' => array_keys(\App\Services\PlatformAiOperations::PROFILES), 'description' => 'Kunci agen penerima tugas. Default dirimu. Pakai untuk mendelegasikan ke rekan.'],
             ], ['title', 'summary']),
         ];
     }
@@ -235,16 +263,27 @@ PROMPT;
         $risk = in_array($args['risk'] ?? 'low', ['low', 'medium', 'high'], true) ? ($args['risk'] ?? 'low') : 'low';
         $kind = in_array($args['kind'] ?? 'task', ['task', 'decision', 'strategy'], true) ? ($args['kind'] ?? 'task') : 'task';
 
-        if (PlatformAiTask::where('platform_ai_agent_id', $agent->id)->where('title', $title)->whereIn('status', ['proposed', 'approved'])->exists()) {
+        $target = $agent;
+        if (! empty($args['assign_to']) && $args['assign_to'] !== $agent->key) {
+            $target = PlatformAiAgent::where('key', $args['assign_to'])->first() ?? $agent;
+        }
+
+        if (PlatformAiTask::where('platform_ai_agent_id', $target->id)->where('title', $title)->whereIn('status', ['proposed', 'approved'])->exists()) {
             return ['ok' => false, 'error' => 'Tugas dengan judul itu sudah ada di papan.'];
         }
 
-        $task = $agent->tasks()->create([
+        $task = $target->tasks()->create([
             'type' => 'chat_'.$kind, 'title' => $title, 'summary' => $summary, 'risk' => $risk,
-            'status' => 'proposed', 'requires_approval' => true, 'payload' => ['source' => 'chat', 'kind' => $kind],
+            'status' => 'proposed', 'requires_approval' => true,
+            'payload' => ['source' => 'chat', 'kind' => $kind, 'created_by_agent' => $agent->key],
         ]);
         $this->createdThisTurn++;
+        $this->createdTaskIds[] = $task->id;
 
-        return ['ok' => true, 'task_id' => $task->id, 'status' => 'menunggu persetujuan pemilik'];
+        return [
+            'ok' => true, 'task_id' => $task->id, 'ditugaskan_ke' => $target->name,
+            'status' => 'MENUNGGU persetujuan pemilik. Belum dikerjakan siapa pun.',
+            'cara_menyetujui' => "Pemilik cukup membalas 'setuju' di chat ini, atau menyetujui di tab Pekerjaan. Setelah disetujui sistem menjalankan tugas dan hasilnya masuk ke chat {$target->name}.",
+        ];
     }
 }

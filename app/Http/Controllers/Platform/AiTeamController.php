@@ -51,8 +51,10 @@ class AiTeamController extends Controller
             'files.*' => 'file|max:5120',
         ]);
         $question = trim($data['message'] ?? '') ?: 'Tolong baca file ini dan beri tahu aku temuan pentingnya.';
+        $approved = $operations->approveFromChat($agent, $question, auth('platform')->id());
+        $facts = $approved ? ['Pemilik baru saja menyetujui tugas: '.implode('; ', $approved).'. Sistem sudah menjalankannya di latar belakang dan hasilnya akan masuk ke chat agen penerima begitu selesai (biasanya beberapa menit). Hasilnya BELUM ada, jangan mengarang isinya.'] : [];
         $savedFiles = $attachments->store(auth('platform')->user(), $agent, $request->file('files', []));
-        $result = $operations->reply($agent, $question, $savedFiles);
+        $result = $operations->reply($agent, $question, $savedFiles, $facts);
         $userMessage = $agent->messages()->create([
             'platform_admin_id' => auth('platform')->id(), 'role' => 'user', 'content' => $question,
             'meta' => ['attachments' => collect($savedFiles)->pluck('original_name')->all()],
@@ -60,7 +62,7 @@ class AiTeamController extends Controller
         collect($savedFiles)->each->update(['platform_ai_message_id' => $userMessage->id]);
         $assistantMessage = $agent->messages()->create([
             'role' => 'assistant', 'content' => $result['content'],
-            'meta' => ['mode' => $result['mode'], 'snapshot' => $result['snapshot'], 'suggestions' => $result['suggestions']],
+            'meta' => ['mode' => $result['mode'], 'snapshot' => $result['snapshot'], 'suggestions' => $result['suggestions'], 'proposed_tasks' => $result['created_tasks'] ?? []],
             'read_at' => now(),
         ]);
         PlatformActivityLog::record('ai.agent.chat', "Berdiskusi dengan {$agent->name}.", $assistantMessage, metadata: ['mode' => $result['mode']]);
@@ -119,7 +121,7 @@ class AiTeamController extends Controller
         return back()->with('success', 'Data operasional ditambahkan.');
     }
 
-    public function decide(Request $request, PlatformAiTask $task)
+    public function decide(Request $request, PlatformAiTask $task, PlatformAiOperations $operations)
     {
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
         $data = $request->validate(['decision' => 'required|in:approve,reject', 'message' => 'nullable|string|max:600']);
@@ -137,6 +139,12 @@ class AiTeamController extends Controller
         PlatformActivityLog::record('ai.task.approve', "Menyetujui tugas {$task->title}.", $task);
 
         if ($task->type !== 'whatsapp_draft') {
+            if ($operations->canExecute($task->fresh())) {
+                $operations->dispatchExecution($task->fresh());
+
+                return back()->with('success', "Disetujui. {$task->agent->name} mulai mengerjakan; hasilnya masuk ke chat-nya.");
+            }
+
             return back()->with('success', 'Tugas disetujui. Eksekusi eksternal tetap menunggu koneksi resmi.');
         }
 
@@ -173,7 +181,7 @@ class AiTeamController extends Controller
         return back()->with('success', 'Tugas baru masuk To Do List.');
     }
 
-    public function moveTask(Request $request, PlatformAiTask $task)
+    public function moveTask(Request $request, PlatformAiTask $task, PlatformAiOperations $operations)
     {
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
         $status = $request->validate(['status' => 'required|in:proposed,approved,completed,rejected'])['status'];
@@ -188,6 +196,11 @@ class AiTeamController extends Controller
         }
         $task->update($changes);
         PlatformActivityLog::record('ai.task.move', "Memindahkan {$task->title} ke {$status}.", $task, metadata: ['status' => $status]);
+        if ($status === 'approved' && $operations->canExecute($task->fresh())) {
+            $operations->dispatchExecution($task->fresh());
+
+            return back()->with('success', "Tugas dipindahkan. {$task->agent->name} mulai mengerjakan; hasilnya masuk ke chat-nya.");
+        }
 
         return back()->with('success', 'Tugas berhasil dipindahkan.');
     }

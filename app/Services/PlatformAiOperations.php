@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BusinessSubscription;
 use App\Models\PlatformAiAgent;
+use App\Models\PlatformActivityLog;
 use App\Models\PlatformAiMessage;
 use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
@@ -53,17 +54,17 @@ class PlatformAiOperations
         }
     }
 
-    public function reply(PlatformAiAgent $agent, string $question, array $attachments = []): array
+    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = []): array
     {
         $snapshot = $this->snapshot($agent);
         $history = $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
             'role' => $message->role === 'assistant' ? 'assistant' : 'user',
             'content' => $message->content,
-        ])->values()->all();
+        ])->reject(fn ($m) => $m['role'] === 'assistant' && preg_match('/\b(Bapak|Pak)\b/u', $m['content']))->values()->all();
 
         if (! filled(config('services.yoka_ai.key'))) {
             return [
-                'content' => $this->offlineReply($agent, $question, $snapshot, $attachments),
+                'content' => $this->offlineReply($agent, $question, $snapshot, $attachments, $facts),
                 'mode' => 'internal',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -72,7 +73,7 @@ class PlatformAiOperations
 
         if ($agent->status !== 'active') {
             return [
-                'content' => "Bos, status kerjaku lagi dijeda. Chat kita tetap aman, tapi aku belum menganalisis hal baru sampai kamu mengaktifkanku lagi.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments),
+                'content' => "Bos, status kerjaku lagi dijeda. Chat kita tetap aman, tapi aku belum menganalisis hal baru sampai kamu mengaktifkanku lagi.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments, $facts),
                 'mode' => 'internal',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -84,7 +85,7 @@ class PlatformAiOperations
         Cache::put($budgetKey, $requestCount, now()->endOfDay());
         if ($requestCount > (int) config('services.yoka_ai.daily_request_budget', 250)) {
             return [
-                'content' => "Jatah analisis AI hari ini sudah penuh, Bos. Biar biaya tetap terkendali, sementara aku jawab dari data internal dulu.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments),
+                'content' => "Jatah analisis AI hari ini sudah penuh, Bos. Biar biaya tetap terkendali, sementara aku jawab dari data internal dulu.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments, $facts),
                 'mode' => 'internal',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -99,14 +100,15 @@ class PlatformAiOperations
             foreach ($attachments as $attachment) {
                 array_push($userContent, ...$this->attachmentService->modelParts($attachment));
             }
-            $content = app(\App\Services\PlatformAgents\AgentBrain::class)->chat($agent, $history, $userContent);
+            $brain = app(\App\Services\PlatformAgents\AgentBrain::class);
+            $content = $brain->chat($agent, $history, $userContent, $facts);
 
-            return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? []];
+            return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [], 'created_tasks' => $brain->createdTaskIds];
         } catch (\Throwable $e) {
             Log::warning('Platform AI chat failed', ['agent' => $agent->key, 'error' => $e->getMessage()]);
 
             return [
-                'content' => "Koneksi analisisku lagi bermasalah, Bos. Aku tetap bantu dari data internal yang sudah masuk.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments),
+                'content' => "Koneksi analisisku lagi bermasalah, Bos. Aku tetap bantu dari data internal yang sudah masuk.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments, $facts),
                 'mode' => 'fallback',
                 'snapshot' => $snapshot,
                 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [],
@@ -143,7 +145,7 @@ class PlatformAiOperations
         };
     }
 
-    private function offlineReply(PlatformAiAgent $agent, string $question, array $snapshot, array $attachments = []): string
+    private function offlineReply(PlatformAiAgent $agent, string $question, array $snapshot, array $attachments = [], array $facts = []): string
     {
         $answer = match ($agent->key) {
             'chief' => 'Oke Bos, aku cek dulu dari data yang ada.',
@@ -176,11 +178,117 @@ Temuan terakhirku: {$latest['summary']}";
                 $answer .= " Menurutku, {$latest['recommendation']}";
             }
         }
+        if ($facts) {
+            $answer .= "\n\n".implode(' ', $facts);
+        }
         $answer .= "
 
 (Mode terbatas: koneksi AI sedang tidak aktif, jadi aku belum bisa diajak berdiskusi lebih dalam.)";
 
         return $answer;
+    }
+
+    /** Tugas yang boleh dikerjakan sendiri oleh agen: murni baca data dan tulis hasil di dalam Yoka. */
+    public const EXECUTABLE_TYPES = ['chat_task', 'chat_decision', 'chat_strategy', 'manual'];
+
+    public function canExecute(PlatformAiTask $task): bool
+    {
+        return in_array($task->type, self::EXECUTABLE_TYPES, true) && $task->status === 'approved' && $task->executed_at === null;
+    }
+
+    /** Dijalankan setelah respons terkirim, supaya halaman tidak menunggu agen bekerja. */
+    public function dispatchExecution(PlatformAiTask $task): void
+    {
+        if (! $this->canExecute($task)) {
+            return;
+        }
+        $id = $task->id;
+        dispatch(function () use ($id) {
+            app(PlatformAiOperations::class)->execute($id);
+        })->afterResponse();
+    }
+
+    public function execute(int $taskId): void
+    {
+        $task = PlatformAiTask::with('agent')->find($taskId);
+        if (! $task || ! $task->agent || ! $this->canExecute($task)) {
+            return;
+        }
+        $lock = 'platform-ai-exec:'.$task->id;
+        if (! Cache::add($lock, 1, now()->addMinutes(10))) {
+            return;
+        }
+
+        $fail = function (string $reason) use ($task, $lock) {
+            Cache::forget($lock);
+            $task->update(['error' => $reason]);
+            $task->agent->messages()->create([
+                'role' => 'assistant',
+                'content' => "Bos, tugas \"{$task->title}\" belum bisa kuselesaikan: {$reason} Tugasnya tetap di In Progress; geser lagi ke In Progress kalau mau kucoba ulang.",
+                'meta' => ['mode' => 'internal', 'proactive' => true, 'task_id' => $task->id, 'failed' => true],
+            ]);
+        };
+
+        if (! filled(config('services.yoka_ai.key'))) {
+            $fail('koneksi AI belum aktif.');
+
+            return;
+        }
+        $budgetKey = 'platform-ai-chat:'.now()->format('Y-m-d');
+        $count = Cache::increment($budgetKey);
+        Cache::put($budgetKey, $count, now()->endOfDay());
+        if ($count > (int) config('services.yoka_ai.daily_request_budget', 250)) {
+            $fail('jatah AI harian sudah penuh.');
+
+            return;
+        }
+
+        try {
+            $report = app(\App\Services\PlatformAgents\AgentBrain::class)->execute($task->agent, $task);
+        } catch (\Throwable $e) {
+            Log::warning('Platform AI task execution failed', ['task' => $task->id, 'error' => $e->getMessage()]);
+            $fail('koneksi analisis sedang bermasalah.');
+
+            return;
+        }
+
+        $task->update(['status' => 'completed', 'executed_at' => now(), 'result' => ['report' => $report], 'error' => null]);
+        $task->agent->messages()->create([
+            'role' => 'assistant', 'content' => $report,
+            'meta' => ['mode' => 'ai', 'proactive' => true, 'task_id' => $task->id, 'executed' => true],
+        ]);
+        PlatformActivityLog::record('ai.task.executed', "{$task->agent->name} menyelesaikan tugas {$task->title}.", $task);
+    }
+
+    /**
+     * Persetujuan lewat chat. Sengaja diputuskan di server, bukan oleh model: hanya balasan singkat
+     * yang jelas menyetujui, dan hanya untuk tugas yang diusulkan agen di pesan terakhirnya.
+     *
+     * @return array<int,string> judul tugas yang disetujui
+     */
+    public function approveFromChat(PlatformAiAgent $agent, string $text, ?int $adminId): array
+    {
+        $text = trim($text);
+        if (mb_strlen($text) > 60
+            || ! preg_match('/^(ya|y|oke|ok|okay|siap|gas|lanjut|lanjutkan|setuju|saya setuju|aku setuju|approve|acc|silakan|boleh|go|deal)\b/iu', $text)
+            || preg_match('/\b(tapi|jangan|tunggu|belum|ubah|revisi|ganti|batal|tidak|nggak|gak)\b/iu', $text)) {
+            return [];
+        }
+        $last = $agent->messages()->where('role', 'assistant')->latest('id')->first();
+        $ids = (array) data_get($last?->meta, 'proposed_tasks', []);
+        if ($ids === []) {
+            return [];
+        }
+
+        $titles = [];
+        foreach (PlatformAiTask::with('agent')->whereIn('id', $ids)->where('status', 'proposed')->whereIn('type', ['chat_task', 'chat_decision', 'chat_strategy'])->get() as $task) {
+            $task->update(['status' => 'approved', 'approved_by' => $adminId, 'approved_at' => now()]);
+            PlatformActivityLog::record('ai.task.approve', "Menyetujui tugas {$task->title} lewat chat.", $task);
+            $this->dispatchExecution($task->fresh());
+            $titles[] = $task->title;
+        }
+
+        return $titles;
     }
 
     public function run(PlatformAiAgent $agent, bool $force = false): PlatformAiTask

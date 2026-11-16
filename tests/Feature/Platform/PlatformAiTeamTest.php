@@ -302,4 +302,133 @@ class PlatformAiTeamTest extends TestCase
         $this->assertSame(0, app(PlatformAiOperations::class)->nudges());
         $this->assertDatabaseHas('platform_ai_messages', ['platform_ai_agent_id' => $agent->id, 'role' => 'assistant']);
     }
+
+    private function aiOn(): void
+    {
+        config(['services.yoka_ai.key' => 'k', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        app(PlatformAiOperations::class)->ensureAgents();
+    }
+
+    private function manualTask(string $agentKey = 'chief'): PlatformAiTask
+    {
+        return PlatformAiAgent::where('key', $agentKey)->firstOrFail()->tasks()->create([
+            'type' => 'manual', 'title' => 'Rangkum 15 keputusan terbuka', 'summary' => 'Kumpulkan dan urutkan.',
+            'risk' => 'low', 'status' => 'proposed', 'requires_approval' => true,
+        ]);
+    }
+
+    public function test_approved_task_is_executed_by_its_agent_and_the_report_lands_in_chat(): void
+    {
+        $this->aiOn();
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Bos, ini hasilnya: ada 2 keputusan, yang paling mendesak harga tahunan.']]]])]);
+        $task = $this->manualTask();
+
+        $this->platformSession($this->admin())->patch(route('platform.ai-team.decision', $task), ['decision' => 'approve'])->assertRedirect();
+
+        $task->refresh();
+        $this->assertSame('completed', $task->status);
+        $this->assertSame('Bos, ini hasilnya: ada 2 keputusan, yang paling mendesak harga tahunan.', data_get($task->result, 'report'));
+        $this->assertDatabaseHas('platform_ai_messages', ['platform_ai_agent_id' => $task->platform_ai_agent_id, 'role' => 'assistant', 'content' => data_get($task->result, 'report')]);
+    }
+
+    public function test_execution_without_ai_connection_is_honest_and_does_not_fake_completion(): void
+    {
+        config(['services.yoka_ai.key' => null]);
+        app(PlatformAiOperations::class)->ensureAgents();
+        Http::fake();
+        $task = $this->manualTask();
+
+        $this->platformSession($this->admin())->patch(route('platform.ai-team.decision', $task), ['decision' => 'approve'])->assertRedirect();
+
+        $task->refresh();
+        $this->assertSame('approved', $task->status);
+        $this->assertNull($task->executed_at);
+        $this->assertNotNull($task->error);
+        Http::assertNothingSent();
+    }
+
+    public function test_replying_setuju_in_chat_approves_the_proposed_task_and_runs_it(): void
+    {
+        $this->aiOn();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $task = $agent->tasks()->create(['type' => 'chat_task', 'title' => 'Kumpulkan data keputusan', 'summary' => 'Susun daftar.', 'risk' => 'low', 'status' => 'proposed', 'requires_approval' => true]);
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Tugasnya kuajukan, nunggu persetujuanmu.', 'meta' => ['proposed_tasks' => [$task->id]]]);
+
+        Http::fakeSequence('https://ai.test/v1/chat/completions')
+            ->push(['choices' => [['message' => ['content' => 'Siap, sudah disetujui. Aku mulai kerjakan sekarang, hasilnya nyusul di sini.']]]])
+            ->push(['choices' => [['message' => ['content' => 'Hasil: ada 1 keputusan terbuka.']]]]);
+
+        $this->platformSession($this->admin())->postJson(route('platform.ai-team.chat', $agent), ['message' => 'setuju'])->assertOk();
+
+        $task->refresh();
+        $this->assertSame('completed', $task->status);
+        $this->assertNotNull($task->approved_at);
+        $this->assertSame('Hasil: ada 1 keputusan terbuka.', data_get($task->result, 'report'));
+        Http::assertSent(fn ($r) => collect(data_get($r->data(), 'messages', []))->contains(fn ($m) => ($m['role'] ?? '') === 'system' && str_contains((string) $m['content'], 'Hasilnya BELUM ada')));
+    }
+
+    public function test_conditional_or_unrelated_replies_never_approve_a_task(): void
+    {
+        $this->aiOn();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $task = $agent->tasks()->create(['type' => 'chat_task', 'title' => 'Kumpulkan data', 'summary' => 's', 'risk' => 'low', 'status' => 'proposed', 'requires_approval' => true]);
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Nunggu persetujuanmu.', 'meta' => ['proposed_tasks' => [$task->id]]]);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Oke, kuubah dulu.']]]])]);
+
+        $admin = $this->admin();
+        foreach (['setuju tapi ubah targetnya dulu', 'kondisi keuangan gimana?', 'ya ampun capek banget hari ini, jangan dulu'] as $text) {
+            $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), ['message' => $text])->assertOk();
+        }
+
+        $this->assertSame('proposed', $task->fresh()->status);
+    }
+
+    public function test_chat_approval_does_not_apply_to_older_proposals(): void
+    {
+        $this->aiOn();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $task = $agent->tasks()->create(['type' => 'chat_task', 'title' => 'Lama', 'summary' => 's', 'risk' => 'low', 'status' => 'proposed', 'requires_approval' => true]);
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Usul lama.', 'meta' => ['proposed_tasks' => [$task->id]]]);
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Obrolan biasa setelahnya.', 'meta' => ['proposed_tasks' => []]]);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Oke.']]]])]);
+
+        $this->platformSession($this->admin())->postJson(route('platform.ai-team.chat', $agent), ['message' => 'setuju'])->assertOk();
+
+        $this->assertSame('proposed', $task->fresh()->status);
+    }
+
+    public function test_agent_can_delegate_a_task_to_a_teammate_and_it_stays_proposed(): void
+    {
+        $this->aiOn();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $luna = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+
+        Http::fakeSequence('https://ai.test/v1/chat/completions')
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [['id' => 'c1', 'type' => 'function', 'function' => ['name' => 'create_task', 'arguments' => json_encode(['title' => 'Hitung runway', 'summary' => 'Hitung runway 6 bulan.', 'assign_to' => 'finance'])]]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Sudah kuajukan ke Luna, nunggu persetujuanmu dulu.']]]]);
+
+        $this->platformSession($this->admin())->postJson(route('platform.ai-team.chat', $agent), ['message' => 'minta Luna hitung runway'])->assertOk();
+
+        $this->assertDatabaseHas('platform_ai_tasks', ['platform_ai_agent_id' => $luna->id, 'title' => 'Hitung runway', 'status' => 'proposed']);
+        $this->assertDatabaseMissing('platform_ai_tasks', ['platform_ai_agent_id' => $agent->id, 'title' => 'Hitung runway']);
+        $last = $agent->messages()->where('role', 'assistant')->latest('id')->first();
+        $this->assertNotEmpty(data_get($last->meta, 'proposed_tasks'));
+    }
+
+    public function test_old_bapak_style_replies_are_not_fed_back_to_the_model(): void
+    {
+        $this->aiOn();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Baik, Pak. Saya akan segera kirim instruksi ke tim.']);
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Oke Bos, nanti kita bahas.']);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Siap.']]]])]);
+
+        $this->platformSession($this->admin())->postJson(route('platform.ai-team.chat', $agent), ['message' => 'gimana?'])->assertOk();
+
+        Http::assertSent(function ($r) {
+            $all = json_encode(data_get($r->data(), 'messages', []));
+
+            return ! str_contains($all, 'Baik, Pak.') && str_contains($all, 'Oke Bos, nanti kita bahas.');
+        });
+    }
 }
