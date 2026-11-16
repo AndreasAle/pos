@@ -17,4 +17,9 @@ class PlatformAiAgent extends Model
     {
         return $this->hasMany(PlatformAiTask::class);
     }
+
+    public function messages()
+    {
+        return $this->hasMany(PlatformAiMessage::class);
+    }
 }

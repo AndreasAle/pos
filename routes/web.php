@@ -172,6 +172,7 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('system/test-mail', [\App\Http\Controllers\Platform\SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
             Route::get('ai-team', [\App\Http\Controllers\Platform\AiTeamController::class, 'index'])->name('ai-team.index');
             Route::post('ai-team/agents/{agent}/run', [\App\Http\Controllers\Platform\AiTeamController::class, 'run'])->middleware('throttle:20,1')->name('ai-team.run');
+            Route::post('ai-team/agents/{agent}/chat', [\App\Http\Controllers\Platform\AiTeamController::class, 'chat'])->middleware('throttle:30,1')->name('ai-team.chat');
             Route::patch('ai-team/agents/{agent}', [\App\Http\Controllers\Platform\AiTeamController::class, 'updateAgent'])->name('ai-team.agent');
             Route::post('ai-team/records', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeRecord'])->middleware('throttle:30,1')->name('ai-team.records');
             Route::post('ai-team/tasks', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeTask'])->middleware('throttle:30,1')->name('ai-team.tasks.store');

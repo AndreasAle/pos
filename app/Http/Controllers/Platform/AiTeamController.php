@@ -28,8 +28,34 @@ class AiTeamController extends Controller
             ['Payment & subscription Yoka', true],
             ['Database tenant Yoka', true],
         ];
+        $profiles = PlatformAiOperations::PROFILES;
+        $snapshots = $agents->mapWithKeys(fn ($agent) => [$agent->id => $operations->snapshot($agent)]);
+        $conversations = $agents->mapWithKeys(fn ($agent) => [
+            $agent->id => $agent->messages()->with('admin:id,name')->latest()->limit(40)->get()->reverse()->values(),
+        ]);
 
-        return view('platform.ai-team', compact('agents', 'tasks', 'records', 'counts', 'connections'));
+        return view('platform.ai-team', compact('agents', 'tasks', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations'));
+    }
+
+    public function chat(Request $request, PlatformAiAgent $agent, PlatformAiOperations $operations)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $data = $request->validate(['message' => 'required|string|max:2000']);
+        $result = $operations->reply($agent, trim($data['message']));
+        $userMessage = $agent->messages()->create([
+            'platform_admin_id' => auth('platform')->id(), 'role' => 'user', 'content' => trim($data['message']),
+        ]);
+        $assistantMessage = $agent->messages()->create([
+            'role' => 'assistant', 'content' => $result['content'],
+            'meta' => ['mode' => $result['mode'], 'snapshot' => $result['snapshot'], 'suggestions' => $result['suggestions']],
+        ]);
+        PlatformActivityLog::record('ai.agent.chat', "Berdiskusi dengan {$agent->name}.", $assistantMessage, metadata: ['mode' => $result['mode']]);
+
+        return response()->json([
+            'user' => ['id' => $userMessage->id, 'role' => 'user', 'content' => $userMessage->content, 'created_at' => $userMessage->created_at->toIso8601String()],
+            'assistant' => ['id' => $assistantMessage->id, 'role' => 'assistant', 'content' => $assistantMessage->content, 'mode' => $result['mode'], 'created_at' => $assistantMessage->created_at->toIso8601String()],
+            'suggestions' => $result['suggestions'],
+        ]);
     }
 
     public function run(PlatformAiAgent $agent, PlatformAiOperations $operations)

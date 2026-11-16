@@ -6,6 +6,7 @@ use App\Models\PlatformAdmin;
 use App\Models\PlatformAiAgent;
 use App\Services\PlatformAiOperations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class PlatformAiTeamTest extends TestCase
@@ -88,5 +89,40 @@ class PlatformAiTeamTest extends TestCase
 
         $this->assertDatabaseHas('platform_ai_tasks', ['id' => $task->id, 'status' => 'approved', 'approved_by' => $admin->id]);
         $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.task.move']);
+    }
+
+    public function test_admin_can_chat_with_an_agent_and_internal_mode_is_honest_without_api(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+
+        $response = $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), [
+            'message' => 'Bagaimana kondisi margin saat ini?',
+        ]);
+
+        $response->assertOk()->assertJsonPath('assistant.mode', 'internal')
+            ->assertJsonFragment(['role' => 'assistant']);
+        $this->assertDatabaseHas('platform_ai_messages', ['platform_ai_agent_id' => $agent->id, 'role' => 'user']);
+        $this->assertDatabaseHas('platform_ai_messages', ['platform_ai_agent_id' => $agent->id, 'role' => 'assistant']);
+        $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.agent.chat']);
+    }
+
+    public function test_chat_uses_configured_model_and_keeps_agent_context(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => 'Margin sementara aman, tetapi biaya harus tetap dicatat.']]],
+        ])]);
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), ['message' => 'Apa fokus hari ini?'])
+            ->assertOk()->assertJsonPath('assistant.mode', 'ai')
+            ->assertJsonPath('assistant.content', 'Margin sementara aman, tetapi biaya harus tetap dicatat.');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), '/chat/completions')
+            && data_get($request->data(), 'messages.0.content') !== null);
     }
 }
