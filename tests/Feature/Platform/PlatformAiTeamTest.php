@@ -127,7 +127,9 @@ class PlatformAiTeamTest extends TestCase
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/chat/completions')
             && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Namamu Luna')
-            && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Finance Strategist'));
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Finance Strategist')
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), "Panggil pemilik bisnis dengan 'Pak'")
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), "jangan pernah memakai 'bro'"));
     }
 
     public function test_admin_can_attach_a_file_and_agent_can_read_its_contents(): void
@@ -183,7 +185,7 @@ class PlatformAiTeamTest extends TestCase
                 'summary' => 'Belum ada data konten.',
                 'recommendation' => 'Masukkan tiga konten terakhir.',
                 'priorities' => ['Tambah data'],
-                'message' => 'Bro, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti aku bantu pilih mana yang paling layak diuji.',
+                'message' => 'Pak, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti saya bantu memilih mana yang paling layak diuji.',
             ])]]],
         ])]);
         app(PlatformAiOperations::class)->ensureAgents();
@@ -193,7 +195,7 @@ class PlatformAiTeamTest extends TestCase
 
         $this->assertDatabaseHas('platform_ai_messages', [
             'platform_ai_agent_id' => $agent->id,
-            'content' => 'Bro, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti aku bantu pilih mana yang paling layak diuji.',
+            'content' => 'Pak, bahan konten kita masih kosong. Masukkan tiga video terakhir, nanti saya bantu memilih mana yang paling layak diuji.',
         ]);
     }
 }
