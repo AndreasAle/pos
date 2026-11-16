@@ -24,36 +24,12 @@
     $readRoutePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.read', $agent)])->all();
     $unreadPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => (int) ($unreadCounts[$agent->id] ?? 0)])->all();
     $promptPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => data_get($profiles, $agent->key.'.prompts', [])])->all();
-    $openTasks = $tasks->whereIn('status', ['proposed','approved'])->count();
-    $yokaConnection = collect($connections)->firstWhere(0, 'Yoka AI');
-    $aiReady = $yokaConnection[1] ?? false;
 @endphp
 
 <div
     x-data="aiTeamWorkspace(@js($selectedAgentId), @js($chatPayload), @js($routePayload), @js($readRoutePayload), @js($unreadPayload), @js($promptPayload))"
     class="space-y-5"
 >
-    <header class="rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6">
-        <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-                <div class="flex items-center gap-2 text-xs font-semibold text-slate-500"><span>Yoka Platform</span><span class="text-slate-300">/</span><span class="text-emerald-700">Tim AI</span></div>
-                <h1 class="mt-2 text-2xl font-black tracking-tight text-[#0B1B3F] sm:text-3xl">Ruang Kerja Tim AI</h1>
-                <p class="mt-1 max-w-2xl text-sm text-slate-500">Bicara langsung dengan setiap agen, lihat dasar jawabannya, lalu ubah hasil diskusi menjadi pekerjaan yang dapat dipantau.</p>
-            </div>
-            <div class="flex flex-wrap gap-2">
-                <button type="button" @click="tab='data'; intake=true" class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Tambah data</button>
-                <button type="button" @click="newTask=true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700">Buat tugas</button>
-            </div>
-        </div>
-    </header>
-
-    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div class="flex items-center justify-between"><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Mesin AI</p><span class="h-2.5 w-2.5 rounded-full {{ $aiReady ? 'bg-emerald-500' : 'bg-amber-500' }}"></span></div><p class="mt-2 text-lg font-black text-[#0B1B3F]">{{ $aiReady ? 'Terhubung' : 'Mode internal' }}</p><p class="mt-1 text-xs text-slate-500">{{ $aiReady ? 'Jawaban memakai model dan data Yoka' : 'Chat tersimpan, jawaban memakai data terstruktur' }}</p></article>
-        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Agen tersedia</p><p class="mt-2 text-2xl font-black text-sky-700">{{ $agents->where('status','active')->count() }}<span class="text-sm text-slate-400"> / {{ $agents->count() }}</span></p><p class="mt-1 text-xs text-slate-500">Masing-masing punya mandat dan histori sendiri</p></article>
-        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Perlu keputusan</p><p class="mt-2 text-2xl font-black text-amber-700">{{ $tasks->where('status','proposed')->count() }}</p><p class="mt-1 text-xs text-slate-500">Tidak dieksekusi tanpa persetujuan</p></article>
-        <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><p class="text-xs font-bold uppercase tracking-wider text-slate-500">Pekerjaan berjalan</p><p class="mt-2 text-2xl font-black text-emerald-700">{{ $openTasks }}</p><p class="mt-1 text-xs text-slate-500">{{ $tasks->where('status','completed')->count() }} pekerjaan sudah selesai</p></article>
-    </section>
-
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <nav class="flex overflow-x-auto border-b border-slate-200 px-3 sm:px-5">
             @foreach ([['workspace','Ruang agen'],['tasks','Pekerjaan'],['team','Pengaturan agen'],['data','Data & integrasi']] as [$key,$label])
@@ -61,10 +37,10 @@
             @endforeach
         </nav>
 
-        <div x-show="tab === 'workspace'" x-cloak class="grid min-h-[680px] xl:grid-cols-[270px_minmax(420px,1fr)_310px]">
-            <aside class="border-b border-slate-200 bg-slate-50 xl:border-b-0 xl:border-r">
+        <div x-show="tab === 'workspace'" x-cloak class="grid min-h-[560px] xl:h-[calc(100dvh-12rem)] xl:min-h-[560px] xl:grid-cols-[270px_minmax(420px,1fr)_310px]">
+            <aside class="min-h-0 overflow-hidden border-b border-slate-200 bg-slate-50 xl:border-b-0 xl:border-r">
                 <div class="border-b border-slate-200 px-4 py-4"><h2 class="font-black text-[#0B1B3F]">Pilih anggota</h2><p class="mt-1 text-xs text-slate-500">Setiap agen memiliki konteks terpisah.</p></div>
-                <div class="flex gap-2 overflow-x-auto p-3 xl:block xl:space-y-1 xl:overflow-visible">
+                <div class="flex gap-2 overflow-x-auto p-3 xl:h-[calc(100%-73px)] xl:block xl:space-y-1 xl:overflow-y-auto xl:overflow-x-hidden">
                     @foreach($agents as $agent)
                         @php [$avatar,$badge] = $agentStyles[$agent->key] ?? ['bg-slate-700','bg-slate-50 text-slate-700 border-slate-200']; @endphp
                         <button type="button" @click="selectAgent({{ $agent->id }})" class="min-w-[230px] rounded-xl border p-3 text-left transition xl:w-full xl:min-w-0" :class="activeAgent === {{ $agent->id }} ? 'border-emerald-300 bg-white shadow-sm' : 'border-transparent hover:bg-white'">
@@ -75,7 +51,7 @@
                 </div>
             </aside>
 
-            <div class="flex min-h-[680px] min-w-0 flex-col bg-white">
+            <div class="flex min-h-0 min-w-0 flex-col bg-white">
                 @foreach($agents as $agent)
                     @php [$avatar,$badge] = $agentStyles[$agent->key] ?? ['bg-slate-700','bg-slate-50 text-slate-700 border-slate-200']; @endphp
                     <template x-if="activeAgent === {{ $agent->id }}">
@@ -121,7 +97,7 @@
                 @endforeach
             </div>
 
-            <aside class="border-t border-slate-200 p-5 xl:border-l xl:border-t-0">
+            <aside class="min-h-0 overflow-y-auto border-t border-slate-200 p-5 xl:border-l xl:border-t-0">
                 @foreach($agents as $agent)
                     <div x-show="activeAgent === {{ $agent->id }}" x-cloak class="space-y-5">
                         <div><p class="text-xs font-bold uppercase tracking-wider text-slate-400">Mandat kerja</p><p class="mt-2 text-sm leading-relaxed text-slate-700">{{ $agent->mission }}</p></div>
