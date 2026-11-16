@@ -22,4 +22,9 @@ class PlatformAiMessage extends Model
     {
         return $this->belongsTo(PlatformAdmin::class, 'platform_admin_id');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(PlatformAiAttachment::class, 'platform_ai_message_id');
+    }
 }

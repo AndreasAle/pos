@@ -17,6 +17,7 @@
     $chatPayload = $conversations->map(fn ($items) => $items->map(fn ($message) => [
         'id' => $message->id, 'role' => $message->role, 'content' => $message->content,
         'mode' => data_get($message->meta, 'mode'), 'admin' => $message->admin?->name,
+        'attachments' => $message->attachments->map(fn ($file) => ['name' => $file->original_name, 'kind' => $file->kind, 'size' => $file->size])->values(),
         'time' => $message->created_at->translatedFormat('d M, H:i'),
     ])->values())->all();
     $routePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.chat', $agent)])->all();
@@ -67,7 +68,7 @@
                     @foreach($agents as $agent)
                         @php [$avatar,$badge] = $agentStyles[$agent->key] ?? ['bg-slate-700','bg-slate-50 text-slate-700 border-slate-200']; @endphp
                         <button type="button" @click="selectAgent({{ $agent->id }})" class="min-w-[230px] rounded-xl border p-3 text-left transition xl:w-full xl:min-w-0" :class="activeAgent === {{ $agent->id }} ? 'border-emerald-300 bg-white shadow-sm' : 'border-transparent hover:bg-white'">
-                            <span class="flex items-center gap-3"><span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white {{ $avatar }}">{{ data_get($profiles,$agent->key.'.initials','AI') }}</span><span class="min-w-0 flex-1"><b class="block truncate text-sm text-slate-900">{{ $agent->name }}</b><small class="mt-0.5 block truncate text-slate-500">{{ data_get($profiles,$agent->key.'.title',$agent->department) }}</small></span><span x-show="unread[{{ $agent->id }}] > 0" x-text="unread[{{ $agent->id }}]" class="flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white"></span><span x-show="unread[{{ $agent->id }}] === 0" class="h-2 w-2 rounded-full {{ $agent->status === 'active' ? 'bg-emerald-500' : 'bg-slate-400' }}"></span></span>
+                            <span class="flex items-center gap-3"><img src="{{ asset(data_get($profiles,$agent->key.'.avatar')) }}" alt="{{ $agent->name }}" class="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-slate-200"><span class="min-w-0 flex-1"><b class="block truncate text-sm text-slate-900">{{ $agent->name }}</b><small class="mt-0.5 block truncate text-slate-500">{{ data_get($profiles,$agent->key.'.title',$agent->department) }}</small></span><span x-show="unread[{{ $agent->id }}] > 0" x-text="unread[{{ $agent->id }}]" class="flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white"></span><span x-show="unread[{{ $agent->id }}] === 0" class="h-2 w-2 rounded-full {{ $agent->status === 'active' ? 'bg-emerald-500' : 'bg-slate-400' }}"></span></span>
                             <span class="mt-3 flex items-center justify-between text-[11px]"><span class="text-slate-500">{{ $agent->open_tasks_count }} tugas terbuka</span><span class="font-bold {{ data_get($snapshots,$agent->id.'.ai_connected') ? 'text-emerald-700' : 'text-amber-700' }}">{{ data_get($snapshots,$agent->id.'.ai_connected') ? 'AI siap' : 'Mode internal' }}</span></span>
                         </button>
                     @endforeach
@@ -80,21 +81,21 @@
                     <template x-if="activeAgent === {{ $agent->id }}">
                         <div class="flex min-h-0 flex-1 flex-col">
                             <header class="flex items-center gap-3 border-b border-slate-200 px-4 py-4 sm:px-5">
-                                <span class="flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black text-white {{ $avatar }}">{{ data_get($profiles,$agent->key.'.initials','AI') }}</span>
+                                <img src="{{ asset(data_get($profiles,$agent->key.'.avatar')) }}" alt="{{ $agent->name }}" class="h-11 w-11 rounded-xl object-cover ring-1 ring-slate-200">
                                 <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><h2 class="font-black text-[#0B1B3F]">{{ $agent->name }}</h2><span class="rounded-full border px-2 py-0.5 text-[10px] font-black {{ $badge }}">{{ $agent->department }}</span></div><p class="mt-0.5 truncate text-xs text-slate-500">{{ $agent->mission }}</p></div>
                                 <form method="POST" action="{{ route('platform.ai-team.run',$agent) }}">@csrf<button class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Analisis sekarang</button></form>
                             </header>
 
                             <div x-ref="messageArea{{ $agent->id }}" class="flex-1 space-y-5 overflow-y-auto bg-slate-50/60 px-4 py-5 sm:px-6">
                                 <div x-show="(messages[{{ $agent->id }}] || []).length === 0" class="mx-auto max-w-lg rounded-xl border border-slate-200 bg-white p-5 text-center">
-                                    <span class="mx-auto flex h-12 w-12 items-center justify-center rounded-xl text-sm font-black text-white {{ $avatar }}">{{ data_get($profiles,$agent->key.'.initials','AI') }}</span>
+                                    <img src="{{ asset(data_get($profiles,$agent->key.'.avatar')) }}" alt="{{ $agent->name }}" class="mx-auto h-14 w-14 rounded-2xl object-cover ring-1 ring-slate-200">
                                     <h3 class="mt-3 font-black text-[#0B1B3F]">Mulai diskusi dengan {{ $agent->name }}</h3>
                                     <p class="mt-2 text-sm leading-relaxed text-slate-500">Agen akan menggunakan data operasional yang tersedia. Jika koneksi belum lengkap, keterbatasannya akan disebutkan dalam jawaban.</p>
                                 </div>
                                 <template x-for="message in (messages[{{ $agent->id }}] || [])" :key="message.id">
                                     <div class="flex" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
                                         <div class="max-w-[88%]">
-                                            <div class="rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-700'"><p class="whitespace-pre-wrap" x-text="message.content"></p></div>
+                                            <div class="rounded-2xl px-4 py-3.5 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-700'"><p class="whitespace-pre-line break-words text-[14px] leading-7" x-text="message.content"></p><div x-show="(message.attachments || []).length" class="mt-3 space-y-1.5 border-t pt-3" :class="message.role === 'user' ? 'border-white/20' : 'border-slate-100'"><template x-for="file in (message.attachments || [])" :key="file.name"><div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs" :class="message.role === 'user' ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-600'"><svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg><span class="truncate" x-text="file.name"></span></div></template></div></div>
                                             <div class="mt-1 flex items-center gap-2 px-1 text-[10px] text-slate-400" :class="message.role === 'user' ? 'justify-end' : ''"><span x-text="message.role === 'user' ? (message.admin || 'Anda') : '{{ $agent->name }}'"></span><span>·</span><span x-text="message.time || 'Baru saja'"></span><span x-show="message.mode" class="rounded bg-slate-200 px-1.5 py-0.5 font-bold text-slate-600" x-text="modeLabel(message.mode)"></span></div>
                                         </div>
                                     </div>
@@ -106,9 +107,12 @@
                                 <div class="mb-3 flex gap-2 overflow-x-auto pb-1">
                                     @foreach(data_get($profiles,$agent->key.'.prompts',[]) as $prompt)<button type="button" @click="sendPrompt(@js($prompt))" class="whitespace-nowrap rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-emerald-400 hover:text-emerald-700">{{ $prompt }}</button>@endforeach
                                 </div>
+                                <div x-show="files.length" class="mb-2 flex flex-wrap gap-2"><template x-for="(file,index) in files" :key="file.name+file.size"><span class="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600"><span class="max-w-48 truncate" x-text="file.name"></span><button type="button" @click="removeFile(index)" class="font-black text-slate-400 hover:text-rose-600">×</button></span></template></div>
                                 <form @submit.prevent="sendMessage()" class="flex items-end gap-2">
-                                    <textarea x-model="draft" @keydown.enter.exact.prevent="sendMessage()" rows="1" maxlength="2000" class="max-h-32 min-h-[48px] flex-1 resize-y rounded-xl border-slate-300 text-sm focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis instruksi atau pertanyaan…"></textarea>
-                                    <button type="submit" :disabled="sending || !draft.trim()" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white disabled:cursor-not-allowed disabled:opacity-40" aria-label="Kirim pesan"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 14-7-4 14-3-6-7-1Z"/></svg></button>
+                                    <input type="file" x-ref="filePicker" multiple accept="{{ \App\Services\PlatformAiAttachmentService::ACCEPT }}" class="hidden" @change="pickFiles($event)">
+                                    <button type="button" @click="$refs.filePicker.click()" :disabled="sending" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Lampirkan file"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg></button>
+                                    <textarea x-model="draft" @keydown.enter.exact.prevent.stop="sendMessage()" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… (Shift+Enter untuk baris baru)"></textarea>
+                                    <button type="submit" :disabled="sending || (!draft.trim() && !files.length)" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white disabled:cursor-not-allowed disabled:opacity-40" aria-label="Kirim pesan"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 14-7-4 14-3-6-7-1Z"/></svg></button>
                                 </form>
                                 <p x-show="chatError" x-text="chatError" class="mt-2 text-xs text-rose-700"></p>
                             </footer>
@@ -153,7 +157,7 @@
             <div class="mt-5 grid gap-4 lg:grid-cols-2">
                 @foreach($agents as $agent)
                     @php [$avatar,$badge] = $agentStyles[$agent->key] ?? ['bg-slate-700','bg-slate-50 text-slate-700 border-slate-200']; @endphp
-                    <article class="rounded-xl border border-slate-200 p-5"><div class="flex items-start gap-3"><span class="flex h-11 w-11 items-center justify-center rounded-xl text-xs font-black text-white {{ $avatar }}">{{ data_get($profiles,$agent->key.'.initials','AI') }}</span><div class="min-w-0 flex-1"><h3 class="font-black text-[#0B1B3F]">{{ $agent->name }}</h3><p class="mt-1 text-xs leading-relaxed text-slate-500">{{ $agent->mission }}</p></div></div>
+                    <article class="rounded-xl border border-slate-200 p-5"><div class="flex items-start gap-3"><img src="{{ asset(data_get($profiles,$agent->key.'.avatar')) }}" alt="{{ $agent->name }}" class="h-11 w-11 rounded-xl object-cover ring-1 ring-slate-200"><div class="min-w-0 flex-1"><h3 class="font-black text-[#0B1B3F]">{{ $agent->name }}</h3><p class="mt-1 text-xs leading-relaxed text-slate-500">{{ $agent->mission }}</p></div></div>
                         <form method="POST" action="{{ route('platform.ai-team.agent',$agent) }}" class="mt-4 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-[1fr_1fr_auto]">@csrf @method('PATCH')<label class="text-xs font-bold text-slate-600">Status<select name="status" class="mt-1 w-full rounded-lg border-slate-300 text-sm"><option value="active" @selected($agent->status==='active')>Aktif</option><option value="paused" @selected($agent->status==='paused')>Dijeda</option></select></label><label class="text-xs font-bold text-slate-600">Anggaran harian<input name="daily_budget" type="number" min="0" max="100000000" value="{{ $agent->daily_budget }}" class="mt-1 w-full rounded-lg border-slate-300 text-sm"></label><button class="self-end rounded-lg bg-[#0B1B3F] px-4 py-2.5 text-xs font-bold text-white">Simpan</button></form>
                     </article>
                 @endforeach
@@ -184,23 +188,39 @@
 function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, initialUnread, prompts) {
     return {
         tab: 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, readRoutes, unread: initialUnread, prompts,
-        draft: '', sending: false, chatError: '', newTask: false, moveTask: null, intake: false,
-        selectAgent(id) { this.activeAgent=id; this.draft=''; this.chatError=''; this.markRead(id); this.$nextTick(()=>this.scrollMessages()); },
+        draft: '', files: [], sending: false, chatError: '', newTask: false, moveTask: null, intake: false,
+        selectAgent(id) { this.activeAgent=id; this.draft=''; this.files=[]; this.chatError=''; this.markRead(id); this.$nextTick(()=>this.scrollMessages()); },
         async markRead(id) { if (!this.unread[id]) return; this.unread[id]=0; try { await fetch(this.readRoutes[id],{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}); } catch(error) { } },
         modeLabel(mode) { return mode === 'ai' ? 'AI + data' : (mode === 'fallback' ? 'Fallback data' : 'Data internal'); },
         sendPrompt(prompt) { this.draft=prompt; this.sendMessage(); },
+        pickFiles(event) {
+            this.chatError='';
+            const incoming=Array.from(event.target.files || []);
+            const allowed=['pdf','xlsx','xls','csv','txt','md','json','png','jpg','jpeg','webp'];
+            for (const file of incoming) {
+                const extension=(file.name.split('.').pop() || '').toLowerCase();
+                if (!allowed.includes(extension)) { this.chatError=`${file.name}: format file belum didukung.`; continue; }
+                if (file.size > 5*1024*1024) { this.chatError=`${file.name}: ukuran maksimal 5 MB.`; continue; }
+                if (this.files.length >= 3) { this.chatError='Maksimal 3 file dalam satu pesan.'; break; }
+                if (!this.files.some(existing=>existing.name===file.name && existing.size===file.size)) this.files.push(file);
+            }
+            event.target.value='';
+        },
+        removeFile(index) { this.files.splice(index,1); },
         async sendMessage() {
-            const content=this.draft.trim(); if (!content || this.sending) return;
-            const agentId=this.activeAgent; this.sending=true; this.chatError=''; this.draft='';
-            const optimistic={id:'local-'+Date.now(),role:'user',content,admin:'Anda',time:'Baru saja'};
+            const content=this.draft.trim(); if ((!content && !this.files.length) || this.sending) return;
+            const agentId=this.activeAgent; const selectedFiles=[...this.files]; const question=content || 'Tolong baca file ini dan beri tahu aku temuan pentingnya.';
+            this.sending=true; this.chatError=''; this.draft=''; this.files=[];
+            const optimistic={id:'local-'+Date.now(),role:'user',content:question,admin:'Anda',time:'Baru saja',attachments:selectedFiles.map(file=>({name:file.name,size:file.size}))};
             if (!this.messages[agentId]) this.messages[agentId]=[]; this.messages[agentId].push(optimistic); this.$nextTick(()=>this.scrollMessages());
             try {
-                const response=await fetch(this.chatRoutes[agentId],{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body:JSON.stringify({message:content})});
+                const body=new FormData(); if(content)body.append('message',content); selectedFiles.forEach(file=>body.append('files[]',file));
+                const response=await fetch(this.chatRoutes[agentId],{method:'POST',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body});
                 const data=await response.json(); if(!response.ok) throw new Error(data.message || 'Pesan belum berhasil dikirim.');
                 const index=this.messages[agentId].findIndex(item=>item.id===optimistic.id); if(index>=0)this.messages[agentId][index]={...data.user,admin:'Anda',time:'Baru saja'};
                 this.messages[agentId].push({...data.assistant,time:'Baru saja'}); this.$nextTick(()=>this.scrollMessages());
             } catch(error) {
-                this.messages[agentId]=this.messages[agentId].filter(item=>item.id!==optimistic.id); this.draft=content; this.chatError=error.message;
+                this.messages[agentId]=this.messages[agentId].filter(item=>item.id!==optimistic.id); this.draft=content; this.files=selectedFiles; this.chatError=error.message;
             } finally { this.sending=false; this.$nextTick(()=>this.scrollMessages()); }
         },
         scrollMessages() { const area=this.$refs['messageArea'+this.activeAgent]; if(area)area.scrollTop=area.scrollHeight; },

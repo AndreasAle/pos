@@ -6,7 +6,9 @@ use App\Models\PlatformAdmin;
 use App\Models\PlatformAiAgent;
 use App\Services\PlatformAiOperations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PlatformAiTeamTest extends TestCase
@@ -124,7 +126,38 @@ class PlatformAiTeamTest extends TestCase
             ->assertJsonPath('assistant.content', 'Margin sementara aman, tetapi biaya harus tetap dicatat.');
 
         Http::assertSent(fn ($request) => str_contains($request->url(), '/chat/completions')
-            && data_get($request->data(), 'messages.0.content') !== null);
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Namamu Luna')
+            && str_contains((string) data_get($request->data(), 'messages.0.content'), 'Finance Strategist'));
+    }
+
+    public function test_admin_can_attach_a_file_and_agent_can_read_its_contents(): void
+    {
+        Storage::fake('local');
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => 'Aku menemukan omzet Rp 1.250.000 dari laporan ini.']]],
+        ])]);
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'accounting')->firstOrFail();
+
+        $response = $this->platformSession($admin)->post(route('platform.ai-team.chat', $agent), [
+            'message' => 'Nanda, tolong cek laporan ini.',
+            'files' => [UploadedFile::fake()->createWithContent('laporan.csv', "tanggal,omzet\n2026-11-16,1250000")],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('user.attachments.0.name', 'laporan.csv')
+            ->assertJsonPath('assistant.content', 'Aku menemukan omzet Rp 1.250.000 dari laporan ini.');
+        $this->assertDatabaseHas('platform_ai_attachments', [
+            'platform_ai_agent_id' => $agent->id,
+            'original_name' => 'laporan.csv',
+            'kind' => 'text',
+        ]);
+        Http::assertSent(fn ($request) => str_contains(
+            json_encode($request->data(), JSON_UNESCAPED_UNICODE),
+            '2026-11-16,1250000'
+        ));
     }
 
     public function test_proactive_agent_message_can_be_marked_as_read(): void
