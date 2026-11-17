@@ -16,7 +16,20 @@ class PlatformTelegramWebhookController extends Controller
         $bot = PlatformAiTelegramBot::where('public_key', $botKey)->where('status', 'active')->firstOrFail();
         $secret = (string) $request->header('X-Telegram-Bot-Api-Secret-Token', '');
         abort_unless($secret !== '' && hash_equals($bot->webhook_secret_hash, hash('sha256', $secret)), 403);
-        $data = $request->validate(['update_id' => 'required|integer', 'message' => 'required|array', 'message.message_id' => 'required|integer', 'message.chat.id' => 'required|integer', 'message.from.id' => 'required|integer', 'message.text' => 'nullable|string|max:4096']);
+        $data = $request->validate([
+            'update_id' => 'required|integer',
+            'message' => 'required|array',
+            'message.message_id' => 'required|integer',
+            'message.message_thread_id' => 'nullable|integer',
+            'message.date' => 'nullable|integer',
+            'message.text' => 'nullable|string|max:4096',
+            'message.chat.id' => 'required|integer',
+            'message.chat.type' => 'required|in:private,group,supergroup,channel',
+            'message.chat.title' => 'nullable|string|max:255',
+            'message.from.id' => 'required|integer',
+            'message.from.username' => 'nullable|string|max:255',
+            'message.from.is_bot' => 'nullable|boolean',
+        ]);
         $chatId = (int) data_get($data, 'message.chat.id');
         $messageId = (int) data_get($data, 'message.message_id');
         $fingerprint = hash('sha256', "message|{$chatId}|{$messageId}");

@@ -88,6 +88,7 @@ class PlatformTelegramOfficeTest extends TestCase
         $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'secret-ramli')->postJson(route('platform.telegram.webhook', $ramli->public_key), $payload)->assertAccepted();
         $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'secret-yusuf')->postJson(route('platform.telegram.webhook', $yusuf->public_key), $payload + ['update_id' => 100])->assertOk()->assertJson(['duplicate' => true]);
         $this->assertSame(1, PlatformAiTelegramUpdate::count());
+        $this->assertSame('supergroup', data_get(PlatformAiTelegramUpdate::first()->payload, 'message.chat.type'));
         Queue::assertPushed(ProcessPlatformTelegramUpdate::class);
     }
 
