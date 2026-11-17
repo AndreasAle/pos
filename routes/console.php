@@ -77,3 +77,7 @@ Schedule::call(function () {
 
 // Pengingat proaktif: agen menyapa lewat chat bila ada keputusan yang menggantung lebih dari sehari.
 Schedule::call(fn () => app(\App\Services\PlatformAiOperations::class)->nudges())->hourly()->name('platform-ai-nudges')->withoutOverlapping();
+
+// ── Backup database terenkripsi — harian 02:30, hanya bila YOKA_BACKUP_ENABLED=true ──
+Schedule::command('yoka:backup')->dailyAt('02:30')->name('db-backup')->withoutOverlapping()
+    ->when(fn () => (bool) config('backup.enabled'));

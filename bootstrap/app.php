@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             EnsureUserIsActive::class,
             Localize::class,
+            \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
         // The tablet pairing cookie carries its own HMAC, so it is readable

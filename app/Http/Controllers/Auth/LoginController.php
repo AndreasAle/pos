@@ -17,6 +17,10 @@ class LoginController extends Controller
     /** Lockout duration in seconds. */
     private const DECAY_SECONDS = 60;
 
+    // IP-independent cap per email: 20 failures per 15 minutes.
+    private const ACCOUNT_MAX_ATTEMPTS = 20;
+    private const ACCOUNT_DECAY_SECONDS = 900;
+
     public function showLogin()
     {
         if (Auth::check()) {
@@ -36,7 +40,7 @@ class LoginController extends Controller
         $this->ensureIsNotRateLimited($request);
 
         if (! Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey($request), self::DECAY_SECONDS);
+            $this->recordFailure($request);
 
             throw ValidationException::withMessages([
                 'email' => 'Email atau password salah.',
@@ -47,7 +51,7 @@ class LoginController extends Controller
 
         if (! $user->is_active) {
             Auth::logout();
-            RateLimiter::hit($this->throttleKey($request), self::DECAY_SECONDS);
+            $this->recordFailure($request);
 
             throw ValidationException::withMessages([
                 'email' => 'Akun Anda tidak aktif.',
@@ -74,11 +78,14 @@ class LoginController extends Controller
      */
     private function ensureIsNotRateLimited(Request $request): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey($request), self::MAX_ATTEMPTS)) {
+        $key = RateLimiter::tooManyAttempts($this->throttleKey($request), self::MAX_ATTEMPTS)
+            ? $this->throttleKey($request)
+            : (RateLimiter::tooManyAttempts($this->accountKey($request), self::ACCOUNT_MAX_ATTEMPTS) ? $this->accountKey($request) : null);
+        if ($key === null) {
             return;
         }
 
-        $seconds = RateLimiter::availableIn($this->throttleKey($request));
+        $seconds = RateLimiter::availableIn($key);
 
         throw ValidationException::withMessages([
             'email' => "Terlalu banyak percobaan login. Coba lagi dalam {$seconds} detik.",
@@ -89,6 +96,23 @@ class LoginController extends Controller
      * Keyed on email + IP so one attacker cannot lock out a legitimate user by
      * hammering their email from elsewhere.
      */
+    private function recordFailure(Request $request): void
+    {
+        RateLimiter::hit($this->throttleKey($request), self::DECAY_SECONDS);
+        RateLimiter::hit($this->accountKey($request), self::ACCOUNT_DECAY_SECONDS);
+    }
+
+    /**
+     * IP-independent ceiling per email (SEC-04). request->ip() follows
+     * X-Forwarded-For while all proxies are trusted, so the email|ip key alone
+     * can be reset by rotating that header. Set higher than the per-IP limit
+     * so a single stranger cannot cheaply lock a real owner out.
+     */
+    private function accountKey(Request $request): string
+    {
+        return 'login-account:'.Str::transliterate(Str::lower((string) $request->input('email')));
+    }
+
     private function throttleKey(Request $request): string
     {
         return Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
