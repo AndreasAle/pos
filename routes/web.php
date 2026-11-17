@@ -10,38 +10,52 @@ use App\Http\Controllers\Auth\PinLoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\BalanceController;
 use App\Http\Controllers\BarcodeController;
+use App\Http\Controllers\BayarProWebhookController;
 use App\Http\Controllers\CashierShiftController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeatureController;
+use App\Http\Controllers\FinanceLedgerController;
+use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\GoBizOAuthController;
 use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\IntelligenceController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\MidtransController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OutletController;
+use App\Http\Controllers\Platform\AccountController;
 use App\Http\Controllers\Platform\ActivityController as PlatformActivityController;
+use App\Http\Controllers\Platform\AiTeamController;
 use App\Http\Controllers\Platform\AuthController as PlatformAuthController;
 use App\Http\Controllers\Platform\BusinessController as PlatformBusinessController;
 use App\Http\Controllers\Platform\DashboardController as PlatformDashboardController;
 use App\Http\Controllers\Platform\ImpersonationController;
+use App\Http\Controllers\Platform\SystemController;
+use App\Http\Controllers\Platform\TeamController;
+use App\Http\Controllers\PlatformTelegramWebhookController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductBundleController;
 use App\Http\Controllers\ProductCategoryController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\PromotionController;
+use App\Http\Controllers\QrOrderController;
+use App\Http\Controllers\QrTableController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SalesReportController;
+use App\Http\Controllers\SelfOrderController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SheetFeedController;
+use App\Http\Controllers\ShopeeFoodInboundController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\TelegramWebhookController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\QrTableController;
-use App\Http\Controllers\QrOrderController;
-use App\Http\Controllers\SelfOrderController;
-use App\Http\Controllers\BayarProWebhookController;
+use App\Http\Middleware\Localize;
 use Illuminate\Support\Facades\Route;
 
 // ── Public ───────────────────────────────────────────────────────────────────
@@ -49,9 +63,9 @@ Route::get('/', fn () => view('landing'))->name('landing');
 
 // Ganti bahasa antarmuka (Indonesia / Inggris). Pilihan disimpan di cookie.
 Route::get('/lang/{locale}', function (string $locale) {
-    abort_unless(in_array($locale, \App\Http\Middleware\Localize::SUPPORTED, true), 404);
+    abort_unless(in_array($locale, Localize::SUPPORTED, true), 404);
 
-    return back()->withCookie(cookie(\App\Http\Middleware\Localize::COOKIE, $locale, 60 * 24 * 365));
+    return back()->withCookie(cookie(Localize::COOKIE, $locale, 60 * 24 * 365));
 })->name('lang.switch');
 Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('features.show');
 
@@ -71,18 +85,20 @@ Route::post('/payments/bayarpro/webhook', BayarProWebhookController::class)->mid
 // ── Auth ──────────────────────────────────────────────────────────────────────
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
 Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
+Route::post('platform-ai/telegram/webhooks/{botKey}', PlatformTelegramWebhookController::class)
+    ->middleware('throttle:240,1')->name('platform.telegram.webhook');
 
 // Google Sheets menarik CSV lewat IMPORTDATA. Dikunci token acak per bisnis; hanya baca.
-Route::get('feed/sheets/{token}/{dataset}.csv', [\App\Http\Controllers\SheetFeedController::class, 'csv'])
+Route::get('feed/sheets/{token}/{dataset}.csv', [SheetFeedController::class, 'csv'])
     ->middleware('throttle:60,1')->name('sheets.feed');
 
 // ShopeeFood memanggil endpoint ini (Vendor API Requirements). Dikunci oleh
 // SHOPEEFOOD_INBOUND_* dan SHOPEEFOOD_INDICATOR; kosong = 404.
 Route::prefix('api/shopeefood/{indicator}')->name('shopeefood.')->middleware(['json', 'throttle:240,1'])->group(function () {
-    Route::post('gettoken', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'token'])->name('token');
-    Route::post('orders', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'order'])->name('orders');
-    Route::post('order/status', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'orderStatus'])->name('order-status');
-    Route::post('menu/notification/result', [\App\Http\Controllers\ShopeeFoodInboundController::class, 'menuResult'])->name('menu-result');
+    Route::post('gettoken', [ShopeeFoodInboundController::class, 'token'])->name('token');
+    Route::post('orders', [ShopeeFoodInboundController::class, 'order'])->name('orders');
+    Route::post('order/status', [ShopeeFoodInboundController::class, 'orderStatus'])->name('order-status');
+    Route::post('menu/notification/result', [ShopeeFoodInboundController::class, 'menuResult'])->name('menu-result');
 });
 
 Route::middleware('guest')->group(function () {
@@ -161,24 +177,37 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('businesses/{business}/impersonate', [ImpersonationController::class, 'start'])->name('impersonate.start');
             Route::post('impersonation/stop', [ImpersonationController::class, 'stop'])->name('impersonate.stop');
             Route::get('activity', PlatformActivityController::class)->name('activity');
-            Route::get('account', [\App\Http\Controllers\Platform\AccountController::class, 'show'])->name('account');
-            Route::post('account/password', [\App\Http\Controllers\Platform\AccountController::class, 'password'])->middleware('throttle:5,10')->name('account.password');
-            Route::post('account/recovery', [\App\Http\Controllers\Platform\AccountController::class, 'recovery'])->middleware('throttle:5,10')->name('account.recovery');
-            Route::get('team', [\App\Http\Controllers\Platform\TeamController::class, 'index'])->name('team');
-            Route::post('team', [\App\Http\Controllers\Platform\TeamController::class, 'store'])->middleware('throttle:10,10')->name('team.store');
-            Route::patch('team/{admin}/toggle', [\App\Http\Controllers\Platform\TeamController::class, 'toggle'])->name('team.toggle');
-            Route::patch('team/{admin}/role', [\App\Http\Controllers\Platform\TeamController::class, 'role'])->name('team.role');
-            Route::get('system', [\App\Http\Controllers\Platform\SystemController::class, 'index'])->name('system');
-            Route::post('system/test-mail', [\App\Http\Controllers\Platform\SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
-            Route::get('ai-team', [\App\Http\Controllers\Platform\AiTeamController::class, 'index'])->name('ai-team.index');
-            Route::post('ai-team/agents/{agent}/run', [\App\Http\Controllers\Platform\AiTeamController::class, 'run'])->middleware('throttle:20,1')->name('ai-team.run');
-            Route::post('ai-team/agents/{agent}/chat', [\App\Http\Controllers\Platform\AiTeamController::class, 'chat'])->middleware('throttle:30,1')->name('ai-team.chat');
-            Route::patch('ai-team/agents/{agent}/read', [\App\Http\Controllers\Platform\AiTeamController::class, 'markRead'])->middleware('throttle:60,1')->name('ai-team.read');
-            Route::patch('ai-team/agents/{agent}', [\App\Http\Controllers\Platform\AiTeamController::class, 'updateAgent'])->name('ai-team.agent');
-            Route::post('ai-team/records', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeRecord'])->middleware('throttle:30,1')->name('ai-team.records');
-            Route::post('ai-team/tasks', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeTask'])->middleware('throttle:30,1')->name('ai-team.tasks.store');
-            Route::patch('ai-team/tasks/{task}/move', [\App\Http\Controllers\Platform\AiTeamController::class, 'moveTask'])->name('ai-team.tasks.move');
-            Route::patch('ai-team/tasks/{task}/decision', [\App\Http\Controllers\Platform\AiTeamController::class, 'decide'])->name('ai-team.decision');
+            Route::get('account', [AccountController::class, 'show'])->name('account');
+            Route::post('account/password', [AccountController::class, 'password'])->middleware('throttle:5,10')->name('account.password');
+            Route::post('account/recovery', [AccountController::class, 'recovery'])->middleware('throttle:5,10')->name('account.recovery');
+            Route::get('team', [TeamController::class, 'index'])->name('team');
+            Route::post('team', [TeamController::class, 'store'])->middleware('throttle:10,10')->name('team.store');
+            Route::patch('team/{admin}/toggle', [TeamController::class, 'toggle'])->name('team.toggle');
+            Route::patch('team/{admin}/role', [TeamController::class, 'role'])->name('team.role');
+            Route::get('system', [SystemController::class, 'index'])->name('system');
+            Route::post('system/test-mail', [SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
+            Route::get('ai-team', [AiTeamController::class, 'index'])->name('ai-team.index');
+            Route::post('ai-team/agents/{agent}/run', [AiTeamController::class, 'run'])->middleware('throttle:20,1')->name('ai-team.run');
+            Route::post('ai-team/agents/{agent}/chat', [AiTeamController::class, 'chat'])->middleware('throttle:30,1')->name('ai-team.chat');
+            Route::patch('ai-team/agents/{agent}/read', [AiTeamController::class, 'markRead'])->middleware('throttle:60,1')->name('ai-team.read');
+            Route::patch('ai-team/agents/{agent}', [AiTeamController::class, 'updateAgent'])->name('ai-team.agent');
+            Route::post('ai-team/records', [AiTeamController::class, 'storeRecord'])->middleware('throttle:30,1')->name('ai-team.records');
+            Route::post('ai-team/owner-context', [AiTeamController::class, 'storeOwnerContext'])->middleware('throttle:30,1')->name('ai-team.owner-context');
+            Route::patch('ai-team/memories/{memory}', [AiTeamController::class, 'updateMemory'])->name('ai-team.memories.update');
+            Route::delete('ai-team/memories/{memory}', [AiTeamController::class, 'deactivateMemory'])->name('ai-team.memories.deactivate');
+            Route::post('ai-team/discussions', [AiTeamController::class, 'storeDiscussion'])->middleware('throttle:5,10')->name('ai-team.discussions.store');
+            Route::post('ai-team/tasks', [AiTeamController::class, 'storeTask'])->middleware('throttle:30,1')->name('ai-team.tasks.store');
+            Route::patch('ai-team/tasks/{task}', [AiTeamController::class, 'updateTask'])->name('ai-team.tasks.update');
+            Route::patch('ai-team/tasks/{task}/move', [AiTeamController::class, 'moveTask'])->name('ai-team.tasks.move');
+            Route::patch('ai-team/tasks/{task}/decision', [AiTeamController::class, 'decide'])->name('ai-team.decision');
+            Route::post('ai-team/tasks/{task}/comments', [AiTeamController::class, 'commentTask'])->middleware('throttle:30,1')->name('ai-team.tasks.comments');
+            Route::post('ai-team/tasks/{task}/attachments', [AiTeamController::class, 'attachTask'])->middleware('throttle:20,1')->name('ai-team.tasks.attachments');
+            Route::get('ai-team/tasks/{task}/attachments/{attachment}', [AiTeamController::class, 'downloadTaskAttachment'])->name('ai-team.tasks.attachments.download');
+            Route::delete('ai-team/tasks/{task}', [AiTeamController::class, 'archiveTask'])->name('ai-team.tasks.archive');
+            Route::post('ai-team/telegram/link', [AiTeamController::class, 'requestTelegramLink'])->middleware('throttle:5,10')->name('ai-team.telegram.link');
+            Route::delete('ai-team/telegram/link', [AiTeamController::class, 'revokeTelegram'])->name('ai-team.telegram.revoke');
+            Route::patch('ai-team/telegram/groups/{group}', [AiTeamController::class, 'updateTelegramGroup'])->name('ai-team.telegram.group');
+            Route::post('ai-team/telegram/health', [AiTeamController::class, 'checkTelegramBots'])->middleware('throttle:3,10')->name('ai-team.telegram.health');
 
             Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
                 Route::get('/', [WithdrawalAdminController::class, 'index'])->name('index');
@@ -248,9 +277,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::get('profile', [UserController::class, 'profile'])->name('profile');
     Route::post('profile', [UserController::class, 'updateProfile'])->name('profile.update');
     Route::post('profile/password-link', [UserController::class, 'sendPasswordLink'])->middleware('throttle:4,10')->name('profile.password.link');
-    Route::post('profile/avatar', [\App\Http\Controllers\ProfileAvatarController::class, 'store'])->middleware('throttle:10,1')->name('profile.avatar.store');
-    Route::delete('profile/avatar', [\App\Http\Controllers\ProfileAvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profile.avatar.destroy');
-    Route::get('avatars/{user}', [\App\Http\Controllers\ProfileAvatarController::class, 'show'])->name('avatar.show');
+    Route::post('profile/avatar', [ProfileAvatarController::class, 'store'])->middleware('throttle:10,1')->name('profile.avatar.store');
+    Route::delete('profile/avatar', [ProfileAvatarController::class, 'destroy'])->middleware('throttle:10,1')->name('profile.avatar.destroy');
+    Route::get('avatars/{user}', [ProfileAvatarController::class, 'show'])->name('avatar.show');
 
     // Categories
     Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])
@@ -357,17 +386,17 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::prefix('reports')->name('reports.')->middleware('role:owner,admin')->group(function () {
         Route::get('sales', [ReportController::class, 'sales'])->name('sales');
         // Sales Reporting v2 (flag: FEATURE_REPORTS_V2)
-        Route::get('sales/analytics', [\App\Http\Controllers\SalesReportController::class, 'analytics'])->name('sales.analytics');
-        Route::get('sales/breakdown', [\App\Http\Controllers\SalesReportController::class, 'breakdown'])->name('sales.breakdown');
-        Route::get('sales/products', [\App\Http\Controllers\SalesReportController::class, 'products'])->name('sales.products');
-        Route::get('sales/orders', [\App\Http\Controllers\SalesReportController::class, 'orders'])->name('sales.orders');
-        Route::get('sales/orders/{orderId}', [\App\Http\Controllers\SalesReportController::class, 'order'])->whereNumber('orderId')->name('sales.order');
-        Route::get('sales/summary', [\App\Http\Controllers\SalesReportController::class, 'summaryJson'])->name('sales.summary');
-        Route::get('sales/trends', [\App\Http\Controllers\SalesReportController::class, 'trendsJson'])->name('sales.trends');
-        Route::get('tax', [\App\Http\Controllers\FinanceReportController::class, 'tax'])->name('tax');
-        Route::get('returns', [\App\Http\Controllers\FinanceReportController::class, 'returns'])->name('returns');
-        Route::get('profit-loss', [\App\Http\Controllers\FinanceReportController::class, 'profitLoss'])->name('profit-loss');
-        Route::get('sales/ask', [\App\Http\Controllers\SalesReportController::class, 'ask'])->name('sales.ask');
+        Route::get('sales/analytics', [SalesReportController::class, 'analytics'])->name('sales.analytics');
+        Route::get('sales/breakdown', [SalesReportController::class, 'breakdown'])->name('sales.breakdown');
+        Route::get('sales/products', [SalesReportController::class, 'products'])->name('sales.products');
+        Route::get('sales/orders', [SalesReportController::class, 'orders'])->name('sales.orders');
+        Route::get('sales/orders/{orderId}', [SalesReportController::class, 'order'])->whereNumber('orderId')->name('sales.order');
+        Route::get('sales/summary', [SalesReportController::class, 'summaryJson'])->name('sales.summary');
+        Route::get('sales/trends', [SalesReportController::class, 'trendsJson'])->name('sales.trends');
+        Route::get('tax', [FinanceReportController::class, 'tax'])->name('tax');
+        Route::get('returns', [FinanceReportController::class, 'returns'])->name('returns');
+        Route::get('profit-loss', [FinanceReportController::class, 'profitLoss'])->name('profit-loss');
+        Route::get('sales/ask', [SalesReportController::class, 'ask'])->name('sales.ask');
         Route::get('products', [ReportController::class, 'products'])->name('products');
         Route::get('cashier', [ReportController::class, 'cashier'])->name('cashier');
         Route::get('shift', [ReportController::class, 'shift'])->name('shift');
@@ -385,7 +414,7 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
 
     // Finance: expenses, suppliers, purchases, payables, receivables (owner/admin only)
     Route::middleware('role:owner,admin')->group(function () {
-        $c = \App\Http\Controllers\FinanceLedgerController::class;
+        $c = FinanceLedgerController::class;
         Route::get('expenses', [$c, 'expenses'])->name('expenses.index');
         Route::get('expenses/create', [$c, 'expenseCreate'])->name('expenses.create');
         Route::post('expenses', [$c, 'expenseStore'])->name('expenses.store');
@@ -420,13 +449,13 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
 
     // Integrasi GoFood / ShopeeFood
     Route::prefix('integrasi')->name('integrations.')->middleware('role:owner,admin')->group(function () {
-        Route::get('/', [\App\Http\Controllers\IntegrationController::class, 'index'])->name('index');
+        Route::get('/', [IntegrationController::class, 'index'])->name('index');
         // Redirect URI GoBiz: harus sama dengan GOBIZ_REDIRECT_URI yang didaftarkan ke Gojek.
-        Route::get('gofood/callback', [\App\Http\Controllers\GoBizOAuthController::class, 'callback'])->name('gofood.callback');
-        Route::post('google-sheets', [\App\Http\Controllers\SheetFeedController::class, 'generate'])->name('sheets.generate');
-        Route::delete('google-sheets', [\App\Http\Controllers\SheetFeedController::class, 'revoke'])->name('sheets.revoke');
-        Route::post('{provider}',[\App\Http\Controllers\IntegrationController::class, 'connect'])->name('connect');
-        Route::delete('{integration}', [\App\Http\Controllers\IntegrationController::class, 'disconnect'])->name('disconnect');
+        Route::get('gofood/callback', [GoBizOAuthController::class, 'callback'])->name('gofood.callback');
+        Route::post('google-sheets', [SheetFeedController::class, 'generate'])->name('sheets.generate');
+        Route::delete('google-sheets', [SheetFeedController::class, 'revoke'])->name('sheets.revoke');
+        Route::post('{provider}', [IntegrationController::class, 'connect'])->name('connect');
+        Route::delete('{integration}', [IntegrationController::class, 'disconnect'])->name('disconnect');
     });
 
     // Settings

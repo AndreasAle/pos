@@ -52,6 +52,30 @@ git pull --ff-only origin main
 echo "==> Dependency PHP"
 composer install --no-dev --optimize-autoloader
 
+# Migration tidak boleh berjalan sebelum database Yoka berhasil dibackup.
+# Kredensial dibaca dari konfigurasi Laravel dan tidak pernah dicetak.
+echo "==> Backup database sebelum migrasi"
+BACKUP_DIR="$APP_DIR/storage/app/backups/deploy"
+mkdir -p "$BACKUP_DIR"
+BACKUP_FILE="$BACKUP_DIR/yokapos-$(date +%Y%m%d-%H%M%S).sql.gz"
+DB_HOST_VALUE=$(php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("database.connections.mysql.host");')
+DB_PORT_VALUE=$(php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("database.connections.mysql.port");')
+DB_NAME_VALUE=$(php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("database.connections.mysql.database");')
+DB_USER_VALUE=$(php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("database.connections.mysql.username");')
+DB_PASS_VALUE=$(php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo config("database.connections.mysql.password");')
+if [[ "$DB_NAME_VALUE" != "u598194357_yokapos" ]]; then
+    echo "DIBATALKAN: database target bukan database Yoka ($DB_NAME_VALUE)." >&2
+    exit 1
+fi
+MYSQL_PWD="$DB_PASS_VALUE" mysqldump --single-transaction --quick --skip-lock-tables \
+    -h "$DB_HOST_VALUE" -P "$DB_PORT_VALUE" -u "$DB_USER_VALUE" "$DB_NAME_VALUE" | gzip > "$BACKUP_FILE"
+if [[ ! -s "$BACKUP_FILE" ]]; then
+    echo "DIBATALKAN: backup database kosong atau gagal." >&2
+    exit 1
+fi
+chmod 600 "$BACKUP_FILE"
+echo "    OK: backup tersimpan di $BACKUP_FILE"
+
 # Migrasi membaca config. Cache config lama dari deploy sebelumnya harus
 # dibuang dulu, kalau tidak migrasi melihat setelan lama (mis. zona waktu).
 # Selama migrasi situs ditutup sebentar, supaya tidak ada transaksi yang

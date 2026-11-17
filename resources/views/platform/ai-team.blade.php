@@ -24,6 +24,12 @@
     $readRoutePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.read', $agent)])->all();
     $unreadPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => (int) ($unreadCounts[$agent->id] ?? 0)])->all();
     $promptPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => data_get($profiles, $agent->key.'.prompts', [])])->all();
+    $taskColumns = [
+        'proposed' => ['label' => 'Menunggu', 'description' => 'Perlu ditinjau', 'dot' => 'bg-amber-400', 'surface' => 'bg-amber-50/40'],
+        'approved' => ['label' => 'Berjalan', 'description' => 'Sedang dikerjakan', 'dot' => 'bg-sky-500', 'surface' => 'bg-sky-50/40'],
+        'completed' => ['label' => 'Selesai', 'description' => 'Hasil telah tersedia', 'dot' => 'bg-emerald-500', 'surface' => 'bg-emerald-50/40'],
+        'rejected' => ['label' => 'Terhambat', 'description' => 'Ditolak atau terhenti', 'dot' => 'bg-rose-500', 'surface' => 'bg-rose-50/40'],
+    ];
 @endphp
 
 <div
@@ -32,8 +38,8 @@
 >
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <nav class="flex overflow-x-auto border-b border-slate-200 px-3 sm:px-5">
-            @foreach ([['workspace','Ruang agen'],['tasks','Pekerjaan'],['team','Pengaturan agen'],['data','Data & integrasi']] as [$key,$label])
-                <button type="button" @click="tab='{{ $key }}'" class="whitespace-nowrap border-b-2 px-4 py-4 text-sm font-bold transition" :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'">{{ $label }}</button>
+            @foreach ([['workspace','Ruang agen'],['tasks','Pekerjaan'],['telegram','Telegram Office'],['memory','Memori & konteks'],['team','Pengaturan agen'],['data','Data & integrasi']] as [$key,$label])
+                <button type="button" @click="selectTab('{{ $key }}')" class="whitespace-nowrap border-b-2 px-4 py-4 text-sm font-bold transition" :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'">{{ $label }}</button>
             @endforeach
         </nav>
 
@@ -87,7 +93,7 @@
                                 <form @submit.prevent="sendMessage()" class="flex items-end gap-2">
                                     <input type="file" x-ref="filePicker" multiple accept="{{ \App\Services\PlatformAiAttachmentService::ACCEPT }}" class="hidden" @change="pickFiles($event)">
                                     <button type="button" @click="$refs.filePicker.click()" :disabled="sending" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Lampirkan file"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg></button>
-                                    <textarea x-model="draft" @keydown.enter.exact.prevent.stop="sendMessage()" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… (Shift+Enter untuk baris baru)"></textarea>
+                                    <textarea x-model="draft" @keydown="handleMessageKeydown($event)" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… (Shift+Enter untuk baris baru)"></textarea>
                                     <button type="submit" :disabled="sending || (!draft.trim() && !files.length)" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white disabled:cursor-not-allowed disabled:opacity-40" aria-label="Kirim pesan"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 14-7-4 14-3-6-7-1Z"/></svg></button>
                                 </form>
                                 <p x-show="chatError" x-text="chatError" class="mt-2 text-xs text-rose-700"></p>
@@ -116,15 +122,109 @@
         </div>
 
         <div x-show="tab === 'tasks'" x-cloak class="p-5 sm:p-6">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="font-black text-[#0B1B3F]">Pekerjaan tim</h2><p class="mt-1 text-sm text-slate-500">Hasil diskusi dan analisis yang perlu ditindaklanjuti.</p></div><button @click="newTask=true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Buat tugas</button></div>
-            <div class="mt-5 grid gap-5 xl:grid-cols-2">
-                @forelse($tasks as $task)
-                    <article class="rounded-xl border border-slate-200 p-5">
-                        <div class="flex items-start justify-between gap-4"><div><span class="rounded-md border px-2 py-1 text-[10px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span><h3 class="mt-3 font-black text-[#0B1B3F]">{{ $task->title }}</h3></div><span class="rounded-full px-2.5 py-1 text-[10px] font-black {{ $task->status === 'completed' ? 'bg-emerald-50 text-emerald-700' : ($task->status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700') }}">{{ ['proposed'=>'Menunggu','approved'=>'Berjalan','completed'=>'Selesai','rejected'=>'Terhambat'][$task->status] ?? $task->status }}</span></div>
-                        <p class="mt-3 text-sm leading-relaxed text-slate-600">{{ $task->summary }}</p>@if($task->recommendation)<p class="mt-3 rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600"><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif
-                        <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span class="text-xs font-bold {{ $task->risk === 'high' ? 'text-rose-700' : ($task->risk === 'medium' ? 'text-amber-700' : 'text-emerald-700') }}">Risiko {{ ['low'=>'rendah','medium'=>'sedang','high'=>'tinggi'][$task->risk] }}</span><button type="button" @click="moveTask={{ $task->id }}" class="text-xs font-bold text-emerald-700">Perbarui status</button></footer>
-                    </article>
-                @empty <div class="rounded-xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500"><b class="block text-slate-700">Belum ada pekerjaan</b><span class="mt-1 block">Mulai diskusi dengan agen atau buat tugas baru.</span></div> @endforelse
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div class="flex items-center gap-2"><h2 class="font-black text-[#0B1B3F]">Pekerjaan tim</h2><span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500">{{ $tasks->count() }}</span></div><p class="mt-1 text-sm text-slate-500">Geser kartu ke kolom lain untuk memperbarui progres.</p></div><button @click="newTask=true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700">Buat tugas</button></div>
+
+            <div class="mt-5 overflow-x-auto pb-3">
+                <div class="grid min-w-[1120px] grid-cols-4 gap-4" aria-label="Papan Kanban pekerjaan tim">
+                    @foreach($taskColumns as $status => $column)
+                        @php $columnTasks = $tasks->where('status', $status); @endphp
+                        <section
+                            class="flex min-h-[520px] flex-col rounded-xl border border-slate-200 {{ $column['surface'] }} p-3 transition"
+                            :class="kanbanOver === '{{ $status }}' ? 'border-emerald-400 ring-2 ring-emerald-100' : ''"
+                            @dragover.prevent="kanbanOver='{{ $status }}'"
+                            @dragleave.self="kanbanOver=null"
+                            @drop.prevent="dropTask('{{ $status }}')"
+                        >
+                            <header class="flex items-center justify-between px-1 pb-3">
+                                <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full {{ $column['dot'] }}"></span><div><h3 class="text-sm font-black text-[#0B1B3F]">{{ $column['label'] }}</h3><p class="text-[10px] text-slate-500">{{ $column['description'] }}</p></div></div>
+                                <span class="flex h-6 min-w-6 items-center justify-center rounded-full border border-slate-200 bg-white px-1.5 text-[10px] font-black text-slate-500">{{ $columnTasks->count() }}</span>
+                            </header>
+
+                            <div class="flex flex-1 flex-col gap-3">
+                                @forelse($columnTasks as $task)
+                                    <article
+                                        draggable="true"
+                                        @dragstart="startTaskDrag($event, {{ $task->id }}, @js($task->type), '{{ $task->status }}')"
+                                        @dragend="endTaskDrag()"
+                                        class="cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:cursor-grabbing"
+                                        :class="draggedTask?.id === {{ $task->id }} ? 'opacity-40' : ''"
+                                    >
+                                        <div class="flex items-start justify-between gap-3">
+                                            <span class="rounded-md border px-2 py-1 text-[9px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span>
+                                            <button type="button" @click="moveTask={{ $task->id }}" class="rounded-md px-1.5 py-0.5 text-lg leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Buka pengaturan tugas {{ $task->title }}">⋯</button>
+                                        </div>
+                                        <h4 class="mt-3 text-sm font-black leading-5 text-[#0B1B3F]">{{ $task->title }}</h4>
+                                        <p class="mt-2 max-h-[4.5rem] overflow-hidden text-xs leading-6 text-slate-500">{{ $task->summary }}</p>
+                                        @if($task->recommendation)<p class="mt-3 max-h-[4rem] overflow-hidden rounded-lg bg-slate-50 p-2.5 text-[11px] leading-5 text-slate-600"><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif
+                                        <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                                            <span class="text-[10px] font-bold {{ $task->risk === 'high' ? 'text-rose-700' : ($task->risk === 'medium' ? 'text-amber-700' : 'text-emerald-700') }}">Risiko {{ ['low'=>'rendah','medium'=>'sedang','high'=>'tinggi'][$task->risk] }}</span>
+                                            <span class="text-[10px] text-slate-400">{{ $task->updated_at->diffForHumans() }}</span>
+                                        </footer>
+                                        <form id="kanban-task-{{ $task->id }}" method="POST" action="{{ route('platform.ai-team.tasks.move',$task) }}" class="hidden">@csrf @method('PATCH')<input name="status" value="{{ $task->status }}"></form>
+                                    </article>
+                                @empty
+                                    <div class="flex min-h-28 flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 px-4 text-center text-xs text-slate-400">Tarik kartu ke sini</div>
+                                @endforelse
+                            </div>
+                        </section>
+                    @endforeach
+                </div>
+            </div>
+            <p class="mt-1 text-xs text-slate-400">Di ponsel, gunakan tombol ⋯ pada kartu untuk mengubah status. Tugas komunikasi eksternal tetap memerlukan persetujuan khusus.</p>
+        </div>
+
+        <div x-show="tab === 'telegram'" x-cloak class="space-y-6 p-5 sm:p-6">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="font-black text-[#0B1B3F]">Telegram Virtual Office</h2><p class="mt-1 text-sm text-slate-500">Kanal komunikasi privat untuk tujuh agen. Dashboard tetap menjadi pusat approval dan sumber kebenaran.</p></div><span class="w-fit rounded-full px-3 py-1 text-xs font-black {{ $telegramGroup?->enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600' }}">{{ $telegramGroup?->enabled ? 'Terhubung' : 'Belum aktif' }}</span></div>
+
+            <div class="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
+                <section class="rounded-xl border border-slate-200 bg-white p-5"><div class="flex items-center justify-between gap-3"><div><h3 class="font-black text-[#0B1B3F]">Koneksi tujuh bot</h3><p class="mt-1 text-xs text-slate-500">Token hanya dibaca dari environment server dan tidak pernah ditampilkan.</p></div><div class="flex items-center gap-2"><span class="text-xs font-bold text-slate-500">{{ $telegramBots->where('status','active')->count() }}/7 aktif</span><form method="POST" action="{{ route('platform.ai-team.telegram.health') }}">@csrf<button class="rounded-lg border border-slate-300 px-2.5 py-1.5 text-[10px] font-bold text-slate-600">Cek koneksi</button></form></div></div><div class="mt-4 grid gap-3 sm:grid-cols-2">@foreach($telegramBots as $bot)<article class="rounded-xl border border-slate-200 p-3"><div class="flex items-center gap-3"><img src="{{ asset(data_get($profiles,$bot->agent->key.'.avatar')) }}" class="h-10 w-10 rounded-xl object-cover"><div class="min-w-0 flex-1"><b class="block text-sm text-[#0B1B3F]">{{ $bot->agent->name }}</b><span class="block truncate text-[11px] text-slate-500">{{ $bot->username ? '@'.$bot->username : 'Username belum diatur' }}</span></div><span class="h-2.5 w-2.5 rounded-full {{ $bot->status==='active' ? 'bg-emerald-500' : 'bg-slate-300' }}"></span></div><div class="mt-3 flex justify-between text-[10px] text-slate-400"><span>Webhook {{ $bot->webhook_status }}</span><span>{{ $bot->last_health_at?->diffForHumans() ?? 'Belum dicek' }}</span></div>@if($bot->last_error)<p class="mt-2 truncate text-[10px] text-rose-600">{{ $bot->last_error }}</p>@endif</article>@endforeach</div></section>
+
+                <section class="rounded-xl border border-slate-200 bg-white p-5"><h3 class="font-black text-[#0B1B3F]">Tautkan pemilik</h3><p class="mt-1 text-xs leading-5 text-slate-500">Otorisasi memakai Telegram user ID, bukan username. Kode hanya berlaku 10 menit dan sekali pakai.</p>@if(session('telegram_link_code'))<div class="mt-4 rounded-xl bg-emerald-50 p-4 text-center"><p class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Kirim ke salah satu bot</p><code class="mt-2 block text-xl font-black text-emerald-900">/link {{ session('telegram_link_code') }}</code></div>@endif<div class="mt-4 rounded-xl bg-slate-50 p-3 text-xs"><div class="flex justify-between"><span class="text-slate-500">Status</span><b>{{ $telegramIdentity?->status ?? 'belum terhubung' }}</b></div>@if($telegramIdentity?->telegram_user_id)<div class="mt-2 flex justify-between"><span class="text-slate-500">Telegram ID</span><b>{{ $telegramIdentity->telegram_user_id }}</b></div>@endif</div><form method="POST" action="{{ route('platform.ai-team.telegram.link') }}" class="mt-3">@csrf<button class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white">Buat kode tautan</button></form>@if($telegramIdentity)<form method="POST" action="{{ route('platform.ai-team.telegram.revoke') }}" class="mt-2" onsubmit="return confirm('Cabut semua akses Telegram Office?')">@csrf @method('DELETE')<button class="w-full rounded-xl border border-rose-200 px-4 py-2.5 text-xs font-bold text-rose-700">Cabut akses</button></form>@endif</section>
+            </div>
+
+            @if($telegramGroup)
+            @php $notify=(array)$telegramGroup->notification_settings; @endphp
+            <section class="rounded-xl border border-slate-200 bg-white p-5"><h3 class="font-black text-[#0B1B3F]">Pengaturan grup</h3><p class="mt-1 text-xs text-slate-500">{{ $telegramGroup->title }} · ID {{ $telegramGroup->telegram_chat_id }}</p><form method="POST" action="{{ route('platform.ai-team.telegram.group',$telegramGroup) }}" class="mt-4 grid gap-4 md:grid-cols-3">@csrf @method('PATCH')<label class="text-xs font-bold text-slate-700">Mode percakapan<select name="mode" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="mention_only" @selected($telegramGroup->mode==='mention_only')>Mention Only</option><option value="smart_discussion" @selected($telegramGroup->mode==='smart_discussion')>Smart Discussion</option></select></label><label class="text-xs font-bold text-slate-700">Jam briefing<input name="briefing_time" type="time" value="{{ data_get($notify,'briefing_time','08:00') }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label><label class="text-xs font-bold text-slate-700">Severity minimum<select name="severity" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm">@foreach(['low'=>'Rendah','medium'=>'Sedang','high'=>'Tinggi'] as $value=>$label)<option value="{{ $value }}" @selected(data_get($notify,'severity','medium')===$value)>{{ $label }}</option>@endforeach</select></label><label class="text-xs font-bold text-slate-700">Quiet mulai<input name="quiet_start" type="time" value="{{ data_get($notify,'quiet_start','22:00') }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label><label class="text-xs font-bold text-slate-700">Quiet selesai<input name="quiet_end" type="time" value="{{ data_get($notify,'quiet_end','07:00') }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label><label class="text-xs font-bold text-slate-700">Maks. alert/hari<input name="max_alerts_per_day" type="number" min="0" max="20" value="{{ data_get($notify,'max_alerts_per_day',5) }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="hidden" name="enabled" value="0"><input name="enabled" value="1" type="checkbox" @checked($telegramGroup->enabled) class="rounded border-slate-300 text-emerald-600">Integrasi aktif</label><label class="flex items-center gap-2 text-xs font-bold text-slate-700"><input type="hidden" name="daily_briefing" value="0"><input name="daily_briefing" value="1" type="checkbox" @checked(data_get($notify,'daily_briefing')) class="rounded border-slate-300 text-emerald-600">Briefing harian</label><button class="rounded-xl bg-[#0B1B3F] px-4 py-2.5 text-xs font-bold text-white">Simpan pengaturan</button></form></section>
+            @endif
+
+            <section class="rounded-xl border border-slate-200 bg-white p-5"><h3 class="font-black text-[#0B1B3F]">Aktivitas integrasi</h3><div class="mt-4 overflow-x-auto"><table class="w-full min-w-[700px] text-left text-xs"><thead class="border-b border-slate-200 text-slate-400"><tr><th class="py-2">Waktu</th><th>Bot</th><th>Status</th><th>Chat</th><th>Kesalahan</th></tr></thead><tbody class="divide-y divide-slate-100">@forelse($telegramUpdates as $update)<tr><td class="py-3 text-slate-500">{{ $update->created_at->translatedFormat('d M H:i') }}</td><td class="font-bold text-slate-700">{{ $update->bot?->agent?->name }}</td><td><span class="rounded-full bg-slate-100 px-2 py-1 font-bold">{{ $update->status }}</span></td><td>{{ $update->telegram_chat_id }}</td><td class="max-w-xs truncate text-rose-600">{{ $update->error ?? '—' }}</td></tr>@empty<tr><td colspan="5" class="py-8 text-center text-slate-400">Belum ada webhook masuk.</td></tr>@endforelse</tbody></table></div></section>
+
+            <aside class="rounded-xl bg-[#0B1B3F] p-5 text-white"><h3 class="font-black">Batas aman Telegram</h3><p class="mt-2 text-xs leading-6 text-slate-300">Maksimal tiga agen untuk Smart Discussion dan empat agen untuk meeting, satu ronde. Pesan bot tidak memicu bot lain. Approval sensitif, pengeluaran, pesan eksternal, refund, harga, dan iklan tetap hanya melalui Operations Center.</p></aside>
+        </div>
+
+        <div x-show="tab === 'memory'" x-cloak class="p-5 sm:p-6">
+            <div><h2 class="font-black text-[#0B1B3F]">Memori & konteks pemilik</h2><p class="mt-1 text-sm text-slate-500">Konteks terkonfirmasi selalu lebih kuat daripada inferensi agen. Data aktual dari tool tetap menjadi sumber angka utama.</p></div>
+            <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h3 class="font-black text-[#0B1B3F]">Owner Context</h3>
+                    <p class="mt-1 text-xs leading-relaxed text-slate-500">Simpan tujuan, prioritas, batas anggaran, gaya komunikasi, atau kebijakan yang harus diketahui semua agen.</p>
+                    <form method="POST" action="{{ route('platform.ai-team.owner-context') }}" class="mt-4 space-y-3">@csrf
+                        <label class="block text-xs font-bold text-slate-700">Jenis konteks<select name="key" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="company_priorities">Prioritas perusahaan</option><option value="quarterly_objectives">Tujuan kuartal</option><option value="marketing_direction">Arah marketing</option><option value="financial_constraints">Batas keuangan</option><option value="communication_style">Gaya komunikasi</option><option value="decision_preferences">Cara mengambil keputusan</option><option value="product_positioning">Posisi produk</option><option value="prohibited_actions">Tindakan terlarang</option><option value="important_metrics">Metrik utama</option><option value="active_initiatives">Inisiatif aktif</option></select></label>
+                        <label class="block text-xs font-bold text-slate-700">Label<input name="label" required maxlength="120" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Contoh: Prioritas Q4"></label>
+                        <label class="block text-xs font-bold text-slate-700">Isi<textarea name="value" required maxlength="4000" rows="4" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Tulis fakta atau kebijakan yang sudah kamu konfirmasi."></textarea></label>
+                        <button class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Simpan konteks terkonfirmasi</button>
+                    </form>
+                    <div class="mt-5 space-y-2 border-t border-slate-100 pt-4">
+                        @forelse($ownerContexts as $context)
+                            <div class="rounded-xl bg-slate-50 p-3"><div class="flex items-center justify-between gap-2"><b class="text-xs text-[#0B1B3F]">{{ $context->label }}</b><span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">Terkonfirmasi</span></div><p class="mt-1.5 text-xs leading-relaxed text-slate-600">{{ $context->value }}</p></div>
+                        @empty <p class="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">Belum ada konteks pemilik.</p> @endforelse
+                    </div>
+                </section>
+                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h3 class="font-black text-[#0B1B3F]">Ingatan agen</h3><p class="mt-1 text-xs text-slate-500">Hanya pernyataan eksplisit yang disimpan otomatis. Kamu dapat mengoreksi atau menonaktifkannya.</p>
+                    <div class="mt-4 space-y-3">
+                        @forelse($memories as $memory)
+                            <article class="rounded-xl border border-slate-200 p-4">
+                                <div class="flex flex-wrap items-center gap-2"><span class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-600">{{ $memory->category }}</span>@if($memory->agent)<span class="text-[11px] font-bold text-emerald-700">{{ $memory->agent->name }}</span>@endif<span class="ml-auto text-[10px] text-slate-400">Versi {{ $memory->version }}</span></div>
+                                <form method="POST" action="{{ route('platform.ai-team.memories.update',$memory) }}" class="mt-3 space-y-2">@csrf @method('PATCH')
+                                    <textarea name="statement" required maxlength="1000" rows="2" class="w-full rounded-xl border-slate-300 text-sm">{{ data_get($memory->content,'statement') }}</textarea>
+                                    <div class="flex items-center gap-2"><label class="text-xs font-bold text-slate-600">Prioritas <input name="importance" type="number" min="1" max="100" value="{{ $memory->importance }}" class="ml-1 w-20 rounded-lg border-slate-300 text-xs"></label><button class="ml-auto rounded-lg bg-[#0B1B3F] px-3 py-2 text-xs font-bold text-white">Koreksi & konfirmasi</button></div>
+                                </form>
+                                <form method="POST" action="{{ route('platform.ai-team.memories.deactivate',$memory) }}" class="mt-2 text-right">@csrf @method('DELETE')<button class="text-xs font-bold text-rose-700">Nonaktifkan memori</button></form>
+                            </article>
+                        @empty <p class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Belum ada memori jangka panjang. Pernyataan eksplisit seperti “Mulai sekarang fokus pada konversi trial” akan disimpan.</p> @endforelse
+                    </div>
+                </section>
             </div>
         </div>
 
@@ -160,7 +260,43 @@
         @if($task->type === 'whatsapp_draft' && $task->status === 'proposed')
         <form x-show="moveTask === {{ $task->id }}" @click.outside="moveTask=null" method="POST" action="{{ route('platform.ai-team.decision',$task) }}" class="w-full max-w-md rounded-xl bg-white shadow-2xl">@csrf @method('PATCH')<header class="flex items-start justify-between border-b border-slate-200 px-6 py-5"><div><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Draf WhatsApp</p><h2 class="mt-1 text-lg font-black leading-snug text-[#0B1B3F]">{{ $task->title }}</h2></div><button type="button" @click="moveTask=null" class="rounded-lg p-1 text-2xl text-slate-400 hover:bg-slate-100">×</button></header><div class="space-y-3 p-6"><p class="text-xs text-slate-500">Tujuan: <strong class="text-slate-800">{{ data_get($task->payload,'phone') }}</strong>. Pesan hanya terkirim setelah Anda menyetujui; boleh disunting dulu.</p><textarea name="message" rows="6" maxlength="600" class="w-full rounded-xl border-slate-300 text-sm">{{ $task->summary }}</textarea>@if($task->error)<p class="text-xs font-semibold text-rose-700">{{ $task->error }}</p>@endif<div class="flex justify-end gap-2 border-t border-slate-100 pt-4"><button name="decision" value="reject" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700">Tolak</button><button name="decision" value="approve" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white">Setujui &amp; kirim</button></div></div></form>
         @else
-        <form x-show="moveTask === {{ $task->id }}" @click.outside="moveTask=null" method="POST" action="{{ route('platform.ai-team.tasks.move',$task) }}" class="w-full max-w-md rounded-xl bg-white shadow-2xl">@csrf @method('PATCH')<header class="border-b border-slate-200 px-6 py-5"><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Perbarui progres</p><h2 class="mt-1 text-lg font-black text-[#0B1B3F]">{{ $task->title }}</h2></header><div class="space-y-4 p-6"><label class="block text-sm font-bold text-slate-700">Status<select name="status" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="proposed" @selected($task->status==='proposed')>Menunggu</option><option value="approved" @selected($task->status==='approved')>Berjalan</option><option value="completed" @selected($task->status==='completed')>Selesai</option><option value="rejected" @selected($task->status==='rejected')>Terhambat</option></select></label><div class="flex justify-end gap-2"><button type="button" @click="moveTask=null" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold">Batal</button><button class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white">Simpan</button></div></div></form>
+        <div x-show="moveTask === {{ $task->id }}" @click.outside="moveTask=null" class="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            <header class="flex items-start justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
+                <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded-md border px-2 py-1 text-[9px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span><span class="text-xs text-slate-400">Tugas #{{ $task->id }}</span></div><h2 class="mt-2 truncate text-xl font-black text-[#0B1B3F]">{{ $task->title }}</h2></div>
+                <button type="button" @click="moveTask=null" class="rounded-lg p-1 text-2xl text-slate-400 hover:bg-slate-100">×</button>
+            </header>
+
+            <div class="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_280px] lg:overflow-hidden">
+                <main class="space-y-6 p-5 sm:p-7 lg:overflow-y-auto">
+                    <form method="POST" action="{{ route('platform.ai-team.tasks.update',$task) }}" class="space-y-5">@csrf @method('PATCH')
+                        <label class="block"><span class="text-xs font-black uppercase tracking-wider text-slate-400">Judul</span><input name="title" required maxlength="180" value="{{ $task->title }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm font-bold text-[#0B1B3F]"></label>
+                        <label class="block"><span class="text-xs font-black uppercase tracking-wider text-slate-400">Deskripsi &amp; catatan</span><textarea name="summary" required maxlength="4000" rows="5" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm leading-6">{{ $task->summary }}</textarea></label>
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <label class="text-xs font-bold text-slate-700">PIC agen<select name="platform_ai_agent_id" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm">@foreach($agents as $agent)<option value="{{ $agent->id }}" @selected($task->platform_ai_agent_id===$agent->id)>{{ $agent->name }} · {{ data_get($profiles,$agent->key.'.title',$agent->department) }}</option>@endforeach</select></label>
+                            <label class="text-xs font-bold text-slate-700">Deadline<input name="scheduled_for" type="datetime-local" value="{{ $task->scheduled_for?->format('Y-m-d\TH:i') }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label>
+                            <label class="text-xs font-bold text-slate-700">Risiko<select name="risk" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="low" @selected($task->risk==='low')>Rendah</option><option value="medium" @selected($task->risk==='medium')>Sedang</option><option value="high" @selected($task->risk==='high')>Tinggi</option></select></label>
+                            <label class="text-xs font-bold text-slate-700">Label<input name="labels" maxlength="500" value="{{ implode(', ', data_get($task->payload,'labels',[])) }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="marketing, prioritas"></label>
+                        </div>
+                        <div class="flex justify-end"><button class="rounded-xl bg-[#0B1B3F] px-5 py-2.5 text-sm font-bold text-white">Simpan detail</button></div>
+                    </form>
+
+                    @if($task->recommendation || $task->result || $task->error)
+                    <section><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Hasil pekerjaan</h3><div class="mt-2 space-y-2 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">@if($task->recommendation)<p><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif @if(data_get($task->result,'report'))<p><b class="text-slate-800">Laporan:</b> {{ data_get($task->result,'report') }}</p>@endif @if($task->error)<p class="text-rose-700"><b>Kendala:</b> {{ $task->error }}</p>@endif</div></section>
+                    @endif
+
+                    <section><div class="flex items-center justify-between"><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Lampiran</h3><span class="text-[10px] text-slate-400">Maks. 10 MB</span></div><div class="mt-2 space-y-2">@forelse(data_get($task->payload,'attachments',[]) as $attachment)<a href="{{ route('platform.ai-team.tasks.attachments.download',[$task,$attachment['id']]) }}" class="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 hover:border-emerald-300"><span class="truncate">{{ $attachment['name'] }}</span><span class="ml-3 shrink-0 text-slate-400">{{ number_format(($attachment['size'] ?? 0)/1024,1) }} KB</span></a>@empty<p class="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">Belum ada lampiran.</p>@endforelse</div><form method="POST" enctype="multipart/form-data" action="{{ route('platform.ai-team.tasks.attachments',$task) }}" class="mt-2 flex gap-2">@csrf<input type="file" name="attachment" required class="min-w-0 flex-1 rounded-xl border border-slate-300 text-xs file:mr-3 file:border-0 file:bg-slate-100 file:px-3 file:py-2.5 file:font-bold"><button class="rounded-xl border border-slate-300 px-3 text-xs font-bold">Unggah</button></form></section>
+
+                    <section><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Komentar &amp; aktivitas</h3><form method="POST" action="{{ route('platform.ai-team.tasks.comments',$task) }}" class="mt-2 flex gap-2">@csrf<input name="comment" required maxlength="1000" class="min-w-0 flex-1 rounded-xl border-slate-300 text-sm" placeholder="Tulis komentar atau arahan…"><button class="rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white">Kirim</button></form><div class="mt-4 space-y-3">@forelse($taskActivities->get($task->id,collect())->take(12) as $activity)<div class="flex gap-3"><span class="mt-1 h-2 w-2 shrink-0 rounded-full {{ $activity->action === 'ai.task.comment' ? 'bg-emerald-500' : 'bg-slate-300' }}"></span><div class="min-w-0"><p class="text-xs leading-5 text-slate-600"><b class="text-slate-800">{{ $activity->admin?->name ?? 'Sistem' }}</b> {{ data_get($activity->metadata,'comment',$activity->description) }}</p><p class="text-[10px] text-slate-400">{{ $activity->created_at->diffForHumans() }}</p></div></div>@empty<p class="text-xs text-slate-400">Belum ada aktivitas tercatat.</p>@endforelse</div></section>
+                </main>
+
+                <aside class="space-y-5 border-t border-slate-200 bg-slate-50 p-5 lg:overflow-y-auto lg:border-l lg:border-t-0">
+                    <form method="POST" action="{{ route('platform.ai-team.tasks.move',$task) }}">@csrf @method('PATCH')<label class="text-xs font-black uppercase tracking-wider text-slate-400">Status<select name="status" required class="mt-2 w-full rounded-xl border-slate-300 bg-white text-sm"><option value="proposed" @selected($task->status==='proposed')>Menunggu</option><option value="approved" @selected($task->status==='approved')>Berjalan</option><option value="completed" @selected($task->status==='completed')>Selesai</option><option value="rejected" @selected($task->status==='rejected')>Terhambat</option></select></label><button class="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white">Perbarui status</button></form>
+                    <div class="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs"><div class="flex justify-between gap-3"><span class="text-slate-500">Dibuat</span><b class="text-right text-slate-700">{{ $task->created_at->translatedFormat('d M Y, H:i') }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Diperbarui</span><b class="text-right text-slate-700">{{ $task->updated_at->diffForHumans() }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Approval</span><b class="text-right text-slate-700">{{ $task->requires_approval ? 'Wajib' : 'Tidak' }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Eksekusi</span><b class="text-right text-slate-700">{{ $task->executed_at?->translatedFormat('d M, H:i') ?? 'Belum' }}</b></div></div>
+                    <div><p class="text-xs font-black uppercase tracking-wider text-slate-400">Label</p><div class="mt-2 flex flex-wrap gap-1.5">@forelse(data_get($task->payload,'labels',[]) as $label)<span class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-800">{{ $label }}</span>@empty<span class="text-xs text-slate-400">Belum ada label</span>@endforelse</div></div>
+                    <form method="POST" action="{{ route('platform.ai-team.tasks.archive',$task) }}" onsubmit="return confirm('Arsipkan tugas ini?')">@csrf @method('DELETE')<button class="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-50">Arsipkan tugas</button></form>
+                </aside>
+            </div>
+        </div>
         @endif
         @endforeach
     </div>
@@ -169,12 +305,42 @@
 <script>
 function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, initialUnread, prompts) {
     return {
-        tab: 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, readRoutes, unread: initialUnread, prompts,
+        tab: sessionStorage.getItem('yokaAiTeamTab') || 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, readRoutes, unread: initialUnread, prompts,
         draft: '', files: [], sending: false, chatError: '', newTask: false, moveTask: null, intake: false,
+        draggedTask: null, kanbanOver: null,
+        startTaskDrag(event, id, type, status) {
+            this.draggedTask={id,type,status};
+            this.kanbanOver=null;
+            event.dataTransfer.effectAllowed='move';
+            event.dataTransfer.setData('text/plain',String(id));
+        },
+        endTaskDrag() { this.draggedTask=null; this.kanbanOver=null; },
+        dropTask(status) {
+            const task=this.draggedTask;
+            this.kanbanOver=null;
+            if (!task || task.status === status) { this.draggedTask=null; return; }
+            if (task.type === 'whatsapp_draft' && ['approved','completed'].includes(status)) {
+                this.moveTask=task.id;
+                this.draggedTask=null;
+                return;
+            }
+            const form=document.getElementById(`kanban-task-${task.id}`);
+            if (!form) { this.draggedTask=null; return; }
+            form.querySelector('[name="status"]').value=status;
+            this.draggedTask=null;
+            form.requestSubmit();
+        },
+        selectTab(tab) { this.tab=tab; sessionStorage.setItem('yokaAiTeamTab',tab); },
         selectAgent(id) { this.activeAgent=id; this.draft=''; this.files=[]; this.chatError=''; this.markRead(id); this.$nextTick(()=>this.scrollMessages()); },
         async markRead(id) { if (!this.unread[id]) return; this.unread[id]=0; try { await fetch(this.readRoutes[id],{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}); } catch(error) { } },
         modeLabel(mode) { return mode === 'ai' ? 'AI + data' : (mode === 'fallback' ? 'Fallback data' : 'Data internal'); },
         sendPrompt(prompt) { this.draft=prompt; this.sendMessage(); },
+        handleMessageKeydown(event) {
+            if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.sendMessage();
+        },
         pickFiles(event) {
             this.chatError='';
             const incoming=Array.from(event.target.files || []);

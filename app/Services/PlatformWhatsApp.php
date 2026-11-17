@@ -51,7 +51,7 @@ class PlatformWhatsApp
 
             return ['ok' => true, 'error' => null];
         } catch (\Throwable $e) {
-            Log::warning('Platform WA failed', ['error' => $e->getMessage()]);
+            Log::warning('Platform WA failed', ['exception' => class_basename($e)]);
 
             return ['ok' => false, 'error' => 'Gagal menghubungi Fonnte.'];
         }

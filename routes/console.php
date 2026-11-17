@@ -6,10 +6,16 @@ use App\Jobs\SendLowStockAlert;
 use App\Jobs\SendShiftUnclosedAlert;
 use App\Models\Business;
 use App\Models\IntelligenceAgent;
+use App\Models\PlatformAiAgent;
 use App\Services\InsightService;
 use App\Services\Intelligence\AgentService;
+use App\Services\PlatformAiEvents;
+use App\Services\PlatformAiOperations;
+use App\Services\PlatformHealth;
+use App\Services\PlatformTelegramNotifications;
 use App\Services\TelegramNotifier;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 
 // ── Cek stok menipis — setiap 6 jam ──────────────────────────────────────────
@@ -63,20 +69,36 @@ Schedule::call(function () {
 })->everyMinute()->name('yoka-intelligence-agents')->withoutOverlapping();
 
 // Detak cron: halaman Platform > Sistem membaca ini untuk memastikan schedule:run benar-benar berjalan tiap menit.
-Schedule::call(fn () => \Illuminate\Support\Facades\Cache::put(\App\Services\PlatformHealth::HEARTBEAT_KEY, now()->timestamp, 3600))
+Schedule::call(fn () => Cache::put(PlatformHealth::HEARTBEAT_KEY, now()->timestamp, 3600))
     ->everyMinute()->name('scheduler-heartbeat');
 
 // Tim AI platform bekerja pada data internal. Tindakan eksternal tetap masuk antrean approval.
 Schedule::call(function () {
-    $operations = app(\App\Services\PlatformAiOperations::class);
+    $operations = app(PlatformAiOperations::class);
     $operations->ensureAgents();
-    \App\Models\PlatformAiAgent::where('status', 'active')
+    PlatformAiAgent::where('status', 'active')
         ->where(fn ($q) => $q->whereNull('next_run_at')->orWhere('next_run_at', '<=', now()))
         ->each(fn ($agent) => $operations->run($agent));
 })->hourly()->name('platform-ai-team')->withoutOverlapping();
 
 // Pengingat proaktif: agen menyapa lewat chat bila ada keputusan yang menggantung lebih dari sehari.
-Schedule::call(fn () => app(\App\Services\PlatformAiOperations::class)->nudges())->hourly()->name('platform-ai-nudges')->withoutOverlapping();
+Schedule::call(fn () => app(PlatformAiOperations::class)->nudges())->hourly()->name('platform-ai-nudges')->withoutOverlapping();
+
+Schedule::call(fn () => app(PlatformAiEvents::class)->detect())->everyFifteenMinutes()->name('platform-ai-events')->withoutOverlapping();
+
+Schedule::call(function () {
+    app(PlatformAiOperations::class)->recoverPendingExecutions();
+})->everyMinute()->name('platform-ai-task-dispatch')->withoutOverlapping();
+
+// Shared hosting tidak selalu menyediakan process manager. Cron schedule:run Yoka
+// memproses antrean database sampai kosong tanpa meninggalkan worker permanen.
+Schedule::command('queue:work --stop-when-empty --tries=2 --timeout=180')
+    ->everyMinute()->name('yoka-queue-drain')->withoutOverlapping(10);
+
+Schedule::call(fn () => app(PlatformTelegramNotifications::class)->briefings())
+    ->everyMinute()->name('platform-telegram-briefing')->withoutOverlapping();
+Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts())
+    ->everyFiveMinutes()->name('platform-telegram-alerts')->withoutOverlapping();
 
 // ── Backup database terenkripsi — harian 02:30, hanya bila YOKA_BACKUP_ENABLED=true ──
 Schedule::command('yoka:backup')->dailyAt('02:30')->name('db-backup')->withoutOverlapping()

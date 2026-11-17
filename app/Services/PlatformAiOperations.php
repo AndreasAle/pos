@@ -2,15 +2,21 @@
 
 namespace App\Services;
 
+use App\Jobs\RunPlatformAiTask;
 use App\Models\BusinessSubscription;
-use App\Models\PlatformAiAgent;
 use App\Models\PlatformActivityLog;
+use App\Models\PlatformAdmin;
+use App\Models\PlatformAiAgent;
 use App\Models\PlatformAiMessage;
 use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
+use App\Models\PlatformAiTaskExecution;
+use App\Services\PlatformAgents\AgentBrain;
+use App\Services\PlatformAgents\TrialAgent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class PlatformAiOperations
 {
@@ -54,10 +60,10 @@ class PlatformAiOperations
         }
     }
 
-    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = []): array
+    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = [], ?PlatformAdmin $admin = null, string $operation = 'chat', ?array $historyOverride = null, string $contextKey = 'default'): array
     {
         $snapshot = $this->snapshot($agent);
-        $history = $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
+        $history = $historyOverride ?? $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
             'role' => $message->role === 'assistant' ? 'assistant' : 'user',
             'content' => $message->content,
         ])->reject(fn ($m) => $m['role'] === 'assistant' && preg_match('/\b(Bapak|Pak)\b/u', $m['content']))->values()->all();
@@ -100,12 +106,14 @@ class PlatformAiOperations
             foreach ($attachments as $attachment) {
                 array_push($userContent, ...$this->attachmentService->modelParts($attachment));
             }
-            $brain = app(\App\Services\PlatformAgents\AgentBrain::class);
-            $content = $brain->chat($agent, $history, $userContent, $facts);
+            $brain = app(AgentBrain::class);
+            $channel = str_starts_with($operation, 'telegram') ? 'telegram_group' : 'platform_dashboard';
+            $context = $admin ? app(PlatformAiContext::class)->package($agent, $admin, $question, $channel, $contextKey) : [];
+            $content = $brain->chat($agent, $history, $userContent, $facts, $context, $operation);
 
             return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [], 'created_tasks' => $brain->createdTaskIds];
         } catch (\Throwable $e) {
-            Log::warning('Platform AI chat failed', ['agent' => $agent->key, 'error' => $e->getMessage()]);
+            Log::warning('Platform AI chat failed', ['agent' => $agent->key, 'exception' => class_basename($e)]);
 
             return [
                 'content' => "Koneksi analisisku lagi bermasalah, Bos. Aku tetap bantu dari data internal yang sudah masuk.\n\n".$this->offlineReply($agent, $question, $snapshot, $attachments, $facts),
@@ -163,11 +171,11 @@ class PlatformAiOperations
 
         $open = PlatformAiTask::with('agent:id,name')->whereIn('status', ['proposed', 'approved'])->latest()->limit(5)->get();
         $records = collect($snapshot['records'])->map(fn ($total, $kind) => "{$total} {$kind}")->join(', ');
-        $answer .= "
+        $answer .= '
 
-Yang kelihatan sekarang: ".($records ?: 'belum ada catatan operasional').".";
+Yang kelihatan sekarang: '.($records ?: 'belum ada catatan operasional').'.';
         if ($open->isNotEmpty()) {
-            $answer .= " Keputusan yang masih menunggu: ".$open->map(fn ($t) => "{$t->title} ({$t->agent?->name})")->join('; ').'.';
+            $answer .= ' Keputusan yang masih menunggu: '.$open->map(fn ($t) => "{$t->title} ({$t->agent?->name})")->join('; ').'.';
         }
         $latest = $snapshot['latest_analysis'];
         if ($latest) {
@@ -181,9 +189,9 @@ Temuan terakhirku: {$latest['summary']}";
         if ($facts) {
             $answer .= "\n\n".implode(' ', $facts);
         }
-        $answer .= "
+        $answer .= '
 
-(Mode terbatas: koneksi AI sedang tidak aktif, jadi aku belum bisa diajak berdiskusi lebih dalam.)";
+(Mode terbatas: koneksi AI sedang tidak aktif, jadi aku belum bisa diajak berdiskusi lebih dalam.)';
 
         return $answer;
     }
@@ -202,26 +210,56 @@ Temuan terakhirku: {$latest['summary']}";
         if (! $this->canExecute($task)) {
             return;
         }
-        $id = $task->id;
-        dispatch(function () use ($id) {
-            app(PlatformAiOperations::class)->execute($id);
-        })->afterResponse();
+        $key = $task->idempotency_key ?: (string) Str::uuid();
+        $task->update(['idempotency_key' => $key]);
+        RunPlatformAiTask::dispatchAfterResponse($task->id, $key);
     }
 
-    public function execute(int $taskId): void
+    public function recoverPendingExecutions(): int
+    {
+        $count = 0;
+        PlatformAiTask::where('status', 'approved')->whereNull('executed_at')->whereNotNull('idempotency_key')
+            ->each(function ($task) use (&$count) {
+                $busy = PlatformAiTaskExecution::where('idempotency_key', $task->idempotency_key)
+                    ->whereIn('status', ['running', 'completed'])->exists();
+                if (! $busy) {
+                    $this->dispatchExecution($task);
+                    $count++;
+                }
+            });
+
+        return $count;
+    }
+
+    public function execute(int $taskId, ?string $idempotencyKey = null): void
     {
         $task = PlatformAiTask::with('agent')->find($taskId);
         if (! $task || ! $task->agent || ! $this->canExecute($task)) {
+            return;
+        }
+        $idempotencyKey ??= $task->idempotency_key;
+        if (! $idempotencyKey || $task->idempotency_key !== $idempotencyKey) {
             return;
         }
         $lock = 'platform-ai-exec:'.$task->id;
         if (! Cache::add($lock, 1, now()->addMinutes(10))) {
             return;
         }
+        if (PlatformAiTaskExecution::where('idempotency_key', $idempotencyKey)->where('status', 'completed')->exists()) {
+            Cache::forget($lock);
 
-        $fail = function (string $reason) use ($task, $lock) {
+            return;
+        }
+        $execution = PlatformAiTaskExecution::create([
+            'idempotency_key' => $idempotencyKey, 'platform_ai_task_id' => $task->id,
+            'task_version' => $task->approval_version, 'attempt' => $task->executions()->count() + 1,
+            'status' => 'running', 'started_at' => now(),
+        ]);
+
+        $fail = function (string $reason) use ($task, $lock, $execution) {
             Cache::forget($lock);
             $task->update(['error' => $reason]);
+            $execution->update(['status' => 'failed', 'error' => $reason, 'finished_at' => now()]);
             $task->agent->messages()->create([
                 'role' => 'assistant',
                 'content' => "Bos, tugas \"{$task->title}\" belum bisa kuselesaikan: {$reason} Tugasnya tetap di In Progress; geser lagi ke In Progress kalau mau kucoba ulang.",
@@ -244,15 +282,16 @@ Temuan terakhirku: {$latest['summary']}";
         }
 
         try {
-            $report = app(\App\Services\PlatformAgents\AgentBrain::class)->execute($task->agent, $task);
+            $report = app(AgentBrain::class)->execute($task->agent, $task);
         } catch (\Throwable $e) {
-            Log::warning('Platform AI task execution failed', ['task' => $task->id, 'error' => $e->getMessage()]);
+            Log::warning('Platform AI task execution failed', ['task' => $task->id, 'exception' => class_basename($e)]);
             $fail('koneksi analisis sedang bermasalah.');
 
             return;
         }
 
         $task->update(['status' => 'completed', 'executed_at' => now(), 'result' => ['report' => $report], 'error' => null]);
+        $execution->update(['status' => 'completed', 'result' => ['report' => $report], 'finished_at' => now()]);
         $task->agent->messages()->create([
             'role' => 'assistant', 'content' => $report,
             'meta' => ['mode' => 'ai', 'proactive' => true, 'task_id' => $task->id, 'executed' => true],
@@ -276,13 +315,24 @@ Temuan terakhirku: {$latest['summary']}";
         }
         $last = $agent->messages()->where('role', 'assistant')->latest('id')->first();
         $ids = (array) data_get($last?->meta, 'proposed_tasks', []);
-        if ($ids === []) {
+        if (count($ids) > 1) {
+            $position = match (true) {
+                preg_match('/\b(pertama|ke-?1|nomor 1)\b/iu', $text) === 1 => 0,
+                preg_match('/\b(kedua|ke-?2|nomor 2)\b/iu', $text) === 1 => 1,
+                preg_match('/\b(ketiga|ke-?3|nomor 3)\b/iu', $text) === 1 => 2,
+                default => null,
+            };
+            if ($position === null || ! isset($ids[$position])) {
+                return [];
+            }
+            $ids = [$ids[$position]];
+        } elseif ($ids === []) {
             return [];
         }
 
         $titles = [];
         foreach (PlatformAiTask::with('agent')->whereIn('id', $ids)->where('status', 'proposed')->whereIn('type', ['chat_task', 'chat_decision', 'chat_strategy'])->get() as $task) {
-            $task->update(['status' => 'approved', 'approved_by' => $adminId, 'approved_at' => now()]);
+            $task->update(['status' => 'approved', 'approved_by' => $adminId, 'approved_at' => now(), 'idempotency_key' => (string) Str::uuid()]);
             PlatformActivityLog::record('ai.task.approve', "Menyetujui tugas {$task->title} lewat chat.", $task);
             $this->dispatchExecution($task->fresh());
             $titles[] = $task->title;
@@ -398,12 +448,12 @@ Temuan terakhirku: {$latest['summary']}";
 Menurutku: {$task->recommendation}";
         }
         $message .= $task->requires_approval
-            ? "
+            ? '
 
-Tugasnya sudah kusiapkan di papan. Tinggal kamu setujui, belum ada yang keluar sebelum itu."
-            : "
+Tugasnya sudah kusiapkan di papan. Tinggal kamu setujui, belum ada yang keluar sebelum itu.'
+            : '
 
-Kalau mau, kita bedah bareng sekarang.";
+Kalau mau, kita bedah bareng sekarang.';
 
         return $message;
     }
@@ -457,7 +507,7 @@ Kalau mau, kita bedah bareng sekarang.";
 
     private function cs(): array
     {
-        [$trialSummary, , , , $trialPayload] = app(\App\Services\PlatformAgents\TrialAgent::class)->work(PlatformAiAgent::where('key', 'cs')->firstOrFail());
+        [$trialSummary, , , , $trialPayload] = app(TrialAgent::class)->work(PlatformAiAgent::where('key', 'cs')->firstOrFail());
 
         $open = PlatformAiRecord::where('kind', 'ticket')->whereNotIn('status', ['resolved', 'closed'])->count();
         $urgent = PlatformAiRecord::where('kind', 'ticket')->where('score', '>=', 80)->whereNotIn('status', ['resolved', 'closed'])->count();
@@ -516,7 +566,7 @@ Kalau mau, kita bedah bareng sekarang.";
 
             return is_array($decoded) ? array_intersect_key($decoded, array_flip(['summary', 'recommendation', 'priorities', 'message'])) : null;
         } catch (\Throwable $e) {
-            Log::warning('Platform AI reasoning failed', ['agent' => $agent->key, 'error' => $e->getMessage()]);
+            Log::warning('Platform AI reasoning failed', ['agent' => $agent->key, 'exception' => class_basename($e)]);
 
             return null;
         }

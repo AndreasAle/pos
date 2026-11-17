@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Log;
 class TrialAgent
 {
     public const MAX_DRAFTS = 5;
+
     private const MAX_STEPS = 6;
 
     /** @var array<int,int> */
@@ -171,7 +172,7 @@ class TrialAgent
 
             return true;
         } catch (\Throwable $e) {
-            Log::warning('Trial agent loop failed', ['error' => $e->getMessage()]);
+            Log::warning('Trial agent loop failed', ['exception' => class_basename($e)]);
 
             return $this->drafted !== [];
         }

@@ -21,6 +21,9 @@ return [
         'timeout' => (int) env('YOKA_AI_TIMEOUT', 25),
         'max_history' => (int) env('YOKA_AI_MAX_HISTORY', 8),
         'daily_request_budget' => (int) env('YOKA_AI_DAILY_REQUEST_BUDGET', 250),
+        'daily_cost_budget_usd' => (float) env('YOKA_AI_DAILY_COST_BUDGET_USD', 5),
+        'input_cost_per_million' => (float) env('YOKA_AI_INPUT_COST_PER_MILLION', 0.40),
+        'output_cost_per_million' => (float) env('YOKA_AI_OUTPUT_COST_PER_MILLION', 1.60),
         'prompt_version' => '2026-11-12.1',
     ],
 
@@ -40,6 +43,20 @@ return [
         'token' => env('TELEGRAM_BOT_TOKEN'),
         'username' => env('TELEGRAM_BOT_USERNAME'),
         'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+    ],
+
+    'telegram_office' => [
+        'timeout' => (int) env('TELEGRAM_OFFICE_TIMEOUT', 10),
+        'daily_briefing_time' => env('TELEGRAM_OFFICE_BRIEFING_TIME', '08:00'),
+        'bots' => [
+            'chief' => ['token' => env('TELEGRAM_RAMLI_TOKEN'), 'username' => env('TELEGRAM_RAMLI_USERNAME'), 'webhook_secret' => env('TELEGRAM_RAMLI_WEBHOOK_SECRET')],
+            'marketing' => ['token' => env('TELEGRAM_YUSUF_TOKEN'), 'username' => env('TELEGRAM_YUSUF_USERNAME'), 'webhook_secret' => env('TELEGRAM_YUSUF_WEBHOOK_SECRET')],
+            'ads' => ['token' => env('TELEGRAM_YONO_TOKEN'), 'username' => env('TELEGRAM_YONO_USERNAME'), 'webhook_secret' => env('TELEGRAM_YONO_WEBHOOK_SECRET')],
+            'finance' => ['token' => env('TELEGRAM_LUNA_TOKEN'), 'username' => env('TELEGRAM_LUNA_USERNAME'), 'webhook_secret' => env('TELEGRAM_LUNA_WEBHOOK_SECRET')],
+            'accounting' => ['token' => env('TELEGRAM_NANDA_TOKEN'), 'username' => env('TELEGRAM_NANDA_USERNAME'), 'webhook_secret' => env('TELEGRAM_NANDA_WEBHOOK_SECRET')],
+            'cs' => ['token' => env('TELEGRAM_ADIT_TOKEN'), 'username' => env('TELEGRAM_ADIT_USERNAME'), 'webhook_secret' => env('TELEGRAM_ADIT_WEBHOOK_SECRET')],
+            'sales' => ['token' => env('TELEGRAM_YOSEF_TOKEN'), 'username' => env('TELEGRAM_YOSEF_USERNAME'), 'webhook_secret' => env('TELEGRAM_YOSEF_WEBHOOK_SECRET')],
+        ],
     ],
 
     'google' => [
