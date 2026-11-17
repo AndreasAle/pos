@@ -35,6 +35,7 @@ use App\Http\Controllers\Platform\DashboardController as PlatformDashboardContro
 use App\Http\Controllers\Platform\ImpersonationController;
 use App\Http\Controllers\Platform\SystemController;
 use App\Http\Controllers\Platform\TeamController;
+use App\Http\Controllers\PlatformTelegramWebhookController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductBundleController;
 use App\Http\Controllers\ProductCategoryController;
@@ -84,6 +85,8 @@ Route::post('/payments/bayarpro/webhook', BayarProWebhookController::class)->mid
 // ── Auth ──────────────────────────────────────────────────────────────────────
 // Webhook Telegram: tanpa sesi/login, diverifikasi lewat secret header.
 Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
+Route::post('platform-ai/telegram/webhooks/{botKey}', PlatformTelegramWebhookController::class)
+    ->middleware('throttle:240,1')->name('platform.telegram.webhook');
 
 // Google Sheets menarik CSV lewat IMPORTDATA. Dikunci token acak per bisnis; hanya baca.
 Route::get('feed/sheets/{token}/{dataset}.csv', [SheetFeedController::class, 'csv'])
@@ -201,6 +204,10 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('ai-team/tasks/{task}/attachments', [AiTeamController::class, 'attachTask'])->middleware('throttle:20,1')->name('ai-team.tasks.attachments');
             Route::get('ai-team/tasks/{task}/attachments/{attachment}', [AiTeamController::class, 'downloadTaskAttachment'])->name('ai-team.tasks.attachments.download');
             Route::delete('ai-team/tasks/{task}', [AiTeamController::class, 'archiveTask'])->name('ai-team.tasks.archive');
+            Route::post('ai-team/telegram/link', [AiTeamController::class, 'requestTelegramLink'])->middleware('throttle:5,10')->name('ai-team.telegram.link');
+            Route::delete('ai-team/telegram/link', [AiTeamController::class, 'revokeTelegram'])->name('ai-team.telegram.revoke');
+            Route::patch('ai-team/telegram/groups/{group}', [AiTeamController::class, 'updateTelegramGroup'])->name('ai-team.telegram.group');
+            Route::post('ai-team/telegram/health', [AiTeamController::class, 'checkTelegramBots'])->middleware('throttle:3,10')->name('ai-team.telegram.health');
 
             Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
                 Route::get('/', [WithdrawalAdminController::class, 'index'])->name('index');

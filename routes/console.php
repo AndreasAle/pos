@@ -12,6 +12,7 @@ use App\Services\Intelligence\AgentService;
 use App\Services\PlatformAiEvents;
 use App\Services\PlatformAiOperations;
 use App\Services\PlatformHealth;
+use App\Services\PlatformTelegramNotifications;
 use App\Services\TelegramNotifier;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
@@ -93,3 +94,8 @@ Schedule::call(function () {
 // memproses antrean database sampai kosong tanpa meninggalkan worker permanen.
 Schedule::command('queue:work --stop-when-empty --tries=2 --timeout=180')
     ->everyMinute()->name('yoka-queue-drain')->withoutOverlapping(10);
+
+Schedule::call(fn () => app(PlatformTelegramNotifications::class)->briefings())
+    ->everyMinute()->name('platform-telegram-briefing')->withoutOverlapping();
+Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts())
+    ->everyFiveMinutes()->name('platform-telegram-alerts')->withoutOverlapping();

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PlatformAiConversationState extends Model
 {
-    protected $fillable = ['platform_admin_id', 'platform_ai_agent_id', 'active_topic', 'mood', 'state', 'context_revised_at'];
+    protected $fillable = ['platform_admin_id', 'platform_ai_agent_id', 'channel', 'context_key', 'active_topic', 'mood', 'state', 'context_revised_at'];
 
     protected function casts(): array
     {

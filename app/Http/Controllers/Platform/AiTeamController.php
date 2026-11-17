@@ -12,12 +12,20 @@ use App\Models\PlatformAiMessage;
 use App\Models\PlatformAiOwnerContext;
 use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
+use App\Models\PlatformAiTelegramBot;
+use App\Models\PlatformAiTelegramGroup;
+use App\Models\PlatformAiTelegramIdentity;
+use App\Models\PlatformAiTelegramMessage;
+use App\Models\PlatformAiTelegramUpdate;
 use App\Services\PlatformAiAttachmentService;
 use App\Services\PlatformAiContext;
 use App\Services\PlatformAiOperations;
+use App\Services\PlatformTelegramBotRegistry;
 use App\Services\PlatformWhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -27,6 +35,7 @@ class AiTeamController extends Controller
     {
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
         $operations->ensureAgents();
+        app(PlatformTelegramBotRegistry::class)->sync();
         $agents = PlatformAiAgent::withCount(['tasks as open_tasks_count' => fn ($q) => $q->whereIn('status', ['proposed', 'approved'])])->orderBy('id')->get();
         $tasks = PlatformAiTask::with('agent')->latest()->limit(60)->get()
             ->reject(fn ($task) => (bool) data_get($task->payload, 'archived'))
@@ -56,8 +65,83 @@ class AiTeamController extends Controller
         $ownerContexts = PlatformAiOwnerContext::query()->orderBy('label')->get();
         $memories = PlatformAiMemory::with('agent:id,name')->where('status', 'active')
             ->orderByDesc('confirmed')->orderByDesc('importance')->latest()->limit(30)->get();
+        $telegramBots = PlatformAiTelegramBot::with('agent')->orderBy('id')->get();
+        $telegramGroup = PlatformAiTelegramGroup::where('platform_admin_id', auth('platform')->id())->latest()->first();
+        $telegramIdentity = PlatformAiTelegramIdentity::where('platform_admin_id', auth('platform')->id())->latest()->first();
+        $telegramUpdates = PlatformAiTelegramUpdate::with('bot.agent')->latest()->limit(20)->get();
+        $telegramDeliveries = PlatformAiTelegramMessage::where('direction', 'outbound')->latest()->limit(20)->get();
 
-        return view('platform.ai-team', compact('agents', 'tasks', 'taskActivities', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts', 'ownerContexts', 'memories'));
+        return view('platform.ai-team', compact('agents', 'tasks', 'taskActivities', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts', 'ownerContexts', 'memories', 'telegramBots', 'telegramGroup', 'telegramIdentity', 'telegramUpdates', 'telegramDeliveries'));
+    }
+
+    public function requestTelegramLink()
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $code = Str::upper(Str::random(4).'-'.Str::random(4));
+        PlatformAiTelegramIdentity::updateOrCreate(['platform_admin_id' => auth('platform')->id()], [
+            'telegram_user_id' => null, 'telegram_username' => null, 'status' => 'pending',
+            'link_code_hash' => Hash::make($code), 'link_expires_at' => now()->addMinutes(10),
+            'verified_at' => null, 'revoked_at' => null,
+        ]);
+        PlatformActivityLog::record('ai.telegram.link.request', 'Membuat kode tautan Telegram Office.');
+
+        return back()->with('telegram_link_code', $code)->with('success', 'Kode tautan berlaku 10 menit.');
+    }
+
+    public function revokeTelegram()
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        PlatformAiTelegramIdentity::where('platform_admin_id', auth('platform')->id())->update(['status' => 'revoked', 'revoked_at' => now(), 'link_code_hash' => null]);
+        PlatformAiTelegramGroup::where('platform_admin_id', auth('platform')->id())->update(['enabled' => false]);
+        PlatformActivityLog::record('ai.telegram.revoke', 'Mencabut akses Telegram Office.');
+
+        return back()->with('success', 'Akses Telegram Office dicabut.');
+    }
+
+    public function updateTelegramGroup(Request $request, PlatformAiTelegramGroup $group)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin() && $group->platform_admin_id === auth('platform')->id(), 403);
+        $data = $request->validate([
+            'mode' => 'required|in:mention_only,smart_discussion', 'enabled' => 'nullable|boolean',
+            'daily_briefing' => 'nullable|boolean', 'briefing_time' => 'required|date_format:H:i',
+            'quiet_start' => 'required|date_format:H:i', 'quiet_end' => 'required|date_format:H:i',
+            'severity' => 'required|in:low,medium,high', 'max_alerts_per_day' => 'required|integer|min:0|max:20',
+        ]);
+        $group->update(['mode' => $data['mode'], 'enabled' => (bool) ($data['enabled'] ?? false), 'notification_settings' => [
+            'daily_briefing' => (bool) ($data['daily_briefing'] ?? false), 'briefing_time' => $data['briefing_time'],
+            'quiet_start' => $data['quiet_start'], 'quiet_end' => $data['quiet_end'], 'timezone' => 'Asia/Jakarta',
+            'severity' => $data['severity'], 'max_alerts_per_day' => $data['max_alerts_per_day'],
+        ]]);
+        PlatformActivityLog::record('ai.telegram.group.update', 'Memperbarui pengaturan Telegram Office.', $group);
+
+        return back()->with('success', 'Pengaturan Telegram Office disimpan.');
+    }
+
+    public function checkTelegramBots(PlatformTelegramBotRegistry $registry)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        foreach (PlatformAiTelegramBot::all() as $bot) {
+            $token = $registry->token($bot);
+            if (! $token) {
+                continue;
+            }
+            try {
+                $me = Http::timeout(8)->get("https://api.telegram.org/bot{$token}/getMe")->json();
+                $webhook = Http::timeout(8)->get("https://api.telegram.org/bot{$token}/getWebhookInfo")->json();
+                $ok = data_get($me, 'ok') === true;
+                $bot->update([
+                    'telegram_bot_id' => $ok ? data_get($me, 'result.id') : $bot->telegram_bot_id,
+                    'username' => $ok ? data_get($me, 'result.username') : $bot->username,
+                    'webhook_status' => filled(data_get($webhook, 'result.url')) ? 'connected' : 'pending',
+                    'last_health_at' => now(), 'last_error' => $ok ? data_get($webhook, 'result.last_error_message') : 'Token bot ditolak Telegram.',
+                ]);
+            } catch (\Throwable $e) {
+                $bot->update(['last_health_at' => now(), 'last_error' => class_basename($e)]);
+            }
+        }
+        PlatformActivityLog::record('ai.telegram.health', 'Memeriksa kesehatan tujuh bot Telegram Office.');
+
+        return back()->with('success', 'Pemeriksaan koneksi bot selesai.');
     }
 
     public function chat(Request $request, PlatformAiAgent $agent, PlatformAiOperations $operations, PlatformAiAttachmentService $attachments)

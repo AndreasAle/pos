@@ -14,11 +14,12 @@ use Illuminate\Support\Str;
 class PlatformAiContext
 {
     /** Context is data, never an instruction layer. Current verified tool data remains authoritative. */
-    public function package(PlatformAiAgent $agent, PlatformAdmin $admin, string $question): array
+    public function package(PlatformAiAgent $agent, PlatformAdmin $admin, string $question, string $channel = 'platform_dashboard', string $contextKey = 'default'): array
     {
         $owner = PlatformAiOwnerContext::query()->orderBy('key')->get(['key', 'label', 'value', 'confirmed']);
         $state = PlatformAiConversationState::query()
-            ->whereBelongsTo($admin, 'admin')->whereBelongsTo($agent, 'agent')->first();
+            ->whereBelongsTo($admin, 'admin')->whereBelongsTo($agent, 'agent')
+            ->where('channel', $channel)->where('context_key', $contextKey)->first();
         $memories = $this->relevantMemories($agent, $admin, $question);
         $decisions = PlatformAiDecision::query()->where('status', 'active')->latest()->limit(8)->get();
 
@@ -94,11 +95,15 @@ class PlatformAiContext
         PlatformAdmin $admin,
         string $question,
         array $createdTaskIds = [],
-        ?string $assistantResponse = null
+        ?string $assistantResponse = null,
+        string $channel = 'platform_dashboard',
+        string $contextKey = 'default'
     ): PlatformAiConversationState {
         $state = PlatformAiConversationState::firstOrNew([
             'platform_admin_id' => $admin->id,
             'platform_ai_agent_id' => $agent->id,
+            'channel' => $channel,
+            'context_key' => $contextKey,
         ]);
         $current = (array) $state->state;
         $current['last_user_message'] = Str::limit($question, 500, '');

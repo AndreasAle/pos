@@ -60,10 +60,10 @@ class PlatformAiOperations
         }
     }
 
-    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = [], ?PlatformAdmin $admin = null, string $operation = 'chat'): array
+    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = [], ?PlatformAdmin $admin = null, string $operation = 'chat', ?array $historyOverride = null, string $contextKey = 'default'): array
     {
         $snapshot = $this->snapshot($agent);
-        $history = $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
+        $history = $historyOverride ?? $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
             'role' => $message->role === 'assistant' ? 'assistant' : 'user',
             'content' => $message->content,
         ])->reject(fn ($m) => $m['role'] === 'assistant' && preg_match('/\b(Bapak|Pak)\b/u', $m['content']))->values()->all();
@@ -107,7 +107,8 @@ class PlatformAiOperations
                 array_push($userContent, ...$this->attachmentService->modelParts($attachment));
             }
             $brain = app(AgentBrain::class);
-            $context = $admin ? app(PlatformAiContext::class)->package($agent, $admin, $question) : [];
+            $channel = str_starts_with($operation, 'telegram') ? 'telegram_group' : 'platform_dashboard';
+            $context = $admin ? app(PlatformAiContext::class)->package($agent, $admin, $question, $channel, $contextKey) : [];
             $content = $brain->chat($agent, $history, $userContent, $facts, $context, $operation);
 
             return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [], 'created_tasks' => $brain->createdTaskIds];
