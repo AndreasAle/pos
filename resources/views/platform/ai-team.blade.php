@@ -32,7 +32,7 @@
 >
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <nav class="flex overflow-x-auto border-b border-slate-200 px-3 sm:px-5">
-            @foreach ([['workspace','Ruang agen'],['tasks','Pekerjaan'],['team','Pengaturan agen'],['data','Data & integrasi']] as [$key,$label])
+            @foreach ([['workspace','Ruang agen'],['tasks','Pekerjaan'],['memory','Memori & konteks'],['team','Pengaturan agen'],['data','Data & integrasi']] as [$key,$label])
                 <button type="button" @click="tab='{{ $key }}'" class="whitespace-nowrap border-b-2 px-4 py-4 text-sm font-bold transition" :class="tab === '{{ $key }}' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'">{{ $label }}</button>
             @endforeach
         </nav>
@@ -125,6 +125,42 @@
                         <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span class="text-xs font-bold {{ $task->risk === 'high' ? 'text-rose-700' : ($task->risk === 'medium' ? 'text-amber-700' : 'text-emerald-700') }}">Risiko {{ ['low'=>'rendah','medium'=>'sedang','high'=>'tinggi'][$task->risk] }}</span><button type="button" @click="moveTask={{ $task->id }}" class="text-xs font-bold text-emerald-700">Perbarui status</button></footer>
                     </article>
                 @empty <div class="rounded-xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500"><b class="block text-slate-700">Belum ada pekerjaan</b><span class="mt-1 block">Mulai diskusi dengan agen atau buat tugas baru.</span></div> @endforelse
+            </div>
+        </div>
+
+        <div x-show="tab === 'memory'" x-cloak class="p-5 sm:p-6">
+            <div><h2 class="font-black text-[#0B1B3F]">Memori & konteks pemilik</h2><p class="mt-1 text-sm text-slate-500">Konteks terkonfirmasi selalu lebih kuat daripada inferensi agen. Data aktual dari tool tetap menjadi sumber angka utama.</p></div>
+            <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.4fr)]">
+                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h3 class="font-black text-[#0B1B3F]">Owner Context</h3>
+                    <p class="mt-1 text-xs leading-relaxed text-slate-500">Simpan tujuan, prioritas, batas anggaran, gaya komunikasi, atau kebijakan yang harus diketahui semua agen.</p>
+                    <form method="POST" action="{{ route('platform.ai-team.owner-context') }}" class="mt-4 space-y-3">@csrf
+                        <label class="block text-xs font-bold text-slate-700">Jenis konteks<select name="key" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="company_priorities">Prioritas perusahaan</option><option value="quarterly_objectives">Tujuan kuartal</option><option value="marketing_direction">Arah marketing</option><option value="financial_constraints">Batas keuangan</option><option value="communication_style">Gaya komunikasi</option><option value="decision_preferences">Cara mengambil keputusan</option><option value="product_positioning">Posisi produk</option><option value="prohibited_actions">Tindakan terlarang</option><option value="important_metrics">Metrik utama</option><option value="active_initiatives">Inisiatif aktif</option></select></label>
+                        <label class="block text-xs font-bold text-slate-700">Label<input name="label" required maxlength="120" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Contoh: Prioritas Q4"></label>
+                        <label class="block text-xs font-bold text-slate-700">Isi<textarea name="value" required maxlength="4000" rows="4" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Tulis fakta atau kebijakan yang sudah kamu konfirmasi."></textarea></label>
+                        <button class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Simpan konteks terkonfirmasi</button>
+                    </form>
+                    <div class="mt-5 space-y-2 border-t border-slate-100 pt-4">
+                        @forelse($ownerContexts as $context)
+                            <div class="rounded-xl bg-slate-50 p-3"><div class="flex items-center justify-between gap-2"><b class="text-xs text-[#0B1B3F]">{{ $context->label }}</b><span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">Terkonfirmasi</span></div><p class="mt-1.5 text-xs leading-relaxed text-slate-600">{{ $context->value }}</p></div>
+                        @empty <p class="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">Belum ada konteks pemilik.</p> @endforelse
+                    </div>
+                </section>
+                <section class="rounded-xl border border-slate-200 bg-white p-5">
+                    <h3 class="font-black text-[#0B1B3F]">Ingatan agen</h3><p class="mt-1 text-xs text-slate-500">Hanya pernyataan eksplisit yang disimpan otomatis. Kamu dapat mengoreksi atau menonaktifkannya.</p>
+                    <div class="mt-4 space-y-3">
+                        @forelse($memories as $memory)
+                            <article class="rounded-xl border border-slate-200 p-4">
+                                <div class="flex flex-wrap items-center gap-2"><span class="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-600">{{ $memory->category }}</span>@if($memory->agent)<span class="text-[11px] font-bold text-emerald-700">{{ $memory->agent->name }}</span>@endif<span class="ml-auto text-[10px] text-slate-400">Versi {{ $memory->version }}</span></div>
+                                <form method="POST" action="{{ route('platform.ai-team.memories.update',$memory) }}" class="mt-3 space-y-2">@csrf @method('PATCH')
+                                    <textarea name="statement" required maxlength="1000" rows="2" class="w-full rounded-xl border-slate-300 text-sm">{{ data_get($memory->content,'statement') }}</textarea>
+                                    <div class="flex items-center gap-2"><label class="text-xs font-bold text-slate-600">Prioritas <input name="importance" type="number" min="1" max="100" value="{{ $memory->importance }}" class="ml-1 w-20 rounded-lg border-slate-300 text-xs"></label><button class="ml-auto rounded-lg bg-[#0B1B3F] px-3 py-2 text-xs font-bold text-white">Koreksi & konfirmasi</button></div>
+                                </form>
+                                <form method="POST" action="{{ route('platform.ai-team.memories.deactivate',$memory) }}" class="mt-2 text-right">@csrf @method('DELETE')<button class="text-xs font-bold text-rose-700">Nonaktifkan memori</button></form>
+                            </article>
+                        @empty <p class="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">Belum ada memori jangka panjang. Pernyataan eksplisit seperti “Mulai sekarang fokus pada konversi trial” akan disimpan.</p> @endforelse
+                    </div>
+                </section>
             </div>
         </div>
 

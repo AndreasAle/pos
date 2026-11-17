@@ -27,6 +27,7 @@ class PlatformHealth
             'app' => ['title' => 'Aplikasi', 'checks' => $this->app()],
             'data' => ['title' => 'Database & penyimpanan', 'checks' => array_merge($this->database(), $this->storage())],
             'jobs' => ['title' => 'Penjadwalan & antrean', 'checks' => $this->jobs()],
+            'ai_workforce' => ['title' => 'AI Workforce', 'checks' => $this->aiWorkforce()],
             'integrations' => ['title' => 'Integrasi', 'checks' => array_merge($this->mail(), $this->telegram(), $this->ai(), $this->google(), $this->midtrans())],
             'security' => ['title' => 'Keamanan', 'checks' => $this->security()],
             'errors' => ['title' => 'Galat 24 jam terakhir', 'checks' => $this->errors()],
@@ -128,6 +129,27 @@ class PlatformHealth
         }
 
         return $out;
+    }
+
+    private function aiWorkforce(): array
+    {
+        if (! Schema::hasTable('platform_ai_runs')) {
+            return [$this->c('Telemetry AI', 'warn', 'Migration telemetry belum dijalankan')];
+        }
+        $runs = DB::table('platform_ai_runs')->where('created_at', '>=', now()->subDay());
+        $total = (clone $runs)->count();
+        $failed = (clone $runs)->where('status', 'failed')->count();
+        $errorRate = $total ? round($failed / $total * 100, 1) : 0;
+        $latency = (int) round((float) (clone $runs)->avg('latency_ms'));
+        $cost = (float) (clone $runs)->sum('estimated_cost_usd');
+        $discussions = Schema::hasTable('platform_ai_discussions') ? DB::table('platform_ai_discussions')->whereIn('status', ['pending', 'running'])->count() : 0;
+        $events = Schema::hasTable('platform_ai_events') ? DB::table('platform_ai_events')->where('status', 'open')->count() : 0;
+
+        return [
+            $this->c('Panggilan AI 24 jam', $errorRate > 20 ? 'warn' : 'ok', "{$total} call · error {$errorRate}% · latency rata-rata {$latency} ms"),
+            $this->c('Estimasi biaya AI 24 jam', 'info', '$'.number_format($cost, 4).' (estimasi, bukan tagihan provider)'),
+            $this->c('Workflow aktif', $discussions > 5 ? 'warn' : 'ok', "{$discussions} diskusi berjalan · {$events} event terbuka"),
+        ];
     }
 
     private function mail(): array

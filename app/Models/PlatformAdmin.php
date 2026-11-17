@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class PlatformAdmin extends Authenticatable
 {
@@ -31,6 +33,11 @@ class PlatformAdmin extends Authenticatable
     public function activityLogs()
     {
         return $this->hasMany(PlatformActivityLog::class);
+    }
+
+    public function conversationStates()
+    {
+        return $this->hasMany(PlatformAiConversationState::class);
     }
 
     public function isSuperAdmin(): bool
@@ -61,8 +68,8 @@ class PlatformAdmin extends Authenticatable
     /** Buat 8 kode pemulihan sekali pakai. Yang disimpan hanya hash-nya; kode asli dikembalikan sekali. */
     public function generateRecoveryCodes(): array
     {
-        $codes = collect(range(1, 8))->map(fn () => strtoupper(\Illuminate\Support\Str::random(5)).'-'.strtoupper(\Illuminate\Support\Str::random(5)))->all();
-        $this->forceFill(['recovery_codes' => array_map(fn ($c) => \Illuminate\Support\Facades\Hash::make($c), $codes)])->save();
+        $codes = collect(range(1, 8))->map(fn () => strtoupper(Str::random(5)).'-'.strtoupper(Str::random(5)))->all();
+        $this->forceFill(['recovery_codes' => array_map(fn ($c) => Hash::make($c), $codes)])->save();
 
         return $codes;
     }
@@ -73,7 +80,7 @@ class PlatformAdmin extends Authenticatable
         $input = strtoupper(trim($input));
         $hashes = (array) $this->recovery_codes;
         foreach ($hashes as $i => $hash) {
-            if (\Illuminate\Support\Facades\Hash::check($input, $hash)) {
+            if (Hash::check($input, $hash)) {
                 unset($hashes[$i]);
                 $this->forceFill(['recovery_codes' => array_values($hashes)])->save();
 

@@ -22,4 +22,9 @@ class PlatformAiAgent extends Model
     {
         return $this->hasMany(PlatformAiMessage::class);
     }
+
+    public function memories()
+    {
+        return $this->hasMany(PlatformAiMemory::class);
+    }
 }

@@ -176,6 +176,10 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::patch('ai-team/agents/{agent}/read', [\App\Http\Controllers\Platform\AiTeamController::class, 'markRead'])->middleware('throttle:60,1')->name('ai-team.read');
             Route::patch('ai-team/agents/{agent}', [\App\Http\Controllers\Platform\AiTeamController::class, 'updateAgent'])->name('ai-team.agent');
             Route::post('ai-team/records', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeRecord'])->middleware('throttle:30,1')->name('ai-team.records');
+            Route::post('ai-team/owner-context', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeOwnerContext'])->middleware('throttle:30,1')->name('ai-team.owner-context');
+            Route::patch('ai-team/memories/{memory}', [\App\Http\Controllers\Platform\AiTeamController::class, 'updateMemory'])->name('ai-team.memories.update');
+            Route::delete('ai-team/memories/{memory}', [\App\Http\Controllers\Platform\AiTeamController::class, 'deactivateMemory'])->name('ai-team.memories.deactivate');
+            Route::post('ai-team/discussions', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeDiscussion'])->middleware('throttle:5,10')->name('ai-team.discussions.store');
             Route::post('ai-team/tasks', [\App\Http\Controllers\Platform\AiTeamController::class, 'storeTask'])->middleware('throttle:30,1')->name('ai-team.tasks.store');
             Route::patch('ai-team/tasks/{task}/move', [\App\Http\Controllers\Platform\AiTeamController::class, 'moveTask'])->name('ai-team.tasks.move');
             Route::patch('ai-team/tasks/{task}/decision', [\App\Http\Controllers\Platform\AiTeamController::class, 'decide'])->name('ai-team.decision');

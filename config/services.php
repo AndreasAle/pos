@@ -21,6 +21,9 @@ return [
         'timeout' => (int) env('YOKA_AI_TIMEOUT', 25),
         'max_history' => (int) env('YOKA_AI_MAX_HISTORY', 8),
         'daily_request_budget' => (int) env('YOKA_AI_DAILY_REQUEST_BUDGET', 250),
+        'daily_cost_budget_usd' => (float) env('YOKA_AI_DAILY_COST_BUDGET_USD', 5),
+        'input_cost_per_million' => (float) env('YOKA_AI_INPUT_COST_PER_MILLION', 0.40),
+        'output_cost_per_million' => (float) env('YOKA_AI_OUTPUT_COST_PER_MILLION', 1.60),
         'prompt_version' => '2026-11-12.1',
     ],
 

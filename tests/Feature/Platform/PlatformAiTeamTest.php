@@ -5,14 +5,24 @@ namespace Tests\Feature\Platform;
 use App\Models\Business;
 use App\Models\BusinessSubscription;
 use App\Models\PlatformAdmin;
+use App\Models\PlatformAiAgent;
+use App\Models\PlatformAiConversationState;
+use App\Models\PlatformAiDecision;
+use App\Models\PlatformAiDiscussion;
+use App\Models\PlatformAiEvent;
+use App\Models\PlatformAiMemory;
+use App\Models\PlatformAiOwnerContext;
 use App\Models\PlatformAiTask;
 use App\Models\SubscriptionPlan;
-use App\Models\PlatformAiAgent;
+use App\Services\PlatformAiContext;
+use App\Services\PlatformAiDiscussions;
+use App\Services\PlatformAiEvents;
 use App\Services\PlatformAiOperations;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PlatformAiTeamTest extends TestCase
@@ -46,6 +56,167 @@ class PlatformAiTeamTest extends TestCase
     public function test_non_super_admin_cannot_access_ai_control_plane(): void
     {
         $this->platformSession($this->admin('support'))->get(route('platform.ai-team.index'))->assertForbidden();
+    }
+
+    public function test_owner_context_is_confirmed_and_only_super_admin_can_change_it(): void
+    {
+        $support = $this->admin('support');
+        $this->platformSession($support)->post(route('platform.ai-team.owner-context'), [
+            'key' => 'company_priorities', 'label' => 'Prioritas', 'value' => 'Naikkan konversi trial.',
+        ])->assertForbidden();
+
+        $admin = $this->admin();
+        $this->platformSession($admin)->post(route('platform.ai-team.owner-context'), [
+            'key' => 'company_priorities', 'label' => 'Prioritas', 'value' => 'Naikkan konversi trial.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('platform_ai_owner_contexts', [
+            'key' => 'company_priorities', 'confirmed' => true, 'updated_by' => $admin->id,
+        ]);
+    }
+
+    public function test_explicit_owner_preference_becomes_scoped_memory_and_can_be_corrected(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'marketing')->firstOrFail();
+
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), [
+            'message' => 'Aku lebih suka konten edukasi daripada hard selling.',
+        ])->assertOk();
+
+        $memory = PlatformAiMemory::firstOrFail();
+        $this->assertSame('owner', $memory->scope);
+        $this->assertTrue($memory->confirmed);
+        $this->assertSame($admin->id, $memory->platform_admin_id);
+
+        $this->platformSession($admin)->patch(route('platform.ai-team.memories.update', $memory), [
+            'statement' => 'Fokus utama adalah konten edukasi untuk pemilik kafe.', 'importance' => 95,
+        ])->assertRedirect();
+
+        $replacement = PlatformAiMemory::where('version', 2)->firstOrFail();
+        $this->assertSame('superseded', $memory->fresh()->status);
+        $this->assertSame($replacement->id, $memory->fresh()->superseded_by);
+        $this->assertSame('Fokus utama adalah konten edukasi untuk pemilik kafe.', data_get($replacement->content, 'statement'));
+    }
+
+    public function test_owner_context_is_sent_as_untrusted_reference_data_to_the_model(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => 'Kita fokus meningkatkan konversi trial.']]],
+        ])]);
+        $admin = $this->admin();
+        PlatformAiOwnerContext::create(['key' => 'company_priorities', 'label' => 'Prioritas', 'value' => 'Konversi trial', 'confirmed' => true, 'updated_by' => $admin->id]);
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), ['message' => 'Apa fokus kita?'])->assertOk();
+
+        Http::assertSent(fn ($request) => str_contains(
+            json_encode($request->data(), JSON_UNESCAPED_UNICODE),
+            'KONTEKS KERJA TERSIMPAN'
+        ) && str_contains(json_encode($request->data(), JSON_UNESCAPED_UNICODE), 'Konversi trial'));
+    }
+
+    public function test_memory_retrieval_respects_expiry_agent_scope_and_owner_scope(): void
+    {
+        $owner = $this->admin();
+        $other = PlatformAdmin::create(['name' => 'Other', 'email' => 'other@yoka.test', 'password' => 'password-kuat', 'role' => 'super_admin', 'is_active' => true]);
+        app(PlatformAiOperations::class)->ensureAgents();
+        $yusuf = PlatformAiAgent::where('key', 'marketing')->firstOrFail();
+        $luna = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+        $make = fn (array $values) => PlatformAiMemory::create($values + [
+            'category' => 'preference', 'content' => ['statement' => 'default'], 'confidence' => 1,
+            'importance' => 90, 'confirmed' => true, 'status' => 'active', 'version' => 1,
+        ]);
+        $visibleOwner = $make(['scope' => 'owner', 'platform_admin_id' => $owner->id, 'content' => ['statement' => 'Fokus konten edukasi']]);
+        $visibleAgent = $make(['scope' => 'agent', 'platform_ai_agent_id' => $yusuf->id, 'content' => ['statement' => 'Gunakan hook singkat']]);
+        $make(['scope' => 'agent', 'platform_ai_agent_id' => $luna->id, 'content' => ['statement' => 'Rahasia finance']]);
+        $make(['scope' => 'owner', 'platform_admin_id' => $other->id, 'content' => ['statement' => 'Preferensi admin lain']]);
+        $make(['scope' => 'shared', 'content' => ['statement' => 'Kedaluwarsa'], 'expires_at' => now()->subMinute()]);
+
+        $ids = collect(app(PlatformAiContext::class)->package($yusuf, $owner, 'konten edukasi hook')['memories'])->pluck('id');
+
+        $this->assertTrue($ids->contains($visibleOwner->id));
+        $this->assertTrue($ids->contains($visibleAgent->id));
+        $this->assertCount(2, $ids);
+    }
+
+    public function test_memory_endpoints_are_not_available_to_store_users(): void
+    {
+        $memory = PlatformAiMemory::create([
+            'scope' => 'shared', 'category' => 'decision', 'content' => ['statement' => 'Internal'],
+            'confidence' => 1, 'importance' => 90, 'confirmed' => true, 'status' => 'active', 'version' => 1,
+        ]);
+
+        $this->patch(route('platform.ai-team.memories.update', $memory), ['statement' => 'Bocor', 'importance' => 1])
+            ->assertRedirect(route('platform.login'));
+        $this->assertSame('Internal', data_get($memory->fresh()->content, 'statement'));
+    }
+
+    public function test_chat_persists_conversation_state_for_the_authenticated_admin_and_agent(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), [
+            'message' => 'Bro, fokus kita sekarang meningkatkan konversi trial.',
+        ])->assertOk();
+
+        $state = PlatformAiConversationState::firstOrFail();
+        $this->assertSame($admin->id, $state->platform_admin_id);
+        $this->assertSame($agent->id, $state->platform_ai_agent_id);
+        $this->assertSame('casual', $state->mood);
+        $this->assertStringContainsString('konversi trial', $state->active_topic);
+    }
+
+    public function test_explicit_decision_enters_ledger_and_numbered_options_survive_reload(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'ads')->firstOrFail();
+        $message = $agent->messages()->create(['platform_admin_id' => $admin->id, 'role' => 'user', 'content' => 'Jangan naikkan budget iklan sampai konversi membaik.']);
+        $context = app(PlatformAiContext::class);
+
+        $context->rememberExplicitOwnerStatement($agent, $admin, $message, $message->content);
+        $context->reviseConversationState($agent, $admin, $message->content, [], "1. Pertahankan budget\n2. Turunkan budget\n3. Hentikan campaign");
+
+        $this->assertDatabaseHas('platform_ai_decisions', [
+            'business_area' => 'ads', 'status' => 'active', 'decided_by' => $admin->id,
+        ]);
+        $package = $context->package($agent, $admin, 'Yang kedua saja.');
+        $this->assertSame('Turunkan budget', data_get($package, 'conversation_state.state.recent_options.1.text'));
+        $this->assertSame(PlatformAiDecision::firstOrFail()->statement, data_get($package, 'active_decisions.0.statement'));
+    }
+
+    public function test_fresh_business_tool_data_is_authoritative_over_stale_memory(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fakeSequence()
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [[
+                'id' => 'call_metrics', 'type' => 'function', 'function' => ['name' => 'business_metrics', 'arguments' => '{}'],
+            ]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Pendapatan terbaru mengikuti data tool.']]]]);
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+        PlatformAiMemory::create([
+            'scope' => 'owner', 'platform_admin_id' => $admin->id, 'platform_ai_agent_id' => $agent->id,
+            'category' => 'decision', 'content' => ['statement' => 'Pendapatan bulan ini Rp 999.999'],
+            'confidence' => 1, 'importance' => 100, 'confirmed' => true, 'status' => 'active', 'version' => 1,
+        ]);
+
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), [
+            'message' => 'Berapa pendapatan bulan ini?',
+        ])->assertOk()->assertJsonPath('assistant.content', 'Pendapatan terbaru mengikuti data tool.');
+
+        $requests = Http::recorded();
+        $secondPayload = json_encode($requests[1][0]->data(), JSON_UNESCAPED_UNICODE);
+        $this->assertStringContainsString('999.999', $secondPayload);
+        $this->assertStringContainsString('pendapatan_langganan_bulan_ini_rp', $secondPayload);
+        $this->assertStringContainsString('TIDAK BOLEH menggantikan hasil tool terbaru', json_encode($requests[0][0]->data(), JSON_UNESCAPED_UNICODE));
     }
 
     public function test_content_is_recorded_and_marketing_agent_uses_it(): void
@@ -413,6 +584,67 @@ class PlatformAiTeamTest extends TestCase
         $this->assertDatabaseMissing('platform_ai_tasks', ['platform_ai_agent_id' => $agent->id, 'title' => 'Hitung runway']);
         $last = $agent->messages()->where('role', 'assistant')->latest('id')->first();
         $this->assertNotEmpty(data_get($last->meta, 'proposed_tasks'));
+    }
+
+    public function test_ambiguous_chat_approval_never_approves_multiple_tasks(): void
+    {
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $admin = $this->admin();
+        $tasks = collect(['Satu', 'Dua'])->map(fn ($title) => $agent->tasks()->create(['type' => 'chat_task', 'title' => $title, 'summary' => 's', 'risk' => 'low', 'status' => 'proposed', 'requires_approval' => true]));
+        $agent->messages()->create(['role' => 'assistant', 'content' => 'Ada dua usulan.', 'meta' => ['proposed_tasks' => $tasks->pluck('id')->all()]]);
+
+        $approved = app(PlatformAiOperations::class)->approveFromChat($agent, 'gas', $admin->id);
+
+        $this->assertSame([], $approved);
+        $this->assertSame(2, $agent->tasks()->where('status', 'proposed')->count());
+
+        $approved = app(PlatformAiOperations::class)->approveFromChat($agent, 'gas yang kedua', $admin->id);
+        $this->assertSame(['Dua'], $approved);
+        $this->assertSame('proposed', $tasks[0]->fresh()->status);
+        $this->assertNotSame('proposed', $tasks[1]->fresh()->status);
+    }
+
+    public function test_task_execution_is_idempotent_and_records_one_attempt(): void
+    {
+        $this->aiOn();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $key = (string) Str::uuid();
+        $task = $agent->tasks()->create(['type' => 'manual', 'title' => 'Audit', 'summary' => 'Audit data.', 'risk' => 'low', 'status' => 'approved', 'requires_approval' => true, 'idempotency_key' => $key]);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Audit selesai.']]]])]);
+
+        app(PlatformAiOperations::class)->execute($task->id, $key);
+        app(PlatformAiOperations::class)->execute($task->id, $key);
+
+        $this->assertSame(1, $task->executions()->count());
+        $this->assertSame('completed', $task->executions()->first()->status);
+        Http::assertSentCount(1);
+    }
+
+    public function test_event_detection_records_change_and_deduplicates_repeated_state(): void
+    {
+        $this->trialBusiness(2);
+        $events = app(PlatformAiEvents::class);
+
+        $this->assertSame(1, $events->detect());
+        $this->assertSame(0, $events->detect());
+        $this->assertSame(1, PlatformAiEvent::count());
+        $this->assertDatabaseHas('platform_ai_messages', ['role' => 'assistant']);
+    }
+
+    public function test_discussion_runs_each_selected_agent_and_persists_real_contributions(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agents = PlatformAiAgent::whereIn('key', ['chief', 'finance'])->get();
+        $discussion = PlatformAiDiscussion::create(['created_by' => $admin->id, 'chair_agent_id' => $agents->firstWhere('key', 'chief')->id, 'objective' => 'Nilai kesiapan promosi.', 'status' => 'pending', 'limits' => ['max_agents' => 4, 'max_rounds' => 1]]);
+
+        app(PlatformAiDiscussions::class)->run($discussion, $admin, $agents->pluck('id')->all());
+
+        $this->assertSame('completed', $discussion->fresh()->status);
+        $this->assertSame(2, $discussion->contributions()->count());
+        $this->assertStringContainsString('Ramli', $discussion->fresh()->synthesis);
+        $this->assertStringContainsString('Luna', $discussion->fresh()->synthesis);
     }
 
     public function test_old_bapak_style_replies_are_not_fed_back_to_the_model(): void
