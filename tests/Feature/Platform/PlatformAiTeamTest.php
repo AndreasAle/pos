@@ -663,4 +663,41 @@ class PlatformAiTeamTest extends TestCase
             return ! str_contains($all, 'Baik, Pak.') && str_contains($all, 'Oke Bos, nanti kita bahas.');
         });
     }
+
+    public function test_task_detail_supports_metadata_comments_private_attachments_and_archive(): void
+    {
+        Storage::fake('local');
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
+        $task = $agent->tasks()->create([
+            'type' => 'manual', 'title' => 'Rencana awal', 'summary' => 'Catatan awal.',
+            'risk' => 'low', 'status' => 'proposed', 'requires_approval' => true,
+        ]);
+
+        $this->platformSession($admin)->patch(route('platform.ai-team.tasks.update', $task), [
+            'platform_ai_agent_id' => $agent->id,
+            'title' => 'Rencana lengkap',
+            'summary' => 'Deskripsi pekerjaan yang sudah diperbarui.',
+            'risk' => 'medium',
+            'scheduled_for' => now()->addDay()->format('Y-m-d H:i:s'),
+            'labels' => 'prioritas, marketing, prioritas',
+        ])->assertRedirect();
+
+        $this->assertSame(['prioritas', 'marketing'], $task->fresh()->payload['labels']);
+        $this->platformSession($admin)->post(route('platform.ai-team.tasks.comments', $task), [
+            'comment' => 'Tolong validasi angka sebelum selesai.',
+        ])->assertRedirect();
+        $this->assertDatabaseHas('platform_activity_logs', ['action' => 'ai.task.comment', 'subject_id' => $task->id]);
+
+        $this->platformSession($admin)->post(route('platform.ai-team.tasks.attachments', $task), [
+            'attachment' => UploadedFile::fake()->create('brief.pdf', 120, 'application/pdf'),
+        ])->assertRedirect();
+        $attachment = $task->fresh()->payload['attachments'][0];
+        Storage::disk('local')->assertExists($attachment['path']);
+        $this->platformSession($admin)->get(route('platform.ai-team.tasks.attachments.download', [$task, $attachment['id']]))->assertOk();
+
+        $this->platformSession($admin)->delete(route('platform.ai-team.tasks.archive', $task))->assertRedirect();
+        $this->assertTrue((bool) $task->fresh()->payload['archived']);
+    }
 }

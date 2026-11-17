@@ -18,6 +18,7 @@ use App\Services\PlatformAiOperations;
 use App\Services\PlatformWhatsApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AiTeamController extends Controller
@@ -27,7 +28,13 @@ class AiTeamController extends Controller
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
         $operations->ensureAgents();
         $agents = PlatformAiAgent::withCount(['tasks as open_tasks_count' => fn ($q) => $q->whereIn('status', ['proposed', 'approved'])])->orderBy('id')->get();
-        $tasks = PlatformAiTask::with('agent')->latest()->limit(30)->get();
+        $tasks = PlatformAiTask::with('agent')->latest()->limit(60)->get()
+            ->reject(fn ($task) => (bool) data_get($task->payload, 'archived'))
+            ->take(30)->values();
+        $taskActivities = PlatformActivityLog::with('admin:id,name')
+            ->where('subject_type', PlatformAiTask::class)
+            ->whereIn('subject_id', $tasks->pluck('id'))
+            ->latest()->get()->groupBy('subject_id');
         $records = PlatformAiRecord::latest()->limit(30)->get();
         $counts = PlatformAiRecord::selectRaw('kind, count(*) total')->groupBy('kind')->pluck('total', 'kind');
         $connections = [
@@ -50,7 +57,7 @@ class AiTeamController extends Controller
         $memories = PlatformAiMemory::with('agent:id,name')->where('status', 'active')
             ->orderByDesc('confirmed')->orderByDesc('importance')->latest()->limit(30)->get();
 
-        return view('platform.ai-team', compact('agents', 'tasks', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts', 'ownerContexts', 'memories'));
+        return view('platform.ai-team', compact('agents', 'tasks', 'taskActivities', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts', 'ownerContexts', 'memories'));
     }
 
     public function chat(Request $request, PlatformAiAgent $agent, PlatformAiOperations $operations, PlatformAiAttachmentService $attachments)
@@ -267,6 +274,79 @@ class AiTeamController extends Controller
         PlatformActivityLog::record('ai.task.create', "Membuat tugas {$task->title}.", $task);
 
         return back()->with('success', 'Tugas baru masuk To Do List.');
+    }
+
+    public function updateTask(Request $request, PlatformAiTask $task)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $data = $request->validate([
+            'platform_ai_agent_id' => 'required|exists:platform_ai_agents,id',
+            'title' => 'required|string|max:180',
+            'summary' => 'required|string|max:4000',
+            'risk' => 'required|in:low,medium,high',
+            'scheduled_for' => 'nullable|date',
+            'labels' => 'nullable|string|max:500',
+        ]);
+        $labels = collect(explode(',', (string) ($data['labels'] ?? '')))
+            ->map(fn ($label) => trim($label))->filter()->unique()->take(8)->values()->all();
+        $payload = (array) $task->payload;
+        $payload['labels'] = $labels;
+        unset($data['labels']);
+        $task->update($data + ['payload' => $payload]);
+        PlatformActivityLog::record('ai.task.update', "Memperbarui detail tugas {$task->title}.", $task, metadata: ['labels' => $labels]);
+
+        return back()->with('success', 'Detail tugas disimpan.');
+    }
+
+    public function commentTask(Request $request, PlatformAiTask $task)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $comment = $request->validate(['comment' => 'required|string|max:1000'])['comment'];
+        PlatformActivityLog::record('ai.task.comment', Str::limit($comment, 240), $task, metadata: ['comment' => $comment]);
+
+        return back()->with('success', 'Komentar ditambahkan.');
+    }
+
+    public function attachTask(Request $request, PlatformAiTask $task)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $file = $request->validate([
+            'attachment' => 'required|file|max:10240|mimes:pdf,xlsx,xls,csv,txt,md,json,png,jpg,jpeg,webp,doc,docx',
+        ])['attachment'];
+        $id = (string) Str::uuid();
+        $path = $file->storeAs("platform-ai/tasks/{$task->id}", $id.'.'.$file->getClientOriginalExtension(), 'local');
+        $payload = (array) $task->payload;
+        $attachments = collect(data_get($payload, 'attachments', []))->push([
+            'id' => $id, 'name' => $file->getClientOriginalName(), 'path' => $path,
+            'size' => $file->getSize(), 'mime' => $file->getMimeType(),
+            'uploaded_by' => auth('platform')->id(), 'uploaded_at' => now()->toIso8601String(),
+        ])->take(-10)->values()->all();
+        $payload['attachments'] = $attachments;
+        $task->update(['payload' => $payload]);
+        PlatformActivityLog::record('ai.task.attachment', "Menambahkan lampiran {$file->getClientOriginalName()}.", $task, metadata: ['attachment_id' => $id]);
+
+        return back()->with('success', 'Lampiran ditambahkan.');
+    }
+
+    public function downloadTaskAttachment(PlatformAiTask $task, string $attachment)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $file = collect(data_get($task->payload, 'attachments', []))->firstWhere('id', $attachment);
+        abort_unless($file && Storage::disk('local')->exists($file['path']), 404);
+
+        return Storage::disk('local')->download($file['path'], $file['name']);
+    }
+
+    public function archiveTask(PlatformAiTask $task)
+    {
+        abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
+        $payload = (array) $task->payload;
+        $payload['archived'] = true;
+        $payload['archived_at'] = now()->toIso8601String();
+        $task->update(['payload' => $payload]);
+        PlatformActivityLog::record('ai.task.archive', "Mengarsipkan tugas {$task->title}.", $task);
+
+        return back()->with('success', 'Tugas diarsipkan.');
     }
 
     public function moveTask(Request $request, PlatformAiTask $task, PlatformAiOperations $operations)
