@@ -24,6 +24,12 @@
     $readRoutePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.read', $agent)])->all();
     $unreadPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => (int) ($unreadCounts[$agent->id] ?? 0)])->all();
     $promptPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => data_get($profiles, $agent->key.'.prompts', [])])->all();
+    $taskColumns = [
+        'proposed' => ['label' => 'Menunggu', 'description' => 'Perlu ditinjau', 'dot' => 'bg-amber-400', 'surface' => 'bg-amber-50/40'],
+        'approved' => ['label' => 'Berjalan', 'description' => 'Sedang dikerjakan', 'dot' => 'bg-sky-500', 'surface' => 'bg-sky-50/40'],
+        'completed' => ['label' => 'Selesai', 'description' => 'Hasil telah tersedia', 'dot' => 'bg-emerald-500', 'surface' => 'bg-emerald-50/40'],
+        'rejected' => ['label' => 'Terhambat', 'description' => 'Ditolak atau terhenti', 'dot' => 'bg-rose-500', 'surface' => 'bg-rose-50/40'],
+    ];
 @endphp
 
 <div
@@ -116,16 +122,55 @@
         </div>
 
         <div x-show="tab === 'tasks'" x-cloak class="p-5 sm:p-6">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 class="font-black text-[#0B1B3F]">Pekerjaan tim</h2><p class="mt-1 text-sm text-slate-500">Hasil diskusi dan analisis yang perlu ditindaklanjuti.</p></div><button @click="newTask=true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white">Buat tugas</button></div>
-            <div class="mt-5 grid gap-5 xl:grid-cols-2">
-                @forelse($tasks as $task)
-                    <article class="rounded-xl border border-slate-200 p-5">
-                        <div class="flex items-start justify-between gap-4"><div><span class="rounded-md border px-2 py-1 text-[10px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span><h3 class="mt-3 font-black text-[#0B1B3F]">{{ $task->title }}</h3></div><span class="rounded-full px-2.5 py-1 text-[10px] font-black {{ $task->status === 'completed' ? 'bg-emerald-50 text-emerald-700' : ($task->status === 'rejected' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700') }}">{{ ['proposed'=>'Menunggu','approved'=>'Berjalan','completed'=>'Selesai','rejected'=>'Terhambat'][$task->status] ?? $task->status }}</span></div>
-                        <p class="mt-3 text-sm leading-relaxed text-slate-600">{{ $task->summary }}</p>@if($task->recommendation)<p class="mt-3 rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-600"><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif
-                        <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span class="text-xs font-bold {{ $task->risk === 'high' ? 'text-rose-700' : ($task->risk === 'medium' ? 'text-amber-700' : 'text-emerald-700') }}">Risiko {{ ['low'=>'rendah','medium'=>'sedang','high'=>'tinggi'][$task->risk] }}</span><button type="button" @click="moveTask={{ $task->id }}" class="text-xs font-bold text-emerald-700">Perbarui status</button></footer>
-                    </article>
-                @empty <div class="rounded-xl border border-dashed border-slate-300 p-10 text-center text-sm text-slate-500"><b class="block text-slate-700">Belum ada pekerjaan</b><span class="mt-1 block">Mulai diskusi dengan agen atau buat tugas baru.</span></div> @endforelse
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div class="flex items-center gap-2"><h2 class="font-black text-[#0B1B3F]">Pekerjaan tim</h2><span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500">{{ $tasks->count() }}</span></div><p class="mt-1 text-sm text-slate-500">Geser kartu ke kolom lain untuk memperbarui progres.</p></div><button @click="newTask=true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700">Buat tugas</button></div>
+
+            <div class="mt-5 overflow-x-auto pb-3">
+                <div class="grid min-w-[1120px] grid-cols-4 gap-4" aria-label="Papan Kanban pekerjaan tim">
+                    @foreach($taskColumns as $status => $column)
+                        @php $columnTasks = $tasks->where('status', $status); @endphp
+                        <section
+                            class="flex min-h-[520px] flex-col rounded-xl border border-slate-200 {{ $column['surface'] }} p-3 transition"
+                            :class="kanbanOver === '{{ $status }}' ? 'border-emerald-400 ring-2 ring-emerald-100' : ''"
+                            @dragover.prevent="kanbanOver='{{ $status }}'"
+                            @dragleave.self="kanbanOver=null"
+                            @drop.prevent="dropTask('{{ $status }}')"
+                        >
+                            <header class="flex items-center justify-between px-1 pb-3">
+                                <div class="flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full {{ $column['dot'] }}"></span><div><h3 class="text-sm font-black text-[#0B1B3F]">{{ $column['label'] }}</h3><p class="text-[10px] text-slate-500">{{ $column['description'] }}</p></div></div>
+                                <span class="flex h-6 min-w-6 items-center justify-center rounded-full border border-slate-200 bg-white px-1.5 text-[10px] font-black text-slate-500">{{ $columnTasks->count() }}</span>
+                            </header>
+
+                            <div class="flex flex-1 flex-col gap-3">
+                                @forelse($columnTasks as $task)
+                                    <article
+                                        draggable="true"
+                                        @dragstart="startTaskDrag($event, {{ $task->id }}, @js($task->type), '{{ $task->status }}')"
+                                        @dragend="endTaskDrag()"
+                                        class="cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:cursor-grabbing"
+                                        :class="draggedTask?.id === {{ $task->id }} ? 'opacity-40' : ''"
+                                    >
+                                        <div class="flex items-start justify-between gap-3">
+                                            <span class="rounded-md border px-2 py-1 text-[9px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span>
+                                            <button type="button" @click="moveTask={{ $task->id }}" class="rounded-md px-1.5 py-0.5 text-lg leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Buka pengaturan tugas {{ $task->title }}">⋯</button>
+                                        </div>
+                                        <h4 class="mt-3 text-sm font-black leading-5 text-[#0B1B3F]">{{ $task->title }}</h4>
+                                        <p class="mt-2 max-h-[4.5rem] overflow-hidden text-xs leading-6 text-slate-500">{{ $task->summary }}</p>
+                                        @if($task->recommendation)<p class="mt-3 max-h-[4rem] overflow-hidden rounded-lg bg-slate-50 p-2.5 text-[11px] leading-5 text-slate-600"><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif
+                                        <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                                            <span class="text-[10px] font-bold {{ $task->risk === 'high' ? 'text-rose-700' : ($task->risk === 'medium' ? 'text-amber-700' : 'text-emerald-700') }}">Risiko {{ ['low'=>'rendah','medium'=>'sedang','high'=>'tinggi'][$task->risk] }}</span>
+                                            <span class="text-[10px] text-slate-400">{{ $task->updated_at->diffForHumans() }}</span>
+                                        </footer>
+                                        <form id="kanban-task-{{ $task->id }}" method="POST" action="{{ route('platform.ai-team.tasks.move',$task) }}" class="hidden">@csrf @method('PATCH')<input name="status" value="{{ $task->status }}"></form>
+                                    </article>
+                                @empty
+                                    <div class="flex min-h-28 flex-1 items-center justify-center rounded-xl border border-dashed border-slate-300 px-4 text-center text-xs text-slate-400">Tarik kartu ke sini</div>
+                                @endforelse
+                            </div>
+                        </section>
+                    @endforeach
+                </div>
             </div>
+            <p class="mt-1 text-xs text-slate-400">Di ponsel, gunakan tombol ⋯ pada kartu untuk mengubah status. Tugas komunikasi eksternal tetap memerlukan persetujuan khusus.</p>
         </div>
 
         <div x-show="tab === 'memory'" x-cloak class="p-5 sm:p-6">
@@ -207,6 +252,29 @@ function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, 
     return {
         tab: 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, readRoutes, unread: initialUnread, prompts,
         draft: '', files: [], sending: false, chatError: '', newTask: false, moveTask: null, intake: false,
+        draggedTask: null, kanbanOver: null,
+        startTaskDrag(event, id, type, status) {
+            this.draggedTask={id,type,status};
+            this.kanbanOver=null;
+            event.dataTransfer.effectAllowed='move';
+            event.dataTransfer.setData('text/plain',String(id));
+        },
+        endTaskDrag() { this.draggedTask=null; this.kanbanOver=null; },
+        dropTask(status) {
+            const task=this.draggedTask;
+            this.kanbanOver=null;
+            if (!task || task.status === status) { this.draggedTask=null; return; }
+            if (task.type === 'whatsapp_draft' && ['approved','completed'].includes(status)) {
+                this.moveTask=task.id;
+                this.draggedTask=null;
+                return;
+            }
+            const form=document.getElementById(`kanban-task-${task.id}`);
+            if (!form) { this.draggedTask=null; return; }
+            form.querySelector('[name="status"]').value=status;
+            this.draggedTask=null;
+            form.requestSubmit();
+        },
         selectAgent(id) { this.activeAgent=id; this.draft=''; this.files=[]; this.chatError=''; this.markRead(id); this.$nextTick(()=>this.scrollMessages()); },
         async markRead(id) { if (!this.unread[id]) return; this.unread[id]=0; try { await fetch(this.readRoutes[id],{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}); } catch(error) { } },
         modeLabel(mode) { return mode === 'ai' ? 'AI + data' : (mode === 'fallback' ? 'Fallback data' : 'Data internal'); },
