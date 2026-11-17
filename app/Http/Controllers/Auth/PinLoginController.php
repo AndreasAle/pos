@@ -30,6 +30,9 @@ class PinLoginController extends Controller
     /** Wrong PINs allowed per outlet+device before a cool-off. */
     private const MAX_ATTEMPTS   = 5;
     private const DECAY_SECONDS  = 60;
+    // IP-independent cap per outlet: 30 wrong PINs per 15 minutes.
+    private const OUTLET_MAX_ATTEMPTS  = 30;
+    private const OUTLET_DECAY_SECONDS = 900;
 
     /** Roles that may sign in at a register. */
     private const ALLOWED_ROLES = ['cashier', 'admin', 'owner'];
@@ -117,6 +120,7 @@ class PinLoginController extends Controller
         }
 
         RateLimiter::hit($this->throttleKey($request, $outlet), self::DECAY_SECONDS);
+        RateLimiter::hit($this->outletKey($outlet), self::OUTLET_DECAY_SECONDS);
 
         throw ValidationException::withMessages([
             'pin' => 'PIN salah. Coba lagi.',
@@ -180,9 +184,14 @@ class PinLoginController extends Controller
     private function ensureIsNotRateLimited(Request $request, Outlet $outlet): void
     {
         $key = $this->throttleKey($request, $outlet);
-
         if (!RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
-            return;
+            // IP-independent ceiling per outlet (SEC-04): ip() is spoofable
+            // while all proxies are trusted, so the per-device key alone does
+            // not bound a PIN brute force.
+            $key = $this->outletKey($outlet);
+            if (!RateLimiter::tooManyAttempts($key, self::OUTLET_MAX_ATTEMPTS)) {
+                return;
+            }
         }
 
         throw ValidationException::withMessages([
@@ -194,6 +203,11 @@ class PinLoginController extends Controller
      * Keyed on outlet and device so one tablet fumbling its PIN cannot lock the
      * registers at another outlet.
      */
+    private function outletKey(Outlet $outlet): string
+    {
+        return 'pin-outlet:' . $outlet->id;
+    }
+
     private function throttleKey(Request $request, Outlet $outlet): string
     {
         return 'pin:' . $outlet->id . '|' . $request->ip();

@@ -46,9 +46,12 @@ class OrderTotalsTest extends TestCase
         $this->setUpPos();
         $product = $this->product(price: 20000);
 
+        // Short *cash* is now rejected outright (SEC-02, see
+        // SecurityRegressionTest). Non-cash methods are settled by the provider
+        // and are not checked, so the clamp still matters there.
         $order = $this->service()->createOrder($this->cashier, $this->payload([
             ['product_id' => $product->id, 'qty' => 2, 'price' => 20000],
-        ], ['paid_amount' => 30000]));
+        ], ['payment_method' => 'qris', 'paid_amount' => 30000]));
 
         $this->assertEquals(0, $order->change_amount);
     }

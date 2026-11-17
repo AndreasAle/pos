@@ -149,6 +149,14 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# Debug mode in production exposes stack traces, env names and SQL to visitors.
+echo "==> Memeriksa APP_DEBUG"
+if php artisan about --only=environment --json | grep -q '"debug_mode":true'; then
+    echo "    GAGAL: APP_DEBUG=true di .env produksi. Set APP_DEBUG=false lalu jalankan php artisan config:cache." >&2
+    exit 1
+fi
+echo "    OK: debug mati"
+
 echo "==> Menyegarkan queue worker"
 php artisan queue:restart
 

@@ -33,7 +33,17 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        // IP-independent cap per email (SEC-04): the route throttle keys on
+        // ip(), which a client can rotate via X-Forwarded-For.
+        $accountKey = 'platform-login:'.mb_strtolower((string) $credentials['email']);
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($accountKey, 10)) {
+            throw ValidationException::withMessages([
+                'email' => 'Terlalu banyak percobaan. Coba lagi dalam '.\Illuminate\Support\Facades\RateLimiter::availableIn($accountKey).' detik.',
+            ]);
+        }
+
         if (! Auth::guard('platform')->attempt($credentials, false)) {
+            \Illuminate\Support\Facades\RateLimiter::hit($accountKey, 900);
             PlatformActivityLog::record('login.failed', 'Percobaan login platform gagal.', null, null, ['email' => mb_substr((string) $credentials['email'], 0, 120)]);
             throw ValidationException::withMessages([
                 'email' => 'Email atau password akun platform salah.',

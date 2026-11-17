@@ -99,3 +99,7 @@ Schedule::call(fn () => app(PlatformTelegramNotifications::class)->briefings())
     ->everyMinute()->name('platform-telegram-briefing')->withoutOverlapping();
 Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts())
     ->everyFiveMinutes()->name('platform-telegram-alerts')->withoutOverlapping();
+
+// ── Backup database terenkripsi — harian 02:30, hanya bila YOKA_BACKUP_ENABLED=true ──
+Schedule::command('yoka:backup')->dailyAt('02:30')->name('db-backup')->withoutOverlapping()
+    ->when(fn () => (bool) config('backup.enabled'));

@@ -174,6 +174,16 @@ class PosOrderService
             $paidAmount     = $isSplit
                 ? collect($splitPayments)->sum('amount')
                 : (float) $data['paid_amount'];
+            // The register blocks short cash payments in the browser only; a
+            // crafted request could otherwise record a sale as "paid" while the
+            // drawer is short. Non-cash single payments are settled for the
+            // full total by the provider, so only cash and split are checked.
+            $settlesNow = ! $paymentPending && ($isSplit || $data['payment_method'] === 'cash');
+            if ($settlesNow && $paidAmount + 0.5 < $grandTotal) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'paid_amount' => 'Jumlah bayar kurang dari total tagihan.',
+                ]);
+            }
             $changeAmount   = max(0, $paidAmount - $grandTotal);
             $primaryMethod  = $isSplit
                 ? ($splitPayments[0]['method'] ?? 'cash')
