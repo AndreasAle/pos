@@ -87,7 +87,7 @@
                                 <form @submit.prevent="sendMessage()" class="flex items-end gap-2">
                                     <input type="file" x-ref="filePicker" multiple accept="{{ \App\Services\PlatformAiAttachmentService::ACCEPT }}" class="hidden" @change="pickFiles($event)">
                                     <button type="button" @click="$refs.filePicker.click()" :disabled="sending" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Lampirkan file"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg></button>
-                                    <textarea x-model="draft" @keydown.enter.exact.prevent.stop="sendMessage()" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… (Shift+Enter untuk baris baru)"></textarea>
+                                    <textarea x-model="draft" @keydown="handleMessageKeydown($event)" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… (Shift+Enter untuk baris baru)"></textarea>
                                     <button type="submit" :disabled="sending || (!draft.trim() && !files.length)" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white disabled:cursor-not-allowed disabled:opacity-40" aria-label="Kirim pesan"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 14-7-4 14-3-6-7-1Z"/></svg></button>
                                 </form>
                                 <p x-show="chatError" x-text="chatError" class="mt-2 text-xs text-rose-700"></p>
@@ -175,6 +175,12 @@ function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, 
         async markRead(id) { if (!this.unread[id]) return; this.unread[id]=0; try { await fetch(this.readRoutes[id],{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}); } catch(error) { } },
         modeLabel(mode) { return mode === 'ai' ? 'AI + data' : (mode === 'fallback' ? 'Fallback data' : 'Data internal'); },
         sendPrompt(prompt) { this.draft=prompt; this.sendMessage(); },
+        handleMessageKeydown(event) {
+            if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.sendMessage();
+        },
         pickFiles(event) {
             this.chatError='';
             const incoming=Array.from(event.target.files || []);
