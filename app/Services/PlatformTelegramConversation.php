@@ -187,7 +187,10 @@ class PlatformTelegramConversation
                 $telemetry->quality($violation === 'filler' ? 'filler_removed' : 'unsupported_claim_removed', $agent, ['type' => $violation]);
             }
             $content = $guarded['text'] !== '' ? $guarded['text'] : 'hmm, yang ini aku belum punya jawaban yang bisa dipertanggungjawabkan, bos. detail apa yang kurang, biar langsung kuhitung di sini?';
-            $text = $intent['deliverable'] ? PlatformTelegramStyle::clean($content) : $office->humanize($agent, $content, $route['question']);
+            // Hasil kerja (hitungan, draf, ide, analisis) boleh utuh; obrolan biasa dipaksa pendek.
+            $text = $intent['deliverable']
+                ? PlatformTelegramStyle::clean($content)
+                : PlatformTelegramStyle::chatLimit($office->humanize($agent, $content, $route['question']));
 
             if ($ids !== []) {
                 $telemetry->quality('task_created_explicit', $agent, ['count' => count($ids)]);

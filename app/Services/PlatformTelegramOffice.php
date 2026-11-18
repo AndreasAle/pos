@@ -43,7 +43,7 @@ class PlatformTelegramOffice
     ];
 
     /** Di atas panjang ini jawaban santai ditulis ulang jadi chat pendek. */
-    public const CASUAL_MAX_CHARS = 260;
+    public const CASUAL_MAX_CHARS = 180;
 
     public function __construct(private PlatformTelegramGateway $gateway) {}
 
@@ -247,7 +247,8 @@ SYS],
         foreach ($guarded['violations'] as $violation) {
             $telemetry->quality($violation === 'filler' ? 'filler_removed' : 'unsupported_claim_removed', $agent, ['type' => $violation]);
         }
-        $text = $this->humanize($agent, $guarded['text']);
+        // Nimbrung/obrolan spontan: satu bubble pendek saja.
+        $text = PlatformTelegramStyle::chatLimit($this->humanize($agent, $guarded['text']), 1, 240);
         if ($gate) {
             $recent = PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)->where('thread_id', $threadId)
                 ->latest('id')->limit(6)->pluck('content')->all();

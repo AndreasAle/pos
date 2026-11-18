@@ -36,7 +36,7 @@ class ResponseGuard
     private const EXTERNAL_DONE = '/\b(sudah|udah|udh|telah|barusan)\b.{0,12}\b(aku |ku|saya )?(kirim|kontak|hubungi|chat|wa|telepon|telpon|jalankan|pasang|aktifkan|nyalakan|transfer|bayar|refund|posting|publish|blast|broadcast|tayangkan)/iu';
 
     /** Klaim sudah membuat tugas. */
-    private const TASK_DONE = '/\b(sudah|udah|udh|telah)\b.{0,15}\b(buat|bikin|taruh|masukin|masukkan|catat|ajukan|usulkan)(kan|in)?\b.{0,25}\b(tugas|task|papan|operations center)/iu';
+    private const TASK_DONE = '/\b(sudah|udah|udh|telah)\b.{0,15}\b(buat|bikin|taruh|masukin|masukkan|catat|ajukan|ajuin|usulkan|usulin|siapin|siapkan|susun|bikinin)(kan|in)?\b.{0,25}\b(tugas|task|papan|operations center)/iu';
 
     /** Klaim sudah berdiskusi dengan rekan tertentu. */
     private const CONSULTED = '/\b(sudah|udah|udh|tadi|barusan)\b.{0,10}\b(diskusi|ngobrol|tanya|nanya|konsultasi|koordinasi|cek)\b.{0,10}\b(sama|dengan|ke)\b\s+(ramli|yusuf|yono|luna|nanda|adit|yosef)\b/iu';

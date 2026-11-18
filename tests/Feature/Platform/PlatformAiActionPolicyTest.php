@@ -405,6 +405,22 @@ class PlatformAiActionPolicyTest extends TestCase
         $this->assertCount(1, $this->aiRequests());
     }
 
+    // Regresi nyata: satu balasan mengulang isi yang sama dua kali + terlalu panjang.
+    public function test_chat_reply_drops_repeated_bubbles_and_is_hard_capped(): void
+    {
+        $style = \App\Services\PlatformTelegramStyle::class;
+        $bubbles = $style::bubbles("bos, blm ada pendaftar baru, pembayaran, atau langganan aktif hari ini, pemasukan dan mrr masih nol\n\nbos, hari ini gak ada pendaftar baru, pembayaran, atau langganan aktif, jadi pemasukan bulan ini masih nol\n\ninbox cs bersih, gak ada tiket");
+        $this->assertCount(2, $bubbles);
+        $this->assertStringContainsString('inbox cs bersih', $bubbles[1]);
+
+        $long = str_repeat('Ini kalimat panjang soal prioritas dashboard trial. ', 20);
+        $limited = $style::chatLimit($long."\n\nbubble kedua.\n\nbubble ketiga.");
+        $this->assertLessThanOrEqual(320, mb_strlen($limited));
+        $this->assertLessThanOrEqual(2, count($style::bubbles($limited)));
+
+        $this->assertSame('', ResponseGuard::validate('bos, aku sudah siapin tugas penting buat prioritas.', ['created_tasks' => []])['text']);
+    }
+
     public function test_intent_classifier_covers_core_intents(): void
     {
         $cases = [
