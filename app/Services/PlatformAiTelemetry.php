@@ -37,7 +37,7 @@ class PlatformAiTelemetry
         'direct_answer', 'direct_answer_failed', 'task_created_explicit', 'task_blocked_by_policy',
         'approval_notice_deduplicated', 'unsupported_claim_removed', 'filler_removed',
         'low_value_suppressed', 'reference_resolved', 'reference_unresolved', 'deliverable_missing',
-        'task_result_delivered', 'task_failure_reported', 'consultation', 'useful_interaction',
+        'task_result_delivered', 'task_failure_reported', 'consultation', 'useful_interaction', 'duplicate_reply_blocked',
     ];
 
     /**

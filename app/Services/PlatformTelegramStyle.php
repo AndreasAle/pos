@@ -26,6 +26,9 @@ class PlatformTelegramStyle
         $names = 'ramli|yusuf|yono(?:\s+bakri)?|luna|nanda|adit|yosef|rekan tim';
         $text = preg_replace('/^[ \t]*\[(?:'.$names.')\][ \t]*:?[ \t]*/imu', '', $text);
         $text = preg_replace('/^[ \t]*(?:'.$names.')[ \t]*:[ \t]+/imu', '', $text);
+        // Penanda internal "SKIP" tidak boleh ikut terkirim walau model menempelkannya di ujung kalimat.
+        $text = preg_replace('/\s*\bSKIP\b[\s.!]*$/u', '', $text);
+
         return trim(preg_replace("/\n{3,}/", "\n\n", $text));
     }
 

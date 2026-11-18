@@ -10,6 +10,7 @@ use App\Models\PlatformAiTelegramDiscussionBinding;
 use App\Models\PlatformAiTelegramGroup;
 use App\Models\PlatformAiTelegramIdentity;
 use App\Models\PlatformAiTelegramMessage;
+use App\Models\PlatformAiTelegramNotification;
 use App\Models\PlatformAiTelegramUpdate;
 use App\Services\PlatformAgents\AgentIntent;
 use App\Services\PlatformAgents\ResponseGuard;
@@ -23,7 +24,15 @@ class PlatformTelegramConversation
 
     public function process(PlatformAiTelegramUpdate $update): void
     {
-        $update->update(['status' => 'processing']);
+        // Klaim atomik: hanya satu proses yang boleh mengerjakan update ini. Dua pemanggilan
+        // bersamaan (job after-response, retry, worker antrean) sebelumnya bisa sama-sama lolos
+        // cek status lalu menjawab dua kali dengan isi yang berbeda.
+        $claimed = PlatformAiTelegramUpdate::whereKey($update->id)->whereIn('status', ['received', 'failed'])
+            ->update(['status' => 'processing', 'updated_at' => now()]);
+        if ($claimed !== 1) {
+            return;
+        }
+        $update->refresh();
         try {
             $payload = (array) $update->payload;
             $message = (array) data_get($payload, 'message', []);
@@ -120,6 +129,13 @@ class PlatformTelegramConversation
         foreach ($agents as $agent) {
             $targetBot = PlatformAiTelegramBot::where('platform_ai_agent_id', $agent->id)->where('status', 'active')->first();
             if (! $targetBot) {
+                continue;
+            }
+            // Lapis kedua: satu agen menjawab satu pesan Bos tepat sekali, walau pesan yang sama
+            // masuk lewat beberapa update (tujuh bot di grup yang sama) atau diproses ulang.
+            if (! PlatformAiTelegramNotification::claim('agent_reply', $group, $threadId, $update->telegram_message_id.':'.$agent->key)) {
+                $telemetry->quality('duplicate_reply_blocked', $agent);
+
                 continue;
             }
             $facts = [WorkingMemory::asFact($agent, $group, $threadId)];

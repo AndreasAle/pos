@@ -24,7 +24,7 @@ class ResponseGuard
         '/\b(siap|senang) (bantu|membantu)\b/iu',
         '/\bada (yang|yg) bisa (aku|saya|kubantu|ku) ?bantu\b/iu',
         '/\bmasih (standby|stand by|siap)\b/iu',
-        '/\bkalau mau,? (aku|saya) (bisa|siap)\b/iu',
+        '/\b(kalau|kalo|jika|bila) (kamu |bos |lo |lu )?(mau|perlu|butuh),? (aku|saya|ku) (bisa|siap|bantu)\b/iu',
         '/\b(bilang|kabari) aja\b/iu',
         '/\btinggal (bilang|kabari)\b/iu',
     ];

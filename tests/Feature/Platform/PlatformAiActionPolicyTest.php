@@ -230,6 +230,8 @@ class PlatformAiActionPolicyTest extends TestCase
         $this->assertNotSame('', ResponseGuard::validate('Tadi aku udah diskusi sama luna.', ['spoke_agents' => ['Luna']])['text']);
         $this->assertSame('', ResponseGuard::validate('Aku sudah kirim WA ke pelanggan.')['text']);
         $this->assertSame('', ResponseGuard::validate('Ada yang mau dicek atau dikerjain?')['text']);
+        $this->assertSame('', ResponseGuard::validate('Kalau kamu mau, aku bisa bantu buat simulasi lanjutan.')['text']);
+        $this->assertSame('siapkan estimasi CAC dulu.', \App\Services\PlatformTelegramStyle::clean('siapkan estimasi CAC dulu. SKIP'));
     }
 
     // 7 & 8
@@ -381,6 +383,26 @@ class PlatformAiActionPolicyTest extends TestCase
         $yusufSystem = collect($this->aiRequests()[1]['messages'])->where('role', 'system')->pluck('content')->join("\n");
         $this->assertStringContainsString('runway tetap 6 bulan', $yusufSystem);
         $this->assertNotContains('create_task', $this->toolNames($this->aiRequests()[0]));
+    }
+
+    // Regresi nyata: jawaban Luna terkirim dua kali (dua versi, bubble selang-seling).
+    public function test_same_owner_message_is_answered_once_even_if_processed_twice_or_via_several_bots(): void
+    {
+        [, , $group] = $this->office();
+        $this->aiResponses = [$this->say('MRR 1,98jt'), $this->say('versi kedua yang tidak boleh terkirim')];
+        $message = ['message_id' => 777, 'text' => 'Luna, hitung MRR 20 toko x 99rb', 'chat' => ['id' => $group->telegram_chat_id, 'type' => 'supergroup'], 'from' => ['id' => 771122, 'is_bot' => false]];
+        $updates = collect(['chief', 'finance'])->map(fn ($key, $i) => PlatformAiTelegramUpdate::create([
+            'platform_ai_telegram_bot_id' => PlatformAiTelegramBot::where('credential_key', $key)->value('id'), 'platform_ai_telegram_group_id' => $group->id,
+            'telegram_update_id' => 9000 + $i, 'telegram_chat_id' => $group->telegram_chat_id, 'telegram_message_id' => 777,
+            'interaction_id' => (string) Str::uuid(), 'event_fingerprint' => hash('sha256', "dup|{$key}"), 'status' => 'received', 'payload' => ['message' => $message],
+        ]));
+        $service = app(PlatformTelegramConversation::class);
+        $service->process($updates[0]);
+        $service->process($updates[0]->fresh()); // diproses ulang
+        $service->process($updates[1]);          // update kembar lewat bot lain
+
+        $this->assertSame(['MRR 1,98jt'], $this->outbound('finance')->pluck('content')->all());
+        $this->assertCount(1, $this->aiRequests());
     }
 
     public function test_intent_classifier_covers_core_intents(): void
