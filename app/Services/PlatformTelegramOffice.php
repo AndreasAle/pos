@@ -137,7 +137,8 @@ class PlatformTelegramOffice
         if (! $starter) {
             return false;
         }
-        $interactionId = 'chatter-'.Str::uuid();
+        // Kolom interaction_id bertipe UUID (36 karakter): jangan diberi awalan.
+        $interactionId = (string) Str::uuid();
         if (! $this->speak($group, $starter, $opening.' Kamu yang membuka obrolan, jadi jangan menunggu ditanya.', $interactionId, null)) {
             return false;
         }
