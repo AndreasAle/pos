@@ -326,7 +326,7 @@ PROMPT;
             'team_status' => $this->teamStatus(),
             'daily_report' => $this->dailyReport(),
             'funnel' => $this->funnel(),
-            'product_facts' => $this->productFacts(),
+            'product_facts' => self::productFacts(),
             'whatsapp_inbox' => $this->whatsappInbox($args),
             'create_task' => $this->tasksBlocked()
                 ? tap(['ok' => false, 'error' => 'create_task tidak diizinkan untuk permintaan ini. Kerjakan permintaannya langsung di balasanmu sekarang (hasil jadi), jangan mengusulkan tugas.'], fn () => app(PlatformAiTelemetry::class)->quality('task_blocked_by_policy', $agent, ['operation' => $this->operation]))
@@ -351,10 +351,10 @@ PROMPT;
                 'from' => $m->name ?: substr($m->phone, 0, 5).'****'.substr($m->phone, -3),
                 'business_id' => $m->business_id,
                 'text' => Str::limit($m->body, 300),
-                'draft_status' => $m->task?->status,
+                'card_status' => $m->task?->status,
                 'at' => $m->created_at->locale('id')->diffForHumans(),
             ])->values()->all(),
-            'note' => 'Balasan hanya terkirim setelah Bos menyetujui draf (whatsapp_draft) di tab Pekerjaan.',
+            'note' => 'Pesan "terkirim" adalah balasan yang benar-benar sudah kamu (Adit) kirim otomatis. Tiap percakapan punya kartu kanban: completed = beres, approved = perlu tindak lanjut manusia (closing/sensitif/belum dibalas).',
         ];
     }
 
@@ -442,7 +442,7 @@ PROMPT;
     }
 
     /** Fakta fitur yang sudah dicek dari kode saat ini; perbarui bila fitur berubah. */
-    private function productFacts(): array
+    public static function productFacts(): array
     {
         return [
             'diperbarui' => '2026-11-16',

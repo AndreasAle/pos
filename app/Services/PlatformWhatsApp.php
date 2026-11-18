@@ -30,7 +30,7 @@ class PlatformWhatsApp
     }
 
     /** @return array{ok:bool, error:?string} */
-    public function send(string $phone, string $message): array
+    public function send(string $phone, string $message, bool $typing = false, int $delay = 2): array
     {
         $target = self::normalize($phone);
         if (! $target) {
@@ -43,7 +43,7 @@ class PlatformWhatsApp
         try {
             $response = Http::withHeaders(['Authorization' => config('services.yoka_fonnte.token')])
                 ->asForm()->timeout(20)
-                ->post('https://api.fonnte.com/send', ['target' => $target, 'message' => $message, 'typing' => false, 'delay' => 2]);
+                ->post('https://api.fonnte.com/send', ['target' => $target, 'message' => $message, 'typing' => $typing, 'delay' => max(0, min(15, $delay))]);
 
             if (! $response->successful() || $response->json('status') === false) {
                 return ['ok' => false, 'error' => 'Fonnte menolak pesan: '.mb_substr($response->body(), 0, 200)];

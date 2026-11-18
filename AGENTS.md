@@ -33,6 +33,7 @@ Tujuan jangka panjang: agen AI menjadi pekerja penuh tim Yoka. Dibangun bertahap
 - Agen = loop LLM dengan tool (lihat `app/Services/PlatformAgents/TrialAgent.php`, dipakai Adit/CS). Batas keras (kuota, siapa boleh dihubungi, anti-duplikat) ditulis di kode, bukan di prompt.
 - Tiga tingkat otonomi: bebas (baca data, analisis, draf), perlu approve manusia (kirim pesan, iklan, uang), dilarang permanen (refund, ubah harga, scraping, pesan massal).
 - Agen hanya menyentuh data platform Yoka (`yokapos_app`). Jangan beri akses ke `pos_app` atau data klien live.
-- Pesan keluar hanya terkirim lewat tombol "Setujui & kirim"; jalan pintas via papan kanban diblokir.
+- Pesan keluar PROAKTIF (follow-up trial, outreach sales, broadcast) hanya terkirim lewat tombol "Setujui & kirim"; jalan pintas via papan kanban diblokir.
+- Pengecualian (keputusan pemilik, 2026-11-19): Adit (CS) membalas sendiri WhatsApp MASUK ke nomor resmi Yoka (`app/Jobs/DraftWhatsAppReply.php`). Batas keras di kode: pesan di luar topik hanya dibaca, topik sensitif (refund/tagihan/data/keamanan/hukum) hanya dibalas "sedang dicek" dan ditandai merah, tanpa diskon/promo/janji tanggal, batas balasan per nomor per jam dan per hari, satu pesan diproses sekali. Setiap percakapan tercatat otomatis sebagai kartu kanban `whatsapp_conversation` tanpa approval. Jangan longgarkan batas ini tanpa izin pemilik.
 - Urutan: Trial/CS, lalu Finance dan Accounting, terakhir Marketing dan Ads (butuh token eksternal dan menyentuh uang).
 - Token (`YOKA_FONNTE_TOKEN`, Meta, TikTok, WhatsApp) hanya di `.env` server, tidak pernah di repo.
