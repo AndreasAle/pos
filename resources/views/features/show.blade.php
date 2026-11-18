@@ -44,6 +44,7 @@
                     </div>
                 </div>
                 <a href="{{ route('landing') }}#usaha" class="hover:text-emerald-700">Solusi Bisnis</a>
+                <a href="{{ route('guides.index') }}" class="hover:text-emerald-700">Panduan</a>
                 <a href="{{ route('landing') }}#harga" class="hover:text-emerald-700">Paket Harga</a>
                 <a href="{{ route('landing') }}#faq" class="hover:text-emerald-700">FAQ</a>
             </nav>

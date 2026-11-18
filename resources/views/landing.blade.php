@@ -140,6 +140,7 @@
                     </div>
                 </div>
                 <a href="#keunggulan" class="hover:opacity-70 transition-opacity">Keunggulan</a>
+                <a href="{{ route('guides.index') }}" class="hover:opacity-70 transition-opacity">Panduan</a>
                 <a href="#harga" class="hover:opacity-70 transition-opacity">Paket Harga</a>
                 <a href="#faq" class="hover:opacity-70 transition-opacity">FAQ</a>
             </nav>
@@ -183,6 +184,7 @@
                 @endforeach
             </div>
             <a @click="mobileOpen=false" href="#keunggulan" class="block text-sm font-medium text-slate-700">Keunggulan</a>
+            <a href="{{ route('guides.index') }}" class="block text-sm font-medium text-slate-700">Panduan</a>
             <a @click="mobileOpen=false" href="#harga" class="block text-sm font-medium text-slate-700">Paket Harga</a>
             <a @click="mobileOpen=false" href="#faq" class="block text-sm font-medium text-slate-700">FAQ</a>
             <x-lang-switch variant="light" />

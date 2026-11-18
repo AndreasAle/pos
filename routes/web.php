@@ -69,6 +69,8 @@ Route::get('/lang/{locale}', function (string $locale) {
     return back()->withCookie(cookie(Localize::COOKIE, $locale, 60 * 24 * 365));
 })->name('lang.switch');
 Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('features.show');
+Route::get('/panduan', [\App\Http\Controllers\GuideController::class, 'index'])->name('guides.index');
+Route::get('/panduan/{slug}', [\App\Http\Controllers\GuideController::class, 'show'])->name('guides.show');
 
 // Halaman legal: wajib untuk Google Play (kebijakan privasi, syarat, hapus akun).
 Route::view('/privasi', 'legal.privacy')->name('legal.privacy');
