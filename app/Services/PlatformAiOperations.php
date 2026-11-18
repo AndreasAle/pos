@@ -12,6 +12,7 @@ use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
 use App\Models\PlatformAiTaskExecution;
 use App\Services\PlatformAgents\AgentBrain;
+use App\Services\PlatformAgents\ResponseGuard;
 use App\Services\PlatformAgents\TrialAgent;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -110,6 +111,10 @@ class PlatformAiOperations
             $channel = str_starts_with($operation, 'telegram') ? 'telegram_group' : 'platform_dashboard';
             $context = $admin ? app(PlatformAiContext::class)->package($agent, $admin, $question, $channel, $contextKey) : [];
             $content = $brain->chat($agent, $history, $userContent, $facts, $context, $operation);
+            if ($channel === 'platform_dashboard') {
+                // Telegram punya guard sendiri; di dashboard cukup buang penutup basa-basi ala CS.
+                $content = ResponseGuard::stripFiller($content);
+            }
 
             return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [], 'created_tasks' => $brain->createdTaskIds, 'tools_used' => $brain->toolsUsed];
         } catch (\Throwable $e) {

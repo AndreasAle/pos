@@ -92,6 +92,17 @@ class PlatformAiWorkforceV3Test extends TestCase
         $this->assertNull(ResponseGuard::lowValue('Setuju, tapi CAC Rp 85.000 terlalu mahal buat harga Rp 99.000.'));
     }
 
+    public function test_dashboard_closers_are_stripped(): void
+    {
+        // Contoh nyata dari chat dashboard Adit 2026-11-19.
+        $this->assertSame(
+            'Iya, semua pesan dari Kopi aa sudah aku balas lengkap hari ini, Bos. Tinggal tindak lanjut pembayaran atau aktivasi aja yang perlu dilanjutin.',
+            ResponseGuard::stripFiller('Iya, semua pesan dari Kopi aa sudah aku balas lengkap hari ini, Bos. Tinggal tindak lanjut pembayaran atau aktivasi aja yang perlu dilanjutin. Ada yang mau kamu atur soal itu?')
+        );
+        $this->assertSame("Ini hitungannya.\n\n1. Rp 99.000", ResponseGuard::stripFiller("Ini hitungannya.\n\n1. Rp 99.000\nAda lagi yang perlu aku bantu?"));
+        $this->assertSame('Ada yang mau kamu atur?', ResponseGuard::stripFiller('Ada yang mau kamu atur?'), 'Tidak pernah mengosongkan jawaban.');
+    }
+
     public function test_every_agent_has_a_distinct_judgment_style(): void
     {
         $this->assertCount(7, AgentBrain::JUDGMENT);

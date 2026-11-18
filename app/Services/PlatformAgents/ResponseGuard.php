@@ -27,7 +27,38 @@ class ResponseGuard
         '/\b(kalau|kalo|jika|bila) (kamu |bos |lo |lu )?(mau|perlu|butuh),? (aku|saya|ku) (bisa|siap|bantu)\b/iu',
         '/\b(bilang|kabari) aja\b/iu',
         '/\btinggal (bilang|kabari)\b/iu',
+        // Penutup tanya-balik template: "Ada yang mau kamu atur soal itu?", "Ada lagi yang perlu aku bantu?"
+        '/\bada (lagi )?(yang|yg) (mau|perlu|ingin) (kamu|bos|lo|lu)?\s*(atur|tanyakan|tanyain|bahas|cek|ubah|tambahkan)\b/iu',
+        '/\bada (lagi )?(yang|yg) (perlu|bisa) (aku|ku|saya) (bantu|bantuin)( lagi)?\b/iu',
+        '/\b(mau|perlu) (aku|ku) (bantu|bantuin) (apa )?lagi\b/iu',
     ];
+
+    /**
+     * Buang kalimat basa-basi saja (tanpa cek bukti), untuk kanal yang tidak lewat validate().
+     * Kalau isinya cuma basa-basi, teks asli dikembalikan supaya tidak kosong.
+     */
+    public static function stripFiller(string $text): string
+    {
+        $lines = [];
+        foreach (preg_split("/\n/", str_replace("\r\n", "\n", $text)) as $line) {
+            $kept = array_filter(preg_split('/(?<=[.!?])\s+/u', $line), function ($sentence) {
+                foreach (self::FILLER as $pattern) {
+                    if (preg_match($pattern, $sentence)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+            $joined = trim(implode(' ', $kept));
+            if ($joined !== '' || trim($line) === '') {
+                $lines[] = $joined;
+            }
+        }
+        $clean = trim(preg_replace("/\n{3,}/", "\n\n", implode("\n", $lines)));
+
+        return $clean !== '' ? $clean : $text;
+    }
 
     /** Janji tindakan di masa depan oleh agen sendiri. */
     private const FUTURE = '/\b(nanti|ntar|besok|lusa|minggu depan|segera)\b.{0,30}\b(aku|ku|saya)\b|\b(aku|saya|ku)\b.{0,12}\b(akan|bakal|mau)\b.{0,15}\b(cek|pantau|pantauin|monitor|kabari|kabarin|update|follow.?up|kirim|hubungi|siapkan|buat(kan)?|kerjakan|kerjain|lapor)\b|\b(aku|ku)\s*(pantau|pantauin|monitor)\b|\b(aku|ku|saya)\b.{0,10}\b(cek|lihat|liat)\b.{0,6}\b(dulu|nanti|lagi)\b/iu';
