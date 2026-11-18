@@ -16,7 +16,7 @@
                 <span class="text-[17px] sm:text-[19px] lg:text-[22px] leading-none font-bold tracking-tight transition-colors duration-300" :class="scrolled || mobileOpen || featureOpen ? 'text-emerald-700' : 'text-white'">POS</span>
             </a>
 
-            <nav class="hidden lg:flex items-center gap-9 ml-12 text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">
+            <nav class="hidden lg:flex items-center gap-5 xl:gap-8 ml-8 xl:ml-12 whitespace-nowrap text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">
                 <div class="relative" @mouseenter="featureOpen = true" @mouseleave="featureOpen = false" @click.outside="featureOpen = false">
                     <button type="button" @click="featureOpen = !featureOpen"
                             class="h-[76px] inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
@@ -89,11 +89,12 @@
                 </div>
                 <a href="{{ $home }}#keunggulan" class="hover:opacity-70 transition-opacity">Keunggulan</a>
                 <a href="{{ route('guides.index') }}" class="hover:opacity-70 transition-opacity">Panduan</a>
+                <a href="{{ route('articles.index') }}" class="hover:opacity-70 transition-opacity">Artikel</a>
                 <a href="{{ $home }}#harga" class="hover:opacity-70 transition-opacity">Paket Harga</a>
                 <a href="{{ $home }}#faq" class="hover:opacity-70 transition-opacity">FAQ</a>
             </nav>
 
-            <div class="hidden lg:flex items-center gap-7 ml-auto">
+            <div class="hidden lg:flex items-center gap-5 xl:gap-7 ml-auto whitespace-nowrap">
                 <x-lang-switch variant="light" />
                 <a href="{{ url('/login') }}" class="text-[15px] font-bold transition-colors duration-300" :class="scrolled || featureOpen ? 'text-slate-800' : 'text-white'">Masuk</a>
                 <a href="{{ url('/login') }}"
@@ -133,6 +134,7 @@
             </div>
             <a @click="mobileOpen=false" href="{{ $home }}#keunggulan" class="block text-sm font-medium text-slate-700">Keunggulan</a>
             <a href="{{ route('guides.index') }}" class="block text-sm font-medium text-slate-700">Panduan</a>
+            <a href="{{ route('articles.index') }}" class="block text-sm font-medium text-slate-700">Artikel</a>
             <a @click="mobileOpen=false" href="{{ $home }}#harga" class="block text-sm font-medium text-slate-700">Paket Harga</a>
             <a @click="mobileOpen=false" href="{{ $home }}#faq" class="block text-sm font-medium text-slate-700">FAQ</a>
             <x-lang-switch variant="light" />

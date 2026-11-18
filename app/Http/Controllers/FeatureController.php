@@ -17,6 +17,12 @@ class FeatureController extends Controller
         ]);
     }
 
+    /** @return array<int, string> untuk sitemap */
+    public static function slugs(): array
+    {
+        return array_keys((new self)->features());
+    }
+
     /** @return array<string, array<string, mixed>> */
     private function features(): array
     {

@@ -71,6 +71,9 @@ Route::get('/lang/{locale}', function (string $locale) {
 Route::get('/fitur/{feature}', [FeatureController::class, 'show'])->name('features.show');
 Route::get('/panduan', [\App\Http\Controllers\GuideController::class, 'index'])->name('guides.index');
 Route::get('/panduan/{slug}', [\App\Http\Controllers\GuideController::class, 'show'])->name('guides.show');
+Route::get('/artikel', [\App\Http\Controllers\ArticleController::class, 'index'])->name('articles.index');
+Route::get('/artikel/{slug}', [\App\Http\Controllers\ArticleController::class, 'show'])->name('articles.show');
+Route::get('/sitemap.xml', \App\Http\Controllers\SitemapController::class)->name('sitemap');
 
 // Halaman legal: wajib untuk Google Play (kebijakan privasi, syarat, hapus akun).
 Route::view('/privasi', 'legal.privacy')->name('legal.privacy');
