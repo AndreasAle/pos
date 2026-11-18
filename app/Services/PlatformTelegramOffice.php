@@ -7,6 +7,7 @@ use App\Models\PlatformAiTelegramBot;
 use App\Models\PlatformAiTelegramGroup;
 use App\Models\PlatformAiTelegramMessage;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
 /**
@@ -37,7 +38,69 @@ class PlatformTelegramOffice
         'casual' => 'Buka obrolan santai ala kantor: jam istirahat, kopi, capek, nyeletuk soal kerjaan. Ringan dan singkat, tetap sopan, tidak perlu data.',
     ];
 
+    /** Di atas panjang ini jawaban santai ditulis ulang jadi chat pendek. */
+    public const CASUAL_MAX_CHARS = 260;
+
     public function __construct(private PlatformTelegramGateway $gateway) {}
+
+    /**
+     * Langkah terakhir sebelum dikirim: kalau jawaban terlalu panjang/rapi untuk obrolan grup,
+     * tulis ulang jadi gaya chat WhatsApp kantor. Permintaan yang memang butuh isi panjang
+     * (ide, daftar, draf, strategi) dibiarkan. Gagal = pakai teks asli.
+     */
+    public function humanize(PlatformAiAgent $agent, string $text, string $request = ''): string
+    {
+        $text = PlatformTelegramStyle::clean($text);
+        if (mb_strlen($text) <= self::CASUAL_MAX_CHARS || ! filled(config('services.yoka_ai.key'))
+            || preg_match('/(ide|daftar|list|draf|draft|strategi|rencana|jadwal|langkah|laporan|rekap|detail|jelasin|jelaskan|caption|script|naskah)/iu', $request)) {
+            return $text;
+        }
+        $telemetry = app(PlatformAiTelemetry::class);
+        if ($telemetry->dailyBudgetReached()) {
+            return $text;
+        }
+        $payload = [
+            'model' => config('services.yoka_ai.model'),
+            'temperature' => 0.9,
+            'max_tokens' => 220,
+            'messages' => [
+                ['role' => 'system', 'content' => <<<'SYS'
+Kamu menulis ulang pesan seorang karyawan untuk grup WhatsApp/Telegram kantor startup Indonesia.
+Aturan:
+- Pertahankan isi penting dan angka, buang basa-basi dan penjelasan berulang.
+- Maksimal 2 bubble, pisahkan bubble dengan satu baris kosong. Tiap bubble 1-2 kalimat pendek (maks ~25 kata).
+- Bahasa lisan santai: huruf kecil boleh, singkatan wajar (yg, gak, udh, blm, bgt, sih, deh, kok, wkwk bila cocok). Panggil "bos" untuk pemilik.
+- Tanpa label nama di depan, tanpa Markdown, tanpa daftar bernomor, tanpa emoji berlebihan.
+- Jangan pakai kalimat CS: "siap bantu", "ada yang bisa dibantu", "kalau mau aku bisa", "bilang aja".
+- Jangan menjawab atas nama orang lain.
+Contoh:
+Asli: "Dari sisi keuangan, aku melihat bahwa trial selama 7 hari merupakan durasi yang seimbang antara kesempatan mencoba dan risiko arus kas, sehingga aku setuju dengan usulan tersebut."
+Ulang: "setuju 7 hari sih, pas antara cobain sama aman buat cashflow"
+Asli: "Saat ini belum ada pendaftar baru maupun pembayaran hari ini. Estimasi pemasukan bulanan juga masih nol."
+Ulang: "sepi bos hari ini, blm ada daftar maupun bayar
+
+mrr masih nol juga"
+Balas hanya dengan pesan hasil tulis ulang.
+SYS],
+                ['role' => 'user', 'content' => $text],
+            ],
+        ];
+        $started = microtime(true);
+        try {
+            $json = Http::baseUrl(rtrim((string) config('services.yoka_ai.url'), '/'))
+                ->withToken(config('services.yoka_ai.key'))
+                ->timeout((int) config('services.yoka_ai.timeout', 25))
+                ->post('/chat/completions', $payload)->throw()->json();
+            $telemetry->record($agent, 'telegram_humanize', (string) $payload['model'], $started, $json);
+            $out = PlatformTelegramStyle::clean((string) data_get($json, 'choices.0.message.content', ''));
+
+            return $out !== '' ? $out : $text;
+        } catch (\Throwable $e) {
+            $telemetry->record($agent, 'telegram_humanize', (string) $payload['model'], $started, [], $e);
+
+            return $text;
+        }
+    }
 
     /**
      * Riwayat grup dari sudut pandang satu agen: pesannya sendiri = assistant (tanpa label),
@@ -170,7 +233,7 @@ class PlatformTelegramOffice
             return false;
         }
 
-        return (bool) $this->gateway->sendHuman($bot, $group, $text, $interactionId, $threadId);
+        return (bool) $this->gateway->sendHuman($bot, $group, $this->humanize($agent, $text), $interactionId, $threadId);
     }
 
     private function activeAgentWithBot(?string $key): ?PlatformAiAgent

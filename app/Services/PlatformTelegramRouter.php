@@ -8,6 +8,9 @@ use Illuminate\Support\Str;
 
 class PlatformTelegramRouter
 {
+    /** Nama lengkap dan panggilan pendek tiap agen, dicocokkan sebagai kata utuh. */
+    public const CALL_NAMES = 'ramli|ram|yusuf|suf|ucup|yono(?:\s+bakri)?|yon|luna|lun|nanda|nan|adit|dit|yosef|sef|ocep';
+
     public function route(string $text, PlatformAiTelegramGroup $group, ?PlatformAiTelegramBot $receivingBot = null): array
     {
         $normalized = Str::lower(trim($text));
@@ -34,7 +37,8 @@ class PlatformTelegramRouter
             }
         }
         // Nama agen boleh dipanggil seperti percakapan biasa, tanpa /ask atau @username.
-        if (preg_match('/\b(ramli|yusuf|yono(?:\s+bakri)?|luna|nanda|adit|yosef)\b/iu', $text, $m)) {
+        // Termasuk panggilan pendek seperti di kantor: "suf", "ucup", "ram", "lun", "dit", "sef".
+        if (preg_match('/\b('.self::CALL_NAMES.')\b/iu', $text, $m)) {
             return ['kind' => 'message', 'question' => $text, 'agents' => [$this->nameKey($m[1])]];
         }
 
@@ -70,8 +74,16 @@ class PlatformTelegramRouter
 
     private function nameKey(string $name): string
     {
-        return match (true) {
-            str_starts_with(Str::lower($name), 'yono') => 'ads', default => ['ramli' => 'chief', 'yusuf' => 'marketing', 'luna' => 'finance', 'nanda' => 'accounting', 'adit' => 'cs', 'yosef' => 'sales'][Str::lower($name)]
-        };
+        $name = Str::lower(preg_replace('/\s+.*/u', '', trim($name)));
+
+        return [
+            'ramli' => 'chief', 'ram' => 'chief',
+            'yusuf' => 'marketing', 'suf' => 'marketing', 'ucup' => 'marketing',
+            'yono' => 'ads', 'yon' => 'ads',
+            'luna' => 'finance', 'lun' => 'finance',
+            'nanda' => 'accounting', 'nan' => 'accounting',
+            'adit' => 'cs', 'dit' => 'cs',
+            'yosef' => 'sales', 'sef' => 'sales', 'ocep' => 'sales',
+        ][$name] ?? 'chief';
     }
 }

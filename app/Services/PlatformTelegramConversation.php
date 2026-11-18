@@ -107,11 +107,12 @@ class PlatformTelegramConversation
             if (! $targetBot) {
                 continue;
             }
-            $text = Str::limit($result['content'], 3500, '…');
+            $text = app(PlatformTelegramOffice::class)->humanize($agent, $result['content'], $route['question']);
             if ($ids = ($result['created_tasks'] ?? [])) {
-                $text .= "\n\nTugas masuk Operations Center dan tetap menunggu approval: ".url('/platform/ai-team').'?tab=tasks';
+                $text .= "\n\nudah aku taruh di Operations Center ya, nunggu approve: ".url('/platform/ai-team').'?tab=tasks';
             }
-            $this->gateway->send($targetBot, $group, $text, $update->interaction_id, $threadId, ['task_id' => ($ids[0] ?? null)]);
+            $this->gateway->sendHuman($targetBot, $group, $text, $update->interaction_id, $threadId, ['task_id' => ($ids[0] ?? null)]);
+            $spoken[] = $agent->key;
             app(PlatformAiContext::class)->reviseConversationState($agent, $identity->admin, $route['question'], $ids ?? [], $result['content'], 'telegram_group', (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
         }
         if ($spoken !== [] && filled(config('services.yoka_ai.key'))) {

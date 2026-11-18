@@ -314,4 +314,13 @@ class PlatformTelegramOfficeTest extends TestCase
         $this->assertSame('chatter', $router->route('kalian ngobrol dong soal pengembangan sistem', $group)['kind']);
         $this->assertSame('message', $router->route('yusuf gimana kontennya', $group)['kind']);
     }
+
+    public function test_short_call_names_route_to_the_right_agent(): void
+    {
+        [, , $group] = $this->linkedOffice();
+        $router = app(PlatformTelegramRouter::class);
+        $this->assertSame(['marketing'], $router->route('coba suf jawab', $group)['agents']);
+        $this->assertSame(['cs'], $router->route('dit ada komplain?', $group)['agents']);
+        $this->assertNotSame(['accounting'], $router->route('nanti aja', $group)['agents']);
+    }
 }

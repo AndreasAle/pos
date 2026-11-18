@@ -16,16 +16,16 @@ class PlatformTelegramStyle
     public static function clean(string $text): string
     {
         $text = str_replace("\r\n", "\n", trim($text));
-        // Label pembicara di awal pesan atau di awal baris: "[Ramli]: ", "Ramli:" (hanya nama tim).
-        $names = 'ramli|yusuf|yono(?:\s+bakri)?|luna|nanda|adit|yosef|rekan tim';
-        $text = preg_replace('/^[ \t]*\[(?:'.$names.')\][ \t]*:?[ \t]*/imu', '', $text);
-        $text = preg_replace('/^[ \t]*(?:'.$names.')[ \t]*:[ \t]+/imu', '', $text);
         // Markdown yang tampil mentah di Telegram.
         $text = preg_replace('/\*\*(.+?)\*\*/su', '$1', $text);
         $text = preg_replace('/__(.+?)__/su', '$1', $text);
         $text = preg_replace('/^#{1,6}\s+/mu', '', $text);
         $text = preg_replace('/^\s*[\*\-]\s+/mu', '- ', $text);
 
+        // Label pembicara di awal pesan atau di awal baris: "[Ramli]: ", "Ramli:" (hanya nama tim).
+        $names = 'ramli|yusuf|yono(?:\s+bakri)?|luna|nanda|adit|yosef|rekan tim';
+        $text = preg_replace('/^[ \t]*\[(?:'.$names.')\][ \t]*:?[ \t]*/imu', '', $text);
+        $text = preg_replace('/^[ \t]*(?:'.$names.')[ \t]*:[ \t]+/imu', '', $text);
         return trim(preg_replace("/\n{3,}/", "\n\n", $text));
     }
 
