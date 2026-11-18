@@ -37,9 +37,13 @@ class DraftWhatsAppReply implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
 
-    public const DAILY_LIMIT = 300;
+    public const DAILY_LIMIT = 1500;
 
-    public const PER_PHONE_HOURLY = 8;
+    /** Bubble per nomor per jam: longgar untuk obrolan normal, menahan banjir. */
+    public const PER_PHONE_HOURLY = 60;
+
+    /** Anti-loop bot-ke-bot: loop nyata itu cepat, jadi dibatasi per 2 menit. */
+    public const BURST_LIMIT = 10;
 
     public const SENSITIVE = '/\b(refund|uang (saya|kembali)|kembalikan dana|transfer|dobel bayar|double bayar|kepotong|tagihan|hapus (data|akun)|bocor|hack|diretas|password|kata sandi|otp|polisi|lapor(kan)?|somasi|pengacara|penipu(an)?)\b/iu';
 
@@ -67,6 +71,11 @@ class DraftWhatsAppReply implements ShouldQueue
         }
         // Satu pesan diproses tepat sekali, walau job terpanggil ulang (retry, restart, callback ganda).
         if (! Cache::add('platform-wa-processed:'.$inbound->id, 1, now()->addDays(2))) {
+            return;
+        }
+
+        // Pelanggan mengetik beruntun: jawab sekali di pesan terbaru (riwayat ikut terbaca), seperti CS manusia.
+        if (PlatformAiWhatsAppMessage::where('phone', $inbound->phone)->where('direction', 'inbound')->where('id', '>', $inbound->id)->exists()) {
             return;
         }
 
@@ -210,10 +219,12 @@ PROMPT;
 
     private function withinLimits(string $phone): bool
     {
-        $hourly = PlatformAiWhatsAppMessage::where('phone', $phone)->where('direction', 'outbound')->where('created_at', '>=', now()->subHour())->count();
+        $sent = fn ($since) => PlatformAiWhatsAppMessage::where('phone', $phone)->where('direction', 'outbound')->where('created_at', '>=', $since)->count();
         $daily = PlatformAiWhatsAppMessage::where('direction', 'outbound')->where('created_at', '>=', today())->count();
 
-        return $hourly < self::PER_PHONE_HOURLY && $daily < self::DAILY_LIMIT;
+        return $sent(now()->subMinutes(2)) < self::BURST_LIMIT
+            && $sent(now()->subHour()) < self::PER_PHONE_HOURLY
+            && $daily < self::DAILY_LIMIT;
     }
 
     /** Satu kartu kanban per nomor per hari, diperbarui tiap pesan. Tidak perlu persetujuan. */

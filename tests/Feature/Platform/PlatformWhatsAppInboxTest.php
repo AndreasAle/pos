@@ -122,13 +122,36 @@ class PlatformWhatsAppInboxTest extends TestCase
         $this->assertSame(['halo kak, siap bantu!'], DraftWhatsAppReply::bubbles('halo kak, siap bantu!'), 'Kalau cuma itu isinya, tetap dikirim.');
     }
 
-    public function test_hourly_limit_stops_reply_loops(): void
+    public function test_burst_limit_stops_bot_loops(): void
     {
         $this->aiSays(['relevant' => true, 'reply' => 'oke kak', 'closing' => false, 'summary' => 'x']);
-        for ($i = 0; $i < DraftWhatsAppReply::PER_PHONE_HOURLY + 3; $i++) {
+        for ($i = 0; $i < DraftWhatsAppReply::BURST_LIMIT + 3; $i++) {
             $this->inbound(['sender' => '6283333333333', 'message' => "pesan {$i}", 'inboxid' => "L{$i}"]);
         }
-        $this->assertCount(DraftWhatsAppReply::PER_PHONE_HOURLY, $this->sentToFonnte());
+        $this->assertCount(DraftWhatsAppReply::BURST_LIMIT, $this->sentToFonnte());
+    }
+
+    public function test_normal_conversation_of_live_test_is_not_cut_off(): void
+    {
+        // Tes live 2026-11-19: 8 bubble dalam sejam membuat Adit berhenti menjawab.
+        $this->aiSays(['relevant' => true, 'reply' => "bisa kak\n\nmau coba dulu?", 'closing' => false, 'summary' => 'x']);
+        foreach (range(1, 6) as $i) {
+            $this->travel(3)->minutes();
+            $this->inbound(['sender' => '6285555555555', 'message' => "tanya {$i}", 'inboxid' => "N{$i}"]);
+        }
+        $this->assertCount(12, $this->sentToFonnte());
+    }
+
+    public function test_burst_of_customer_messages_gets_one_answer_for_the_latest(): void
+    {
+        $this->aiSays(['relevant' => true, 'reply' => 'bisa kak', 'closing' => false, 'summary' => 'x']);
+        // Dua pesan sudah tersimpan sebelum job pertama sempat jalan.
+        $first = PlatformAiWhatsAppMessage::create(['direction' => 'inbound', 'phone' => '6286666666666', 'body' => 'kak']);
+        $second = PlatformAiWhatsAppMessage::create(['direction' => 'inbound', 'phone' => '6286666666666', 'body' => 'yokapos bisa buat cafe ga?']);
+        (new DraftWhatsAppReply($first->id))->handle();
+        (new DraftWhatsAppReply($second->id))->handle();
+
+        $this->assertCount(1, $this->sentToFonnte());
     }
 
     public function test_without_ai_nothing_is_sent_and_card_asks_for_manual_reply(): void
