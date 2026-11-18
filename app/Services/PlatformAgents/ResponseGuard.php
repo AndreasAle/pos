@@ -41,6 +41,12 @@ class ResponseGuard
     /** Klaim sudah berdiskusi dengan rekan tertentu. */
     private const CONSULTED = '/\b(sudah|udah|udh|tadi|barusan)\b.{0,10}\b(diskusi|ngobrol|tanya|nanya|konsultasi|koordinasi|cek)\b.{0,10}\b(sama|dengan|ke)\b\s+(ramli|yusuf|yono|luna|nanda|adit|yosef)\b/iu';
 
+    /** Klaim sudah memeriksa data: sah hanya bila ada tool yang benar-benar dipanggil di giliran ini. */
+    private const CHECKED = '/\b(sudah|udah|udh|barusan|baru aja)\b.{0,10}\b(aku |ku|saya )?(cek|periksa|lihat|liat|tarik|ambil)\b.{0,25}\b(data|laporan|angka|dashboard|funnel|tugas|papan|metrik)/iu';
+
+    /** Kehidupan/rasa manusia yang dikarang (agen AI tidak makan, tidur, atau pulang kantor). */
+    private const HUMAN_LIFE = '/\b(aku|ku|saya)\b.{0,10}\b(lagi makan|lagi ngopi|baru bangun|ngantuk|capek banget|kecapekan|lagi di (rumah|jalan|mobil)|pulang kantor|lagi sakit|lagi cuti)\b/iu';
+
     /**
      * @param  array{tools_used?:array<int,string>, created_tasks?:array<int,int>, spoke_agents?:array<int,string>, scheduled?:bool}  $evidence
      * @return array{text:string, violations:array<int,string>}
@@ -88,6 +94,15 @@ class ResponseGuard
             if (preg_match($pattern, $sentence)) {
                 return 'filler';
             }
+        }
+        if (preg_match(self::HUMAN_LIFE, $sentence)) {
+            return 'fabricated_human_life';
+        }
+        if ($term = BusinessReasoning::terminologyViolation($sentence)) {
+            return $term;
+        }
+        if (preg_match(self::CHECKED, $sentence) && $tools === []) {
+            return 'claimed_check_without_tool';
         }
         if (preg_match(self::TASK_DONE, $sentence)) {
             return $tasks === [] ? 'claimed_task_without_record' : null;

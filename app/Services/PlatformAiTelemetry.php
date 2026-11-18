@@ -38,6 +38,7 @@ class PlatformAiTelemetry
         'approval_notice_deduplicated', 'unsupported_claim_removed', 'filler_removed',
         'low_value_suppressed', 'reference_resolved', 'reference_unresolved', 'deliverable_missing',
         'task_result_delivered', 'task_failure_reported', 'consultation', 'useful_interaction', 'duplicate_reply_blocked',
+        'terminology_corrected', 'correction_handled', 'business_check_applied',
     ];
 
     /**

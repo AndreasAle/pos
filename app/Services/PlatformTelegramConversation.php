@@ -15,6 +15,8 @@ use App\Models\PlatformAiTelegramMessage;
 use App\Models\PlatformAiTelegramNotification;
 use App\Models\PlatformAiTelegramUpdate;
 use App\Services\PlatformAgents\AgentIntent;
+use App\Services\PlatformAgents\BusinessReasoning;
+use App\Services\PlatformAgents\ConversationDecision;
 use App\Services\PlatformAgents\ResponseGuard;
 use App\Services\PlatformAgents\WorkingMemory;
 use Illuminate\Support\Carbon;
@@ -142,6 +144,9 @@ class PlatformTelegramConversation
         $office = app(PlatformTelegramOffice::class);
         $telemetry = app(PlatformAiTelemetry::class);
         $intent = AgentIntent::classify($route['question']);
+        // Keputusan bertipe hanya membentuk jawaban; izin tetap dari $intent['allows_task'].
+        $decision = ConversationDecision::decide($route['question'], $intent);
+        $decisionFacts = array_merge([$decision->asFact()], BusinessReasoning::facts($decision->domains));
         $agentKeys = array_slice(array_values(array_unique($route['agents'])), 0, 3);
 
         // "coba kirim di sini dulu" tanpa nama: tujukan ke agen yang terakhir bicara di grup ini.
@@ -170,7 +175,13 @@ class PlatformTelegramConversation
 
                 continue;
             }
-            $facts = [WorkingMemory::asFact($agent, $group, $threadId)];
+            $facts = array_merge([WorkingMemory::asFact($agent, $group, $threadId)], $decisionFacts);
+            if ($decision->domains !== []) {
+                $telemetry->quality('business_check_applied', $agent, ['domains' => implode(',', $decision->domains)]);
+            }
+            if ($decision->correction) {
+                $telemetry->quality('correction_handled', $agent);
+            }
 
             // Rujukan ke hasil sebelumnya: kirim hasil yang benar-benar ada, atau akui belum ada.
             if ($intent['reference']) {
@@ -216,7 +227,12 @@ class PlatformTelegramConversation
                 'tools_used' => (array) ($result['tools_used'] ?? []), 'created_tasks' => $ids, 'spoke_agents' => $spokeNames,
             ]);
             foreach ($guarded['violations'] as $violation) {
-                $telemetry->quality($violation === 'filler' ? 'filler_removed' : 'unsupported_claim_removed', $agent, ['type' => $violation]);
+                $metric = match (true) {
+                    $violation === 'filler' => 'filler_removed',
+                    str_starts_with($violation, 'terminology') => 'terminology_corrected',
+                    default => 'unsupported_claim_removed',
+                };
+                $telemetry->quality($metric, $agent, ['type' => $violation]);
             }
             $content = $guarded['text'] !== '' ? $guarded['text'] : 'iya bos?';
             // Hasil kerja (hitungan, draf, ide, analisis) boleh utuh; obrolan biasa dipaksa pendek.

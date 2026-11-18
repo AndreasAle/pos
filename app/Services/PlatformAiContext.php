@@ -185,12 +185,16 @@ class PlatformAiContext
         return mb_strlen($clean) >= 12 ? Str::limit($clean, 140, '') : $fallback;
     }
 
-    private function mood(string $text): string
+    public static function mood(string $text): string
     {
+        $letters = preg_replace('/[^A-Za-z]/', '', $text);
+        $shouting = strlen($letters) >= 12 && strtoupper($letters) === $letters;
+
         return match (true) {
-            preg_match('/\b(cepat|urgent|darurat|segera)\b/iu', $text) === 1 => 'urgent',
-            preg_match('/\b(kesal|kecewa|salah lagi|kok begini|parah)\b/iu', $text) === 1 => 'frustrated',
-            preg_match('/\b(ide|brainstorm|coba bayangkan|eksplor)\b/iu', $text) === 1 => 'exploratory',
+            preg_match('/\b(cepat|urgent|darurat|segera|asap)\b/iu', $text) === 1 => 'urgent',
+            $shouting || preg_match('/\b(kesal|kecewa|salah lagi|kok begini|parah|masih (double|dobel|salah|error|rusak)|kenapa (masih|lagi)|capek)\b/iu', $text) === 1 => 'frustrated',
+            preg_match('/\b(berhasil|closing|goal|tembus|akhirnya|mantap+|alhamdulillah|yeay|hore)\b/iu', $text) === 1 => 'celebratory',
+            preg_match('/\b(ide|brainstorm|coba bayangkan|eksplor|gimana kalau|gmn kalo)\b/iu', $text) === 1 => 'exploratory',
             preg_match('/\b(bro|wkwk|haha|santai)\b/iu', $text) === 1 => 'casual',
             default => 'serious',
         };
@@ -198,11 +202,12 @@ class PlatformAiContext
 
     private function conversationSignal(string $text): array
     {
-        $mood = $this->mood($text);
+        $mood = self::mood($text);
         $correction = preg_match('/\b(salah|bukan itu|maksudku|koreksi|ralat|keliru)\b/iu', $text) === 1;
         $guidance = match ($mood) {
             'urgent' => 'Berikan keputusan atau jawaban inti lebih dulu; singkat dan tanpa pembuka ramah yang tidak perlu.',
             'frustrated' => 'Akui masalah secara singkat, jangan defensif atau terlalu ceria, lalu fokus pada koreksi konkret.',
+            'celebratory' => 'Tanggapi hangat tapi wajar, jangan melebih-lebihkan pencapaian, lalu sebut satu hal yang perlu dijaga.',
             'exploratory' => 'Boleh mengeksplorasi beberapa alternatif tanpa terlalu cepat mengunci satu pilihan.',
             'casual' => 'Balas santai dan natural, tetap profesional dan tidak berlebihan.',
             default => 'Jawab profesional, langsung, dan proporsional terhadap kompleksitas pertanyaan.',
