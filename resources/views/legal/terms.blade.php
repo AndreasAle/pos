@@ -1,7 +1,7 @@
 @extends('legal.layout')
 
 @section('title', 'Syarat Layanan')
-@section('updated', '13 November 2026')
+@section('updated', '18 November 2026')
 
 @section('content')
 <p>Dengan membuat akun atau memakai Yoka POS, Anda menyetujui syarat berikut. Jika tidak setuju, mohon berhenti menggunakan layanan.</p>
@@ -32,15 +32,24 @@
 <h2>6. Ketersediaan</h2>
 <p>Kami berupaya menjaga layanan tetap berjalan, tetapi tidak menjamin layanan bebas gangguan. Kami menyarankan Anda menyiapkan cara pencatatan cadangan saat jaringan terputus. Pemeliharaan terjadwal akan diinformasikan bila memungkinkan.</p>
 
-<h2>7. Batasan tanggung jawab</h2>
+<h2>7. Integrasi pihak ketiga</h2>
+<p>Anda dapat memilih menghubungkan layanan pihak ketiga, termasuk TikTok, ke Yoka POS. Dengan menghubungkannya, Anda memberi Yoka POS izin untuk mengakses dan memproses data yang Anda setujui pada layar otorisasi layanan tersebut, hanya untuk menyediakan fitur yang Anda minta.</p>
+<ul>
+    <li>Anda harus memiliki hak untuk menghubungkan dan menganalisis akun serta konten tersebut.</li>
+    <li>Ketersediaan data dan fitur bergantung pada API, kebijakan, dan persetujuan layanan pihak ketiga.</li>
+    <li>Analisis dan rekomendasi AI bersifat bantuan pengambilan keputusan, bukan jaminan hasil bisnis.</li>
+    <li>Anda dapat memutus koneksi kapan saja. Pencabutan akses dapat membatasi atau menghentikan fitur terkait.</li>
+</ul>
+
+<h2>8. Batasan tanggung jawab</h2>
 <p>Sejauh diizinkan hukum, Yoka POS tidak bertanggung jawab atas kerugian tidak langsung, kehilangan keuntungan, atau kerugian akibat kesalahan input data, gangguan jaringan, atau perangkat pihak ketiga (misalnya printer) yang berada di luar kendali kami.</p>
 
-<h2>8. Penghentian</h2>
+<h2>9. Penghentian</h2>
 <p>Anda dapat berhenti kapan saja dan meminta penghapusan akun di halaman <a href="{{ route('legal.delete') }}">Hapus Akun</a>. Kami dapat menangguhkan akun yang melanggar syarat ini.</p>
 
-<h2>9. Perubahan syarat</h2>
+<h2>10. Perubahan syarat</h2>
 <p>Syarat dapat diperbarui. Penggunaan layanan setelah pembaruan berarti Anda menyetujui versi terbaru.</p>
 
-<h2>10. Kontak</h2>
+<h2>11. Kontak</h2>
 <p><a href="mailto:conwebid@gmail.com">conwebid@gmail.com</a></p>
 @endsection
