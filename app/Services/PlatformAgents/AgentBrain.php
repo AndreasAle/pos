@@ -103,10 +103,11 @@ class AgentBrain
     {
         $this->operation = $operation;
         $system = [['role' => 'system', 'content' => $this->systemPrompt($agent)]];
-        if ($agent->key === 'cs') {
-            // Adit di dashboard harus sinkron dengan apa yang benar-benar terjadi di WhatsApp.
-            $facts = array_merge([self::whatsappDigest()], $facts);
-        }
+        // Adit harus sinkron dengan WhatsApp. Fakta ini ditaruh SETELAH riwayat (paling dekat dengan
+        // pertanyaan) karena riwayat bisa berisi jawaban lama yang keliru dan model cenderung mengulangnya.
+        $late = $agent->key === 'cs'
+            ? [['role' => 'system', 'content' => self::whatsappDigest()."\nKOREKSI: balasan WA untuk pesan masuk kamu kirim sendiri otomatis, TIDAK menunggu \"setuju\" Bos. Kalau jawabanmu sebelumnya di riwayat bilang balasan WA menunggu persetujuan, itu keliru dan sudah tidak berlaku; jangan diulang. Jawab dari ringkasan ini."]]
+            : [];
         if ($facts) {
             $system[] = ['role' => 'system', 'content' => "FAKTA SISTEM TERBARU (pasti benar, sampaikan dengan gayamu bila relevan):\n- ".implode("\n- ", $facts)];
         }
@@ -118,7 +119,7 @@ class AgentBrain
             ];
         }
 
-        return $this->converse($agent, array_merge($system, $history, [['role' => 'user', 'content' => $userContent]]));
+        return $this->converse($agent, array_merge($system, $history, $late, [['role' => 'user', 'content' => $userContent]]));
     }
 
     /** Mengerjakan tugas yang SUDAH disetujui pemilik dan mengembalikan hasil kerjanya sebagai pesan chat. */

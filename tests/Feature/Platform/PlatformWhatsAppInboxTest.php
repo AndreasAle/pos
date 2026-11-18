@@ -183,6 +183,13 @@ class PlatformWhatsAppInboxTest extends TestCase
 
             return str_contains($body, 'RINGKASAN WHATSAPP HARI INI') && str_contains($body, '1 pesan masuk') && str_contains($body, 'PENGECUALIAN UNTUK KAMU');
         });
+        // Ringkasan ada tepat sebelum pertanyaan Bos, setelah riwayat yang mungkin berisi jawaban lama keliru.
+        Http::assertSent(function ($r) {
+            $messages = $r->data()['messages'] ?? [];
+            $beforeUser = $messages[count($messages) - 2] ?? [];
+
+            return ($beforeUser['role'] ?? null) === 'system' && str_contains((string) $beforeUser['content'], 'KOREKSI');
+        });
     }
 
     public function test_group_and_own_device_messages_are_ignored(): void
