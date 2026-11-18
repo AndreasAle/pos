@@ -86,6 +86,8 @@ return [
     // WhatsApp resmi tim Yoka (Fonnte). Hanya dipakai setelah tugas disetujui manusia.
     'yoka_fonnte' => [
         'token' => env('YOKA_FONNTE_TOKEN'),
+        // Bagian rahasia di URL webhook pesan masuk. Kosong = webhook mati.
+        'webhook_secret' => env('YOKA_FONNTE_WEBHOOK_SECRET'),
     ],
 
     'postmark' => [

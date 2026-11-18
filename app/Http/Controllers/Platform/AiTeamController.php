@@ -17,6 +17,7 @@ use App\Models\PlatformAiTelegramGroup;
 use App\Models\PlatformAiTelegramIdentity;
 use App\Models\PlatformAiTelegramMessage;
 use App\Models\PlatformAiTelegramUpdate;
+use App\Models\PlatformAiWhatsAppMessage;
 use App\Services\PlatformAiAttachmentService;
 use App\Services\PlatformAiContext;
 use App\Services\PlatformAiOperations;
@@ -333,6 +334,10 @@ class AiTeamController extends Controller
         if ($result['ok']) {
             $task->update(['summary' => $message, 'status' => 'completed', 'executed_at' => now(), 'result' => ['sent' => true], 'error' => null]);
             PlatformActivityLog::record('ai.whatsapp.sent', "WhatsApp terkirim: {$task->title}.", $task, metadata: ['business_id' => data_get($task->payload, 'business_id')]);
+            // Simpan di kotak WA supaya Adit tahu apa yang sudah dibalas di percakapan berikutnya.
+            if ($phone = PlatformWhatsApp::normalize((string) data_get($task->payload, 'phone'))) {
+                PlatformAiWhatsAppMessage::create(['direction' => 'outbound', 'phone' => $phone, 'body' => $message, 'business_id' => data_get($task->payload, 'business_id') ?? data_get($task->payload, 'matched_business_id'), 'platform_ai_task_id' => $task->id]);
+            }
 
             return back()->with('success', 'Disetujui dan WhatsApp terkirim.');
         }

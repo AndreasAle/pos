@@ -17,6 +17,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\FinanceLedgerController;
 use App\Http\Controllers\FinanceReportController;
+use App\Http\Controllers\FonnteWebhookController;
 use App\Http\Controllers\GoBizOAuthController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\IntegrationController;
@@ -87,6 +88,9 @@ Route::post('/payments/bayarpro/webhook', BayarProWebhookController::class)->mid
 Route::post('telegram/webhook', [TelegramWebhookController::class, 'handle'])->name('telegram.webhook');
 Route::post('platform-ai/telegram/webhooks/{botKey}', PlatformTelegramWebhookController::class)
     ->middleware('throttle:240,1')->name('platform.telegram.webhook');
+// Pesan WA masuk ke nomor resmi Yoka (Fonnte). Secret di URL; Adit hanya membuat draf.
+Route::match(['get', 'post'], 'platform-ai/whatsapp/webhook/{secret}', FonnteWebhookController::class)
+    ->middleware('throttle:120,1')->name('platform.whatsapp.webhook');
 
 // Google Sheets menarik CSV lewat IMPORTDATA. Dikunci token acak per bisnis; hanya baca.
 Route::get('feed/sheets/{token}/{dataset}.csv', [SheetFeedController::class, 'csv'])

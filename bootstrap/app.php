@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             '/midtrans/callback',
             '/telegram/webhook',
             '/platform-ai/telegram/webhooks/*',
+            '/platform-ai/whatsapp/webhook/*',
             'api/shopeefood/*',
             '/payments/bayarpro/webhook',
         ]);
