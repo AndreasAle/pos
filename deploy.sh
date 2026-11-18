@@ -115,6 +115,8 @@ for WEB_ROOT_ITEM in "${WEB_ROOT_LIST[@]}"; do
     cp -r "$APP_DIR/public/build/." "$WEB_ROOT_ITEM/build/"
     cp -r "$APP_DIR/public/images/." "$WEB_ROOT_ITEM/images/"
     cp -r "$APP_DIR/public/models/." "$WEB_ROOT_ITEM/models/"
+    # robots.txt menunjuk ke sitemap.xml untuk Google; ikut diperbarui setiap deploy.
+    cp "$APP_DIR/public/robots.txt" "$WEB_ROOT_ITEM/robots.txt"
 
     # Foto produk/logo hasil upload disimpan di storage/app/public dan dilayani
     # lewat symlink <web root>/storage. Symlink yang hilang atau menunjuk ke
