@@ -4,6 +4,7 @@ namespace Tests\Feature\Platform;
 
 use App\Models\Business;
 use App\Models\PlatformAdmin;
+use App\Models\PlatformAiAgent;
 use App\Models\PlatformAiTask;
 use App\Models\PlatformAiWhatsAppMessage;
 use App\Services\PlatformAiOperations;
@@ -75,6 +76,22 @@ class PlatformWhatsAppInboxTest extends TestCase
         $this->assertSame('high', $task->risk);
         $this->assertTrue($task->payload['sensitive']);
         $this->assertStringContainsString('TOPIK SENSITIF', $task->recommendation);
+    }
+
+    public function test_adit_chat_can_read_the_inbox_and_channel_shows_connected(): void
+    {
+        $this->inbound(['sender' => '6281234567890', 'name' => 'Rina', 'message' => 'Halo', 'inboxid' => 'C1']);
+        config(['services.yoka_ai.key' => 'k', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fakeSequence('https://ai.test/v1/chat/completions')
+            ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [['id' => 't1', 'type' => 'function', 'function' => ['name' => 'whatsapp_inbox', 'arguments' => '{}']]]]]]])
+            ->push(['choices' => [['message' => ['content' => 'Ada 1 pesan masuk dari Rina: "Halo". Drafnya nunggu approve.']]]]);
+        $adit = PlatformAiAgent::where('key', 'cs')->firstOrFail();
+
+        $result = app(PlatformAiOperations::class)->reply($adit, 'adit ada pesan masuk gak');
+
+        $this->assertContains('whatsapp_inbox', $result['tools_used']);
+        Http::assertSent(fn ($r) => str_contains(json_encode($r->data()), 'Rina') && str_contains(json_encode($r->data()), 'proposed'));
+        $this->assertTrue(app(PlatformAiOperations::class)->externalConnectionReady('cs'));
     }
 
     public function test_approved_reply_is_sent_once_and_logged_to_thread(): void

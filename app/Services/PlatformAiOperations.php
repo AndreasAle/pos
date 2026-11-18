@@ -148,7 +148,7 @@ class PlatformAiOperations
     {
         return match ($key) {
             'marketing', 'ads' => (filled(config('services.meta_marketing.access_token')) && filled(config('services.meta_marketing.ad_account_id'))) || (filled(config('services.tiktok_marketing.access_token')) && filled(config('services.tiktok_marketing.advertiser_id'))),
-            'cs', 'sales' => filled(config('services.whatsapp_business.access_token')) && filled(config('services.whatsapp_business.phone_number_id')),
+            'cs', 'sales' => (filled(config('services.whatsapp_business.access_token')) && filled(config('services.whatsapp_business.phone_number_id'))) || PlatformWhatsApp::configured(),
             default => null,
         };
     }

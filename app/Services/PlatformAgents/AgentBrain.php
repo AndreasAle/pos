@@ -7,9 +7,12 @@ use App\Models\BusinessSubscription;
 use App\Models\PlatformAiAgent;
 use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
+use App\Models\PlatformAiWhatsAppMessage;
 use App\Services\PlatformAiOperations;
 use App\Services\PlatformAiTelemetry;
+use App\Services\PlatformWhatsApp;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 /**
  * Otak obrolan agen Yoka. Dua hal yang membuatnya terasa seperti rekan kerja, bukan bot:
@@ -48,7 +51,7 @@ class AgentBrain
         'ads' => 'Rencana eksperimen iklan: hipotesis, anggaran uji kecil, batas rugi, kriteria berhenti dan naik. Kamu tidak membelanjakan uang; semua menunggu persetujuan. Bila data performa organik belum ada, katakan terus terang.',
         'finance' => 'Laporan keuangan harian: pembayaran masuk hari ini vs kemarin, langganan aktif dan estimasi pemasukan bulanan, trial yang segera habis beserta potensi pemasukannya, SATU anomali, SATU tindakan. Pakai daily_report dan funnel. Bila data biaya kosong, katakan apa yang perlu diinput.',
         'accounting' => 'Cek kelengkapan pencatatan: sebut item spesifik yang janggal atau kosong (pembayaran tanpa catatan, selisih, data yang belum diinput) dan langkah membereskannya satu per satu.',
-        'cs' => 'Follow-up trial: urutkan toko dari yang paling mendesak (sisa hari), tulis draf WhatsApp siap kirim per toko yang hangat dan tidak memaksa. Semua pesan hanya draf yang menunggu persetujuan.',
+        'cs' => 'Pesan masuk dulu: panggil whatsapp_inbox untuk melihat chat pelanggan dan draf balasannya. Follow-up trial: urutkan toko dari yang paling mendesak (sisa hari), tulis draf WhatsApp siap kirim per toko yang hangat dan tidak memaksa. Semua pesan hanya draf yang menunggu persetujuan.',
         'sales' => 'Pipeline: urutkan prospek dari yang paling siap, beri alasan singkat tiap prospek, dan tulis pesan pembuka personal. Jangan pernah klaim sudah menghubungi siapa pun.',
     ];
 
@@ -290,6 +293,7 @@ PROMPT;
             $fn('daily_report', 'Laporan harian Yoka: pendaftar dan pembayaran hari ini vs kemarin, trial yang habis hari ini dan besok (dengan nama toko), langganan aktif, estimasi pemasukan bulanan, tugas tim yang selesai hari ini.'),
             $fn('funnel', 'Corong 30 hari: pendaftar, trial berjalan, trial yang kedaluwarsa tanpa bayar, pembayaran, dan perkiraan konversi. Konversi ini perkiraan kasar, sebutkan begitu.'),
             $fn('product_facts', 'Fakta fitur Yoka POS yang sudah diverifikasi dan statusnya (aktif, kerangka, atau sedang dibangun). Wajib dipakai sebelum menulis konten atau pesan penjualan agar tidak mengklaim fitur yang belum ada.'),
+            $fn('whatsapp_inbox', 'Kotak WhatsApp resmi Yoka: pesan masuk dari pelanggan/calon pelanggan dan status draf balasannya. WAJIB dipakai saat ditanya soal pesan masuk, chat WA, atau pelanggan yang menghubungi.', ['days' => ['type' => 'integer', 'description' => 'Rentang hari, default 7.']]),
             $fn('create_task', 'Usulkan tugas, keputusan, atau strategi ke papan kerja atas namamu. Tugas menunggu persetujuan pemilik dan TIDAK menjalankan apa pun sendiri.', [
                 'title' => ['type' => 'string', 'description' => 'Judul singkat, maks 120 karakter.'],
                 'summary' => ['type' => 'string', 'description' => 'Isi lengkap: apa yang dikerjakan, alasan, langkah, ukuran keberhasilan.'],
@@ -323,11 +327,35 @@ PROMPT;
             'daily_report' => $this->dailyReport(),
             'funnel' => $this->funnel(),
             'product_facts' => $this->productFacts(),
+            'whatsapp_inbox' => $this->whatsappInbox($args),
             'create_task' => $this->tasksBlocked()
                 ? tap(['ok' => false, 'error' => 'create_task tidak diizinkan untuk permintaan ini. Kerjakan permintaannya langsung di balasanmu sekarang (hasil jadi), jangan mengusulkan tugas.'], fn () => app(PlatformAiTelemetry::class)->quality('task_blocked_by_policy', $agent, ['operation' => $this->operation]))
                 : $this->createTask($agent, $args),
             default => ['error' => 'Tool tidak dikenal.'],
         };
+    }
+
+    /** Kotak WA resmi Yoka: pesan masuk terbaru + status draf balasannya. Nomor disamarkan sebagian. */
+    private function whatsappInbox(array $args): array
+    {
+        $days = max(1, min(30, (int) ($args['days'] ?? 7)));
+        $messages = PlatformAiWhatsAppMessage::with('task:id,status')->where('created_at', '>=', now()->subDays($days))
+            ->latest('id')->limit(30)->get();
+
+        return [
+            'connected' => PlatformWhatsApp::configured() && filled(config('services.yoka_fonnte.webhook_secret')),
+            'period_days' => $days,
+            'inbound_count' => $messages->where('direction', 'inbound')->count(),
+            'messages' => $messages->map(fn ($m) => [
+                'direction' => $m->direction === 'inbound' ? 'masuk' : 'terkirim',
+                'from' => $m->name ?: substr($m->phone, 0, 5).'****'.substr($m->phone, -3),
+                'business_id' => $m->business_id,
+                'text' => Str::limit($m->body, 300),
+                'draft_status' => $m->task?->status,
+                'at' => $m->created_at->locale('id')->diffForHumans(),
+            ])->values()->all(),
+            'note' => 'Balasan hanya terkirim setelah Bos menyetujui draf (whatsapp_draft) di tab Pekerjaan.',
+        ];
     }
 
     private function listTasks(PlatformAiAgent $agent, array $args): array
