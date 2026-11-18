@@ -51,5 +51,5 @@
 <p>Syarat dapat diperbarui. Penggunaan layanan setelah pembaruan berarti Anda menyetujui versi terbaru.</p>
 
 <h2>11. Kontak</h2>
-<p><a href="mailto:conwebid@gmail.com">conwebid@gmail.com</a></p>
+<p><a href="mailto:support@yokapos.com">support@yokapos.com</a></p>
 @endsection

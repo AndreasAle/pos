@@ -57,7 +57,7 @@
 
 <h2>Memutus koneksi dan menghapus data TikTok</h2>
 <p>Anda dapat memutus koneksi TikTok dari halaman Data &amp; Integrasi di Yoka POS. Setelah diputus, Yoka POS menghentikan pengambilan data baru dan menghapus token TikTok yang tersimpan. Anda juga dapat mencabut akses Yoka POS dari pengaturan keamanan akun TikTok.</p>
-<p>Untuk meminta penghapusan salinan profil, daftar video, dan riwayat metrik TikTok yang tersimpan di Yoka POS, gunakan proses pada halaman <a href="{{ route('legal.delete') }}">Hapus Akun</a> atau kirim permintaan dari alamat email akun Anda ke <a href="mailto:conwebid@gmail.com">conwebid@gmail.com</a>. Sebutkan bahwa permintaan hanya untuk data integrasi TikTok bila Anda tidak ingin menghapus seluruh akun Yoka POS.</p>
+<p>Untuk meminta penghapusan salinan profil, daftar video, dan riwayat metrik TikTok yang tersimpan di Yoka POS, gunakan proses pada halaman <a href="{{ route('legal.delete') }}">Hapus Akun</a> atau kirim permintaan dari alamat email akun Anda ke <a href="mailto:support@yokapos.com">support@yokapos.com</a>. Sebutkan bahwa permintaan hanya untuk data integrasi TikTok bila Anda tidak ingin menghapus seluruh akun Yoka POS.</p>
 
 <h2>Hak Anda</h2>
 <p>Anda berhak mengakses, memperbaiki, dan meminta penghapusan data pribadi Anda. Hubungi kami melalui email di bawah.</p>
@@ -69,5 +69,5 @@
 <p>Jika kebijakan ini berubah, versi terbaru akan ditampilkan di halaman ini beserta tanggal pembaruannya.</p>
 
 <h2>Kontak</h2>
-<p>Pertanyaan tentang privasi: <a href="mailto:conwebid@gmail.com">conwebid@gmail.com</a></p>
+<p>Pertanyaan tentang privasi: <a href="mailto:support@yokapos.com">support@yokapos.com</a></p>
 @endsection

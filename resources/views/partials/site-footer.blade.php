@@ -1,7 +1,7 @@
 {{-- Footer bersama: landing dan halaman fitur. Opsional: $home (prefix tautan anchor). --}}
     @php
         $companyName = 'Conwebid Indonesia Digital';
-        $companyEmail = 'conwebid@gmail.com';
+        $companyEmail = 'support@yokapos.com';
         $companyPhone = '0858-9111-1795';
         $companyPhoneDigits = '6285891111795';
     @endphp
