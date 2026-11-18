@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\PlatformAdmin;
 use App\Models\PlatformAiAgent;
+use App\Models\PlatformAiDiscussion;
 use App\Models\PlatformAiTelegramBot;
 use App\Models\PlatformAiTelegramGroup;
 use App\Models\PlatformAiTelegramMessage;
+use App\Services\PlatformAgents\ResponseGuard;
+use App\Services\PlatformAgents\WorkingMemory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -52,7 +56,7 @@ class PlatformTelegramOffice
     {
         $text = PlatformTelegramStyle::clean($text);
         if (mb_strlen($text) <= self::CASUAL_MAX_CHARS || ! filled(config('services.yoka_ai.key'))
-            || preg_match('/(ide|daftar|list|draf|draft|strategi|rencana|jadwal|langkah|laporan|rekap|detail|jelasin|jelaskan|caption|script|naskah)/iu', $request)) {
+            || preg_match('/\b(ide|daftar|list|draf|draft|strategi|rencana|jadwal|langkah|laporan|rekap|detail|jelasin|jelaskan|caption|script|naskah)\b/iu', $request)) {
             return $text;
         }
         $telemetry = app(PlatformAiTelemetry::class);
@@ -202,7 +206,7 @@ SYS],
         }
         // Kolom interaction_id bertipe UUID (36 karakter): jangan diberi awalan.
         $interactionId = (string) Str::uuid();
-        if (! $this->speak($group, $starter, $opening.' Kamu yang membuka obrolan, jadi jangan menunggu ditanya.', $interactionId, null)) {
+        if (! $this->speak($group, $starter, $opening.' Kamu yang membuka obrolan, jadi jangan menunggu ditanya.', $interactionId, null, false)) {
             return false;
         }
 
@@ -219,7 +223,13 @@ SYS],
         return true;
     }
 
-    private function speak(PlatformAiTelegramGroup $group, PlatformAiAgent $agent, string $instruction, ?string $interactionId, ?int $threadId): bool
+    /**
+     * Satu giliran bicara yang TIDAK diminta langsung oleh Bos (nimbrung / obrolan spontan).
+     * Lewat dua gerbang: validasi klaim (ResponseGuard::validate) dan gerbang kontribusi
+     * (ResponseGuard::lowValue). Pesan yang ditahan tidak pernah dikirim, jadi tidak bisa
+     * memicu balasan bot lain.
+     */
+    private function speak(PlatformAiTelegramGroup $group, PlatformAiAgent $agent, string $instruction, ?string $interactionId, ?int $threadId, bool $gate = true): bool
     {
         $bot = PlatformAiTelegramBot::where('platform_ai_agent_id', $agent->id)->where('status', 'active')->first();
         if (! $bot) {
@@ -227,13 +237,75 @@ SYS],
         }
         $history = $this->history($group, $agent, $threadId);
         $question = "[Konteks sistem, bukan dari Bos: {$instruction} Jangan membuat tugas baru di obrolan ini.]";
-        $result = app(PlatformAiOperations::class)->reply($agent, $question, [], [], null, 'telegram_chatter', $history, (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
+        $result = app(PlatformAiOperations::class)->reply($agent, $question, [], [WorkingMemory::asFact($agent, $group, $threadId)], null, 'telegram_chatter', $history, (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''), ['allow_tasks' => false]);
         $text = trim((string) ($result['content'] ?? ''));
-        if ($text === '' || preg_match('/^\W*skip\W*$/iu', $text) || ($result['mode'] ?? null) === 'internal') {
+        if ($text === '' || preg_match('/^\W*skip\W*$/iu', $text) || ($result['mode'] ?? null) !== 'ai') {
+            return false;
+        }
+        $guarded = ResponseGuard::validate($text, ['tools_used' => (array) ($result['tools_used'] ?? []), 'spoke_agents' => $this->recentSpeakers($group)]);
+        $telemetry = app(PlatformAiTelemetry::class);
+        foreach ($guarded['violations'] as $violation) {
+            $telemetry->quality($violation === 'filler' ? 'filler_removed' : 'unsupported_claim_removed', $agent, ['type' => $violation]);
+        }
+        $text = $this->humanize($agent, $guarded['text']);
+        if ($gate) {
+            $recent = PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)->where('thread_id', $threadId)
+                ->latest('id')->limit(6)->pluck('content')->all();
+            if ($reason = ResponseGuard::lowValue($text, $recent)) {
+                $telemetry->quality('low_value_suppressed', $agent, ['reason' => $reason]);
+
+                return false;
+            }
+        } elseif ($text === '') {
             return false;
         }
 
-        return (bool) $this->gateway->sendHuman($bot, $group, $this->humanize($agent, $text), $interactionId, $threadId);
+        return (bool) $this->gateway->sendHuman($bot, $group, $text, $interactionId, $threadId);
+    }
+
+    /**
+     * Agen A bertanya ke agen B atas permintaan Bos. B benar-benar dijalankan (bukan dikarang A),
+     * jawabannya dikirim dengan identitas B dan disimpan sebagai kontribusi diskusi.
+     * Dibatasi satu lompatan: B tidak boleh berkonsultasi lagi dan tidak boleh membuat tugas.
+     *
+     * @return array{name:string, content:string}|null
+     */
+    public function consult(PlatformAiTelegramGroup $group, PlatformAiAgent $asker, string $targetKey, string $request, ?string $interactionId, ?int $threadId, ?PlatformAdmin $admin): ?array
+    {
+        $target = $this->activeAgentWithBot($targetKey);
+        if (! $target || $target->is($asker)) {
+            return null;
+        }
+        $bot = PlatformAiTelegramBot::where('platform_ai_agent_id', $target->id)->where('status', 'active')->first();
+        $question = "[Konteks sistem: Bos minta {$asker->name} menanyakan ini ke kamu: \"".Str::limit($request, 500).'". Jawab langsung ke '.$asker->name.' dengan analisis atau angka konkret dari bidangmu (ambil data lewat tool bila perlu). Jangan membuat tugas, jangan bertanya ke rekan lain.]';
+        $result = app(PlatformAiOperations::class)->reply($target, $question, [], [WorkingMemory::asFact($target, $group, $threadId)], $admin, 'telegram_chat', $this->history($group, $target, $threadId), (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''), ['allow_tasks' => false]);
+        if (($result['mode'] ?? null) !== 'ai') {
+            return null;
+        }
+        $guarded = ResponseGuard::validate((string) $result['content'], ['tools_used' => (array) ($result['tools_used'] ?? []), 'spoke_agents' => $this->recentSpeakers($group)]);
+        $content = PlatformTelegramStyle::clean($guarded['text']);
+        if ($content === '') {
+            return null;
+        }
+        $sent = $this->gateway->sendHuman($bot, $group, $content, $interactionId, $threadId);
+        if ($admin) {
+            $discussion = PlatformAiDiscussion::create(['created_by' => $admin->id, 'chair_agent_id' => $asker->id, 'objective' => Str::limit($request, 250), 'status' => 'completed', 'limits' => ['channel' => 'telegram', 'type' => 'consultation', 'max_agents' => 2, 'max_rounds' => 1, 'delegation_depth' => 1]]);
+            $discussion->contributions()->create(['platform_ai_agent_id' => $target->id, 'round' => 1, 'content' => $content, 'context' => ['mode' => 'ai', 'asked_by' => $asker->key]]);
+            if ($sent) {
+                $sent->update(['platform_ai_discussion_id' => $discussion->id]);
+            }
+        }
+
+        return ['name' => $target->name, 'content' => $content];
+    }
+
+    /** @return array<int,string> nama agen yang benar-benar punya pesan di grup ini 2 jam terakhir */
+    private function recentSpeakers(PlatformAiTelegramGroup $group): array
+    {
+        $ids = PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)->where('direction', 'outbound')
+            ->where('created_at', '>=', now()->subHours(2))->whereNotNull('platform_ai_agent_id')->distinct()->pluck('platform_ai_agent_id');
+
+        return PlatformAiAgent::whereIn('id', $ids)->pluck('name')->all();
     }
 
     private function activeAgentWithBot(?string $key): ?PlatformAiAgent

@@ -11,6 +11,9 @@ use App\Models\PlatformAiTelegramGroup;
 use App\Models\PlatformAiTelegramIdentity;
 use App\Models\PlatformAiTelegramMessage;
 use App\Models\PlatformAiTelegramUpdate;
+use App\Services\PlatformAgents\AgentIntent;
+use App\Services\PlatformAgents\ResponseGuard;
+use App\Services\PlatformAgents\WorkingMemory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -58,7 +61,10 @@ class PlatformTelegramConversation
             $group->update(['last_activity_at' => now()]);
             $threadId = data_get($message, 'message_thread_id');
             PlatformAiTelegramMessage::create(['platform_ai_telegram_group_id' => $group->id, 'platform_admin_id' => $identity->platform_admin_id, 'interaction_id' => $update->interaction_id, 'direction' => 'inbound', 'channel' => $threadId ? 'telegram_topic' : 'telegram_group', 'telegram_message_id' => $update->telegram_message_id, 'thread_id' => $threadId, 'content' => $text, 'delivery_status' => 'received']);
-            $route = $this->router->route($text, $group, $bot);
+            // Balasan (reply) ke pesan agen: catat pesan yang dirujuk agar konteksnya bisa diselesaikan.
+            $replied = $this->repliedMessage($group, $message);
+            $route = $this->router->route($text, $group, $bot, $replied?->agent?->key);
+            $route['replied_message_id'] = $replied?->id;
             if ($route['kind'] === 'ignore') {
                 $this->finish($update, 'ignored');
 
@@ -92,32 +98,151 @@ class PlatformTelegramConversation
 
     private function respond(array $route, PlatformAiTelegramIdentity $identity, PlatformAiTelegramGroup $group, PlatformAiTelegramUpdate $update, ?int $threadId): void
     {
+        $office = app(PlatformTelegramOffice::class);
+        $telemetry = app(PlatformAiTelemetry::class);
+        $intent = AgentIntent::classify($route['question']);
         $agentKeys = array_slice(array_values(array_unique($route['agents'])), 0, 3);
+
+        // "coba kirim di sini dulu" tanpa nama: tujukan ke agen yang terakhir bicara di grup ini.
+        if ($intent['reference'] && ! $route['replied_message_id'] && ! $this->namesAgent($route['question'])) {
+            $lastSpeaker = PlatformAiTelegramMessage::with('agent')->where('platform_ai_telegram_group_id', $group->id)->where('thread_id', $threadId)
+                ->where('direction', 'outbound')->whereNotNull('platform_ai_agent_id')->latest('id')->first()?->agent?->key;
+            $agentKeys = $lastSpeaker ? [$lastSpeaker] : $agentKeys;
+        }
+
         $agentsByKey = PlatformAiAgent::whereIn('key', $agentKeys)->where('status', 'active')->get()->keyBy('key');
         $agents = collect($agentKeys)->map(fn (string $key) => $agentsByKey->get($key))->filter();
+        $origin = ['group_id' => $group->id, 'admin_id' => $group->platform_admin_id, 'chat_id' => $group->telegram_chat_id, 'thread_id' => $threadId, 'message_id' => $update->telegram_message_id, 'interaction_id' => $update->interaction_id];
+        $contextKey = (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : '');
         $spoken = [];
+        $consulted = [];
+
         foreach ($agents as $agent) {
-            $history = app(PlatformTelegramOffice::class)->history($group, $agent, $threadId, $update->interaction_id);
-            $question = $route['question'];
-            if ($agents->count() > 1) {
-                $question .= "\n\n[Konteks sistem: Ini diskusi grup kerja. Baca pendapat rekan yang sudah muncul di riwayat. Tambahkan sudut pandang bidangmu, tanggapi bila perlu, dan jangan mengulang isi mereka.]";
-            }
-            $result = app(PlatformAiOperations::class)->reply($agent, $question, [], [], $identity->admin, 'telegram_chat', $history, (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
             $targetBot = PlatformAiTelegramBot::where('platform_ai_agent_id', $agent->id)->where('status', 'active')->first();
             if (! $targetBot) {
                 continue;
             }
-            $text = app(PlatformTelegramOffice::class)->humanize($agent, $result['content'], $route['question']);
-            if ($ids = ($result['created_tasks'] ?? [])) {
-                $text .= "\n\nudah aku taruh di Operations Center ya, nunggu approve: ".url('/platform/ai-team').'?tab=tasks';
+            $facts = [WorkingMemory::asFact($agent, $group, $threadId)];
+
+            // Rujukan ke hasil sebelumnya: kirim hasil yang benar-benar ada, atau akui belum ada.
+            if ($intent['reference']) {
+                $resolved = $this->resolveDeliverable($agent, $group, $threadId, $route['replied_message_id']);
+                if ($resolved['kind'] === 'completed_task') {
+                    $this->gateway->sendHuman($targetBot, $group, $resolved['text'], $update->interaction_id, $threadId, ['task_id' => $resolved['task_id']]);
+                    $telemetry->quality('reference_resolved', $agent, ['kind' => 'completed_task']);
+                    $spoken[] = $agent->key;
+
+                    continue;
+                }
+                $facts[] = $resolved['fact'];
+                $telemetry->quality($resolved['kind'] === 'none' ? 'reference_unresolved' : 'reference_resolved', $agent, ['kind' => $resolved['kind']]);
+                if ($resolved['kind'] === 'pending_task') {
+                    $telemetry->quality('deliverable_missing', $agent);
+                }
+            }
+
+            // Kolaborasi nyata: rekan yang ditanya benar-benar dijalankan dan jawabannya tersimpan.
+            $consultKey = $intent['consult'];
+            if ($consultKey && $consultKey !== $agent->key && ! in_array($consultKey, $consulted, true)) {
+                $answer = $office->consult($group, $agent, $consultKey, $route['question'], $update->interaction_id, $threadId, $identity->admin);
+                if ($answer) {
+                    $consulted[] = $consultKey;
+                    $facts[] = "Kamu barusan benar-benar bertanya ke {$answer['name']} dan jawabannya sudah terkirim di grup: \"".Str::limit($answer['content'], 600).'". Pakai jawaban itu untuk rekomendasi akhirmu.';
+                    $telemetry->quality('consultation', $agent, ['with' => $consultKey]);
+                }
+            }
+
+            $history = $office->history($group, $agent, $threadId, $update->interaction_id);
+            $question = $route['question'];
+            if ($agents->count() > 1) {
+                $question .= "\n\n[Konteks sistem: Ini diskusi grup kerja. Baca pendapat rekan yang sudah muncul di riwayat. Tambahkan sudut pandang bidangmu, tanggapi bila perlu, dan jangan mengulang isi mereka.]";
+            }
+            $policy = ['allow_tasks' => $intent['allows_task'], 'origin' => $origin];
+            $result = app(PlatformAiOperations::class)->reply($agent, $question, [], $facts, $identity->admin, 'telegram_chat', $history, $contextKey, $policy);
+            $ids = (array) ($result['created_tasks'] ?? []);
+
+            $spokeNames = PlatformAiAgent::whereIn('id', PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)
+                ->where('direction', 'outbound')->where('created_at', '>=', now()->subHours(2))->whereNotNull('platform_ai_agent_id')
+                ->distinct()->pluck('platform_ai_agent_id'))->pluck('name')->all();
+            $guarded = ResponseGuard::validate($result['content'], [
+                'tools_used' => (array) ($result['tools_used'] ?? []), 'created_tasks' => $ids, 'spoke_agents' => $spokeNames,
+            ]);
+            foreach ($guarded['violations'] as $violation) {
+                $telemetry->quality($violation === 'filler' ? 'filler_removed' : 'unsupported_claim_removed', $agent, ['type' => $violation]);
+            }
+            $content = $guarded['text'] !== '' ? $guarded['text'] : 'hmm, yang ini aku belum punya jawaban yang bisa dipertanggungjawabkan, bos. detail apa yang kurang, biar langsung kuhitung di sini?';
+            $text = $intent['deliverable'] ? PlatformTelegramStyle::clean($content) : $office->humanize($agent, $content, $route['question']);
+
+            if ($ids !== []) {
+                $telemetry->quality('task_created_explicit', $agent, ['count' => count($ids)]);
+                if ($notice = app(PlatformTelegramNotifications::class)->proposalNotice($group, $threadId, $ids)) {
+                    $text .= "\n\n".$notice;
+                }
+            } elseif (! $intent['allows_task']) {
+                $telemetry->quality(($result['mode'] ?? '') === 'ai' ? 'direct_answer' : 'direct_answer_failed', $agent, ['intent' => $intent['intent']]);
             }
             $this->gateway->sendHuman($targetBot, $group, $text, $update->interaction_id, $threadId, ['task_id' => ($ids[0] ?? null)]);
             $spoken[] = $agent->key;
-            app(PlatformAiContext::class)->reviseConversationState($agent, $identity->admin, $route['question'], $ids ?? [], $result['content'], 'telegram_group', (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
+            if (($result['mode'] ?? '') === 'ai') {
+                $telemetry->quality('useful_interaction', $agent);
+            }
+            app(PlatformAiContext::class)->reviseConversationState($agent, $identity->admin, $route['question'], $ids, $content, 'telegram_group', $contextKey);
         }
-        if ($spoken !== [] && filled(config('services.yoka_ai.key'))) {
-            app(PlatformTelegramOffice::class)->maybeChimeIn($group, $route['question'], $spoken, $update->interaction_id, $threadId);
+        if ($spoken !== [] && filled(config('services.yoka_ai.key')) && ! $intent['reference']) {
+            $office->maybeChimeIn($group, $route['question'], array_merge($spoken, $consulted), $update->interaction_id, $threadId);
         }
+    }
+
+    /** Pesan agen yang di-reply Bos, hanya dari grup yang sama. */
+    private function repliedMessage(PlatformAiTelegramGroup $group, array $message): ?PlatformAiTelegramMessage
+    {
+        $repliedId = data_get($message, 'reply_to_message.message_id');
+        if (! $repliedId) {
+            return null;
+        }
+
+        return PlatformAiTelegramMessage::with('agent')->where('platform_ai_telegram_group_id', $group->id)
+            ->where('telegram_message_id', (int) $repliedId)->where('direction', 'outbound')->latest('id')->first();
+    }
+
+    private function namesAgent(string $text): bool
+    {
+        return (bool) preg_match('/\b('.PlatformTelegramRouter::CALL_NAMES.')\b/iu', $text);
+    }
+
+    /**
+     * Cari "hasil" yang dirujuk Bos, berurutan dari bukti terkuat:
+     *  1. tugas agen ini (dari grup ini) yang SUDAH selesai -> kirim hasil aslinya
+     *  2. tugas yang baru diusulkan/di-approve tapi belum ada hasil -> akui, lalu kerjakan sekarang
+     *  3. pesan agen yang di-reply / pesan terakhirnya di grup -> jadikan konteks untuk diulang lengkap
+     *
+     * @return array{kind:string, text?:string, task_id?:int, fact?:string}
+     */
+    private function resolveDeliverable(PlatformAiAgent $agent, PlatformAiTelegramGroup $group, ?int $threadId, ?int $repliedMessageId): array
+    {
+        $tasks = PlatformAiTask::where('platform_ai_agent_id', $agent->id)->where('created_at', '>=', now()->subDays(2))
+            ->where('payload->telegram_origin->group_id', $group->id)->latest('id')->limit(5)->get();
+        $replied = $repliedMessageId ? PlatformAiTelegramMessage::find($repliedMessageId) : null;
+        if ($replied?->platform_ai_task_id) {
+            $tasks = $tasks->prepend(PlatformAiTask::find($replied->platform_ai_task_id))->filter()->unique('id');
+        }
+        $completed = $tasks->first(fn ($t) => $t->status === 'completed' && filled(data_get($t->result, 'report')));
+        if ($completed) {
+            return ['kind' => 'completed_task', 'task_id' => $completed->id, 'text' => "ini hasil \"{$completed->title}\":\n\n".PlatformTelegramStyle::clean((string) data_get($completed->result, 'report'))];
+        }
+        $pending = $tasks->first(fn ($t) => in_array($t->status, ['proposed', 'approved'], true));
+        if ($pending) {
+            $state = $pending->status === 'proposed' ? 'masih menunggu approve' : 'sudah di-approve tapi belum selesai dikerjakan sistem';
+
+            return ['kind' => 'pending_task', 'fact' => "RUJUKAN: Bos minta hasil yang tadi. Hasil jadinya BELUM ADA: tugas \"{$pending->title}\" {$state}. Jangan kirim judul/deskripsi tugas seolah itu hasil. Bilang singkat hasilnya belum ada, lalu kerjakan analisisnya LANGSUNG di pesan ini (pakai tool bila perlu) karena ini kerja baca-data yang aman."];
+        }
+        $source = $replied ?? PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)->where('thread_id', $threadId)
+            ->where('platform_ai_agent_id', $agent->id)->where('direction', 'outbound')->latest('id')->first();
+        if ($source) {
+            return ['kind' => 'previous_message', 'fact' => 'RUJUKAN: Bos merujuk pesanmu sebelumnya: "'.Str::limit($source->content, 800).'". Kalau isinya baru janji/rencana, kerjakan hasil lengkapnya sekarang. Kalau sudah berisi hasil, tulis ulang versi lengkapnya di sini.'];
+        }
+
+        return ['kind' => 'none', 'fact' => 'RUJUKAN: Bos merujuk sesuatu "yang tadi" tapi tidak ada catatan hasil atau pesanmu yang cocok. Ajukan SATU pertanyaan singkat: yang mana maksudnya.'];
     }
 
     private function meeting(array $route, PlatformAiTelegramIdentity $identity, PlatformAiTelegramGroup $group, PlatformAiTelegramUpdate $update, ?int $threadId): void

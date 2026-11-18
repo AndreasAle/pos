@@ -60,7 +60,7 @@ class PlatformAiOperations
         }
     }
 
-    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = [], ?PlatformAdmin $admin = null, string $operation = 'chat', ?array $historyOverride = null, string $contextKey = 'default'): array
+    public function reply(PlatformAiAgent $agent, string $question, array $attachments = [], array $facts = [], ?PlatformAdmin $admin = null, string $operation = 'chat', ?array $historyOverride = null, string $contextKey = 'default', array $policy = []): array
     {
         $snapshot = $this->snapshot($agent);
         $history = $historyOverride ?? $agent->messages()->latest()->limit(12)->get()->reverse()->map(fn (PlatformAiMessage $message) => [
@@ -106,12 +106,12 @@ class PlatformAiOperations
             foreach ($attachments as $attachment) {
                 array_push($userContent, ...$this->attachmentService->modelParts($attachment));
             }
-            $brain = app(AgentBrain::class);
+            $brain = app(AgentBrain::class)->policy($policy);
             $channel = str_starts_with($operation, 'telegram') ? 'telegram_group' : 'platform_dashboard';
             $context = $admin ? app(PlatformAiContext::class)->package($agent, $admin, $question, $channel, $contextKey) : [];
             $content = $brain->chat($agent, $history, $userContent, $facts, $context, $operation);
 
-            return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [], 'created_tasks' => $brain->createdTaskIds];
+            return ['content' => $content, 'mode' => 'ai', 'snapshot' => $snapshot, 'suggestions' => self::PROFILES[$agent->key]['prompts'] ?? [], 'created_tasks' => $brain->createdTaskIds, 'tools_used' => $brain->toolsUsed];
         } catch (\Throwable $e) {
             Log::warning('Platform AI chat failed', ['agent' => $agent->key, 'exception' => class_basename($e)]);
 
@@ -265,6 +265,7 @@ Temuan terakhirku: {$latest['summary']}";
                 'content' => "Bos, tugas \"{$task->title}\" belum bisa kuselesaikan: {$reason} Tugasnya tetap di In Progress; geser lagi ke In Progress kalau mau kucoba ulang.",
                 'meta' => ['mode' => 'internal', 'proactive' => true, 'task_id' => $task->id, 'failed' => true],
             ]);
+            app(PlatformTelegramNotifications::class)->taskOutcome($task->fresh('agent'), false, $reason);
         };
 
         if (! filled(config('services.yoka_ai.key'))) {
@@ -297,6 +298,7 @@ Temuan terakhirku: {$latest['summary']}";
             'meta' => ['mode' => 'ai', 'proactive' => true, 'task_id' => $task->id, 'executed' => true],
         ]);
         PlatformActivityLog::record('ai.task.executed', "{$task->agent->name} menyelesaikan tugas {$task->title}.", $task);
+        app(PlatformTelegramNotifications::class)->taskOutcome($task->fresh('agent'), true);
     }
 
     /**

@@ -29,6 +29,9 @@ class PlatformTelegramWebhookController extends Controller
             'message.from.id' => 'required|integer',
             'message.from.username' => 'nullable|string|max:255',
             'message.from.is_bot' => 'nullable|boolean',
+            'message.reply_to_message' => 'nullable|array',
+            'message.reply_to_message.message_id' => 'nullable|integer',
+            'message.reply_to_message.from.is_bot' => 'nullable|boolean',
         ]);
         $chatId = (int) data_get($data, 'message.chat.id');
         $messageId = (int) data_get($data, 'message.message_id');
@@ -37,6 +40,11 @@ class PlatformTelegramWebhookController extends Controller
             return response()->json(['ok' => true, 'duplicate' => true]);
         }
         $safe = ['message' => ['message_id' => $messageId, 'message_thread_id' => data_get($data, 'message.message_thread_id'), 'text' => data_get($data, 'message.text'), 'date' => data_get($data, 'message.date'), 'chat' => ['id' => $chatId, 'type' => data_get($data, 'message.chat.type'), 'title' => data_get($data, 'message.chat.title')], 'from' => ['id' => data_get($data, 'message.from.id'), 'username' => data_get($data, 'message.from.username'), 'is_bot' => (bool) data_get($data, 'message.from.is_bot', false)]]];
+        // Hanya ID pesan yang di-reply yang disimpan (bukan isinya): cukup untuk mencocokkan
+        // dengan pesan agen yang sudah tercatat di platform_ai_telegram_messages.
+        if ($replyId = data_get($data, 'message.reply_to_message.message_id')) {
+            $safe['message']['reply_to_message'] = ['message_id' => (int) $replyId, 'from' => ['is_bot' => (bool) data_get($data, 'message.reply_to_message.from.is_bot', false)]];
+        }
         $update = PlatformAiTelegramUpdate::create(['platform_ai_telegram_bot_id' => $bot->id, 'platform_ai_telegram_group_id' => PlatformAiTelegramGroup::where('telegram_chat_id', $chatId)->value('id'), 'telegram_update_id' => $data['update_id'], 'telegram_chat_id' => $chatId, 'telegram_message_id' => $messageId, 'interaction_id' => (string) Str::uuid(), 'event_fingerprint' => $fingerprint, 'status' => 'received', 'payload' => $safe]);
         ProcessPlatformTelegramUpdate::dispatchAfterResponse($update->id);
 

@@ -23,3 +23,7 @@ Task yang dibuat model tetap masuk `platform_ai_tasks` dan approval sensitif tet
 ## Operasional
 
 Queue memproses webhook dengan tiga percobaan dan bounded backoff. Scheduler mengirim briefing idempoten dan alert pending dengan cooldown, quiet hours, serta batas harian. Delivery hanya berstatus berhasil bila Telegram mengembalikan `ok=true`.
+
+## Kualitas percakapan & kebijakan aksi (2.1)
+
+Lihat `yoka-telegram-conversation-quality.md` dan `yoka-ai-workforce-action-policy.md`: klasifikasi niat, validasi bukti tindakan, gerbang kontribusi, ledger notifikasi (`platform_ai_telegram_notifications`), hasil tugas kembali ke grup asal, dan memori kerja per agen.

@@ -32,6 +32,52 @@ class PlatformAiTelemetry
         ]);
     }
 
+    /** Metrik kualitas percakapan yang dicatat sebagai PlatformAiRun berbiaya nol. */
+    public const QUALITY_METRICS = [
+        'direct_answer', 'direct_answer_failed', 'task_created_explicit', 'task_blocked_by_policy',
+        'approval_notice_deduplicated', 'unsupported_claim_removed', 'filler_removed',
+        'low_value_suppressed', 'reference_resolved', 'reference_unresolved', 'deliverable_missing',
+        'task_result_delivered', 'task_failure_reported', 'consultation', 'useful_interaction',
+    ];
+
+    /**
+     * Catat satu kejadian kualitas. Sengaja TIDAK menyimpan isi percakapan: hanya nama metrik,
+     * agen, dan angka/flag pendek di metadata.
+     */
+    public function quality(string $metric, ?PlatformAiAgent $agent = null, array $meta = []): PlatformAiRun
+    {
+        $safe = collect($meta)->filter(fn ($v) => is_bool($v) || is_int($v) || is_float($v) || (is_string($v) && mb_strlen($v) <= 60))->all();
+
+        return PlatformAiRun::create([
+            'platform_ai_agent_id' => $agent?->id,
+            'operation' => mb_substr('quality.'.$metric, 0, 40),
+            'channel' => 'telegram_group',
+            'model' => null,
+            'status' => 'completed',
+            'estimated_cost_usd' => 0,
+            'metadata' => array_merge(['quality' => true], $safe),
+        ]);
+    }
+
+    /** Ringkasan metrik kualitas + biaya per interaksi berguna untuk N hari terakhir. */
+    public function qualitySummary(int $days = 7): array
+    {
+        $since = now()->subDays($days);
+        $counts = PlatformAiRun::where('operation', 'like', 'quality.%')->where('created_at', '>=', $since)
+            ->selectRaw('operation, count(*) total')->groupBy('operation')->pluck('total', 'operation')
+            ->mapWithKeys(fn ($total, $op) => [substr($op, 8) => (int) $total])->all();
+        $cost = (float) PlatformAiRun::where('channel', 'telegram_group')->where('operation', 'not like', 'quality.%')
+            ->where('created_at', '>=', $since)->sum('estimated_cost_usd');
+        $useful = (int) ($counts['useful_interaction'] ?? 0);
+
+        return [
+            'days' => $days,
+            'metrics' => array_merge(array_fill_keys(self::QUALITY_METRICS, 0), $counts),
+            'telegram_cost_usd' => round($cost, 4),
+            'cost_per_useful_interaction_usd' => $useful > 0 ? round($cost / $useful, 4) : null,
+        ];
+    }
+
     public function dailyBudgetReached(): bool
     {
         $limit = (float) config('services.yoka_ai.daily_cost_budget_usd', 0);

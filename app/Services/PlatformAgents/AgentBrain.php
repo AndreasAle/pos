@@ -56,6 +56,31 @@ class AgentBrain
 
     private string $operation = 'chat';
 
+    /** Nama tool yang sukses dipanggil pada giliran terakhir: bukti untuk ResponseGuard. */
+    public array $toolsUsed = [];
+
+    /** Kebijakan aksi giliran ini (lihat AgentIntent). Default lama: tugas boleh dibuat. */
+    private bool $allowTasks = true;
+
+    /** Asal Telegram (grup/topik/pesan) yang ikut disimpan di tugas yang dibuat giliran ini. */
+    private ?array $origin = null;
+
+    /**
+     * @param  array{allow_tasks?:bool, origin?:?array}  $policy
+     */
+    public function policy(array $policy): static
+    {
+        $this->allowTasks = (bool) ($policy['allow_tasks'] ?? true);
+        $this->origin = $policy['origin'] ?? null;
+
+        return $this;
+    }
+
+    private function tasksBlocked(): bool
+    {
+        return $this->operation === 'telegram_chatter' || ! $this->allowTasks;
+    }
+
     /**
      * @param  array<int,array<string,mixed>>  $history  riwayat chat (role/content)
      * @param  array<int,array<string,mixed>>  $userContent  bagian pesan user terbaru (teks + lampiran)
@@ -96,6 +121,7 @@ class AgentBrain
     {
         $this->createdThisTurn = 0;
         $this->createdTaskIds = [];
+        $this->toolsUsed = [];
 
         for ($step = 0; $step < self::MAX_STEPS; $step++) {
             $last = $step === self::MAX_STEPS - 1;
@@ -105,8 +131,9 @@ class AgentBrain
                 'messages' => $messages,
             ];
             if (! $last) {
-                // Obrolan spontan di grup tidak boleh membuat tugas: hanya membaca data.
-                $payload['tools'] = $this->operation === 'telegram_chatter'
+                // Kebijakan aksi ditegakkan di sini: kalau niatnya kerja langsung (analisis, hitungan,
+                // draf) atau obrolan spontan, tool create_task tidak ditawarkan sama sekali.
+                $payload['tools'] = $this->tasksBlocked()
                     ? array_values(array_filter($this->definitions(), fn ($d) => $d['function']['name'] !== 'create_task'))
                     : $this->definitions();
                 $payload['tool_choice'] = 'auto';
@@ -145,7 +172,11 @@ class AgentBrain
             $messages[] = $message;
             foreach ($message['tool_calls'] as $call) {
                 $args = json_decode($call['function']['arguments'] ?? '{}', true) ?: [];
-                $result = $this->run($agent, (string) ($call['function']['name'] ?? ''), $args);
+                $name = (string) ($call['function']['name'] ?? '');
+                $result = $this->run($agent, $name, $args);
+                if (! isset($result['error']) && ($result['ok'] ?? true) !== false) {
+                    $this->toolsUsed[] = $name;
+                }
                 $messages[] = ['role' => 'tool', 'tool_call_id' => $call['id'], 'content' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)];
             }
         }
@@ -166,7 +197,7 @@ class AgentBrain
 KONTEKS TELEGRAM OFFICE (grup kerja, ini menimpa aturan panjang dan format di atas):
 - Kamu karyawan di grup kerja Yoka bareng Bos dan rekan: Ramli (chief), Yusuf (marketing), Yono (ads), Luna (finance), Nanda (accounting), Adit (CS), Yosef (sales). Riwayat menampilkan ucapan orang lain sebagai "Nama: isi".
 - JANGAN PERNAH menulis label nama di awal balasanmu (bukan "[Ramli]:" atau "Yusuf:"). Telegram sudah menampilkan namamu.
-- Ngetik seperti orang di grup WhatsApp kantor: pendek, santai, huruf kecil boleh, typo kecil wajar. Contoh nada: "oke siap bos", "eh itu yg trial kemarin udah bayar blm?", "wkwk iya juga", "bentar aku cek dulu", "nah ini, setuju sama luna".
+- Ngetik seperti orang di grup WhatsApp kantor: pendek, santai, huruf kecil boleh, typo kecil wajar. Contoh nada: "eh itu yg trial kemarin udah bayar blm?", "wkwk iya juga", "nah ini, setuju sama luna tapi angkanya aku koreksi dikit".
 - Satu ide satu bubble. Kalau mau bilang dua hal, pisahkan dengan baris kosong (jadi dua bubble). Maksimal 3 bubble. Obrolan ringan cukup 1 bubble.
 - Tanpa Markdown: tidak ada **tebal**, judul, atau tabel. Daftar bernomor hanya kalau Bos minta daftar/ide, dan tetap ringkas (satu baris per poin).
 - Jangan buka dengan "Oke Bos, ini..." terus-terusan dan jangan tutup tiap pesan dengan tawaran "Kalau mau aku bisa...". Variasikan. Sering kali cukup jawab lalu diam.
@@ -178,6 +209,13 @@ KONTEKS TELEGRAM OFFICE (grup kerja, ini menimpa aturan panjang dan format di at
 - Kalau Bos cuma manggil namamu ("yusuf", "luna?"), jawab kayak orang dipanggil di kantor lalu langsung nyambung ke kerjaan nyata: "ya bos? lagi ngulik hook buat video demo kasir nih", "hadir bos, lagi rekap trial yang mau habis". Ambil dari tugas/datamu lewat tool kalau ada.
 - Contoh nada yang benar: "wkwk iya bos, datanya masih nol semua, sepi kayak kantor jam 6 pagi" / "eh luna, kalau trial gratis diperpanjang 7 hari aman ga ke cashflow?" / "setuju sama yusuf, tapi menurutku hooknya kepanjangan".
 - Angka tetap dari tool, jangan mengarang. Kalau datanya kosong bilang aja santai ("datanya masih kosong bos").
+
+KEBIJAKAN AKSI DI GRUP (menimpa aturan create_task di atas):
+- Kerjakan SEKARANG di pesan ini. Analisis, hitungan, simulasi harga, ide, hook, draf pesan, ringkasan: tulis hasil jadinya langsung, jangan mengusulkan tugas dan jangan bilang "aku buatkan tugasnya". Kalau create_task tidak tersedia, itu disengaja.
+- Butuh data? panggil tool-nya sekarang di giliran ini. Jangan janji "nanti aku cek", "besok aku pantau", "aku kabari lagi": kamu tidak punya jadwal untuk itu, dan kalimat seperti itu akan dihapus sistem.
+- Untuk hitungan/simulasi keuangan: tulis ASUMSI (sebut mana yang asumsi), lalu HITUNGAN singkat, lalu HASIL dan rekomendasi. Bedakan "data Yoka" (dari tool) dengan "asumsi". Untuk hasil seperti ini boleh lebih panjang dari obrolan biasa dan boleh pakai daftar singkat.
+- Jangan mengulang judul tugas seolah itu hasil kerja. Kalau hasilnya memang belum ada, bilang belum ada lalu kerjakan sekarang.
+- Kalau ada yang ambigu sampai kamu benar-benar tidak bisa mulai, ajukan SATU pertanyaan singkat.
 GUIDANCE : '';
 
         return <<<PROMPT
@@ -271,7 +309,9 @@ PROMPT;
             'daily_report' => $this->dailyReport(),
             'funnel' => $this->funnel(),
             'product_facts' => $this->productFacts(),
-            'create_task' => $this->operation === 'telegram_chatter' ? ['error' => 'Tidak bisa membuat tugas di obrolan spontan.'] : $this->createTask($agent, $args),
+            'create_task' => $this->tasksBlocked()
+                ? tap(['ok' => false, 'error' =>'create_task tidak diizinkan untuk permintaan ini. Kerjakan permintaannya langsung di balasanmu sekarang (hasil jadi), jangan mengusulkan tugas.'], fn () => app(PlatformAiTelemetry::class)->quality('task_blocked_by_policy', $agent, ['operation' => $this->operation]))
+                : $this->createTask($agent, $args),
             default => ['error' => 'Tool tidak dikenal.'],
         };
     }
@@ -432,7 +472,7 @@ PROMPT;
             'delegation_depth' => max(0, $depth),
             'type' => 'chat_'.$kind, 'title' => $title, 'summary' => $summary, 'risk' => $risk,
             'status' => 'proposed', 'requires_approval' => true,
-            'payload' => ['source' => 'chat', 'kind' => $kind, 'created_by_agent' => $agent->key],
+            'payload' => array_filter(['source' => $this->origin ? 'telegram' : 'chat', 'kind' => $kind, 'created_by_agent' => $agent->key, 'telegram_origin' => $this->origin]),
         ]);
         $this->createdThisTurn++;
         $this->createdTaskIds[] = $task->id;

@@ -17,4 +17,9 @@ class PlatformAiDiscussionContribution extends Model
     {
         return $this->belongsTo(PlatformAiAgent::class, 'platform_ai_agent_id');
     }
+
+    public function discussion()
+    {
+        return $this->belongsTo(PlatformAiDiscussion::class, 'platform_ai_discussion_id');
+    }
 }

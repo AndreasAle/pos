@@ -124,9 +124,10 @@ class PlatformTelegramOfficeTest extends TestCase
         $bot = PlatformAiTelegramBot::where('credential_key', 'chief')->firstOrFail();
         app(PlatformTelegramConversation::class)->process($this->update($bot, 'Yusuf, ide konten hari ini?', 20, 771122, $group));
 
-        $outbound = PlatformAiTelegramMessage::where('direction', 'outbound')->get();
-        $this->assertCount(1, $outbound);
-        $this->assertSame('marketing', $outbound->first()->agent?->key ?? PlatformAiTelegramBot::find($outbound->first()->platform_ai_telegram_bot_id)->agent->key);
+        // Satu agen bisa mengirim beberapa bubble; yang diuji: hanya Yusuf yang bicara.
+        $speakers = PlatformAiTelegramMessage::where('direction', 'outbound')->get()
+            ->map(fn ($m) => PlatformAiTelegramBot::find($m->platform_ai_telegram_bot_id)->agent->key)->unique()->values()->all();
+        $this->assertSame(['marketing'], $speakers);
     }
 
     public function test_smart_discussion_is_bounded_and_bot_messages_do_not_loop(): void
@@ -134,7 +135,8 @@ class PlatformTelegramOfficeTest extends TestCase
         [, , $group] = $this->linkedOffice('smart_discussion');
         $bot = PlatformAiTelegramBot::where('credential_key', 'chief')->firstOrFail();
         app(PlatformTelegramConversation::class)->process($this->update($bot, 'Menurut kalian budget iklan dan kondisi keuangan aman?', 30, 771122, $group));
-        $this->assertLessThanOrEqual(3, PlatformAiTelegramMessage::where('direction', 'outbound')->count());
+        $this->assertLessThanOrEqual(3, PlatformAiTelegramMessage::where('direction', 'outbound')->distinct()->count('platform_ai_agent_id'));
+        $this->assertLessThanOrEqual(3 * \App\Services\PlatformTelegramStyle::MAX_BUBBLES, PlatformAiTelegramMessage::where('direction', 'outbound')->count());
         $before = PlatformAiTelegramMessage::count();
         app(PlatformTelegramConversation::class)->process($this->update($bot, 'pesan dari bot', 31, 771122, $group, true));
         $this->assertSame($before, PlatformAiTelegramMessage::count());
@@ -244,7 +246,7 @@ class PlatformTelegramOfficeTest extends TestCase
         ];
         $this->aiResponses = [$toolResponse, $finalResponse];
         $bot = PlatformAiTelegramBot::where('credential_key', 'chief')->firstOrFail();
-        app(PlatformTelegramConversation::class)->process($this->update($bot, '/ask ramli buatkan Yusuf strategi konten tujuh hari', 50, 771122, $group));
+        app(PlatformTelegramConversation::class)->process($this->update($bot, '/ask ramli jadikan tugas untuk Yusuf: strategi konten tujuh hari', 50, 771122, $group));
 
         $this->assertDatabaseHas('platform_ai_tasks', ['title' => 'Strategi konten tujuh hari', 'status' => 'proposed', 'requires_approval' => true]);
         $this->assertDatabaseMissing('platform_ai_tasks', ['title' => 'Strategi konten tujuh hari', 'status' => 'completed']);
