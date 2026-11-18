@@ -151,11 +151,11 @@
             </header>
 
             <div x-show="taskView === 'board'" class="mt-4 overflow-x-auto pb-3">
-                <div class="grid min-w-[1080px] grid-cols-4 gap-3" aria-label="Papan Kanban pekerjaan tim">
+                <div class="grid h-[calc(100dvh-26rem)] min-h-[420px] max-h-[800px] min-w-[1080px] grid-cols-4 gap-3" aria-label="Papan Kanban pekerjaan tim">
                     @foreach($taskColumns as $status => $column)
                         @php $columnTasks = $tasks->where('status', $status); @endphp
                         <section
-                            class="flex min-h-[520px] flex-col rounded-xl border border-slate-200 {{ $column['surface'] }} p-3 transition"
+                            class="flex min-h-0 flex-col overflow-hidden rounded-xl border border-slate-200 {{ $column['surface'] }} p-3 transition"
                             :class="kanbanOver === '{{ $status }}' ? 'border-emerald-400 ring-2 ring-emerald-100' : ''"
                             @dragover.prevent="kanbanOver='{{ $status }}'"
                             @dragleave.self="kanbanOver=null"
@@ -166,7 +166,7 @@
                                 <span class="flex h-6 min-w-6 items-center justify-center rounded-full border border-slate-200 bg-white px-1.5 text-[10px] font-black text-slate-500">{{ $columnTasks->count() }}</span>
                             </header>
 
-                            <div class="flex flex-1 flex-col gap-2.5">
+                            <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
                                 @forelse($columnTasks as $task)
                                     <article
                                         x-show="taskMatches({{ $task->id }})"
