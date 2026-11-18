@@ -59,7 +59,7 @@ return new class extends Migration
             $table->bigInteger('telegram_chat_id')->unique();
             $table->string('title')->nullable();
             $table->boolean('enabled')->default(true);
-            $table->string('mode', 30)->default('mention_only');
+            $table->string('mode', 30)->default('smart_discussion');
             $table->json('topic_routes')->nullable();
             $table->json('notification_settings')->nullable();
             $table->timestamp('last_activity_at')->nullable();

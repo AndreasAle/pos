@@ -26,8 +26,9 @@ class PlatformTelegramRouter
                 return ['kind' => 'message', 'question' => trim(preg_replace('/@'.preg_quote($bot->username, '/').'\b/iu', '', $text)), 'agents' => [$bot->agent?->key ?? $bot->credential_key]];
             }
         }
-        if ($group->mode === 'mention_only') {
-            return ['kind' => 'ignore', 'agents' => []];
+        // Nama agen boleh dipanggil seperti percakapan biasa, tanpa /ask atau @username.
+        if (preg_match('/\b(ramli|yusuf|yono(?:\s+bakri)?|luna|nanda|adit|yosef)\b/iu', $text, $m)) {
+            return ['kind' => 'message', 'question' => $text, 'agents' => [$this->nameKey($m[1])]];
         }
 
         return ['kind' => 'message', 'question' => $text, 'agents' => $this->relevant($text, 3)];
@@ -36,12 +37,12 @@ class PlatformTelegramRouter
     public function relevant(string $text, int $limit = 3): array
     {
         $rules = [
-            'finance' => ['biaya', 'budget', 'uang', 'margin', 'cac', 'ltv', 'runway', 'keuangan'],
+            'finance' => ['biaya', 'budget', 'anggaran', 'uang', 'harga', 'margin', 'cac', 'ltv', 'runway', 'keuangan', 'cashflow', 'arus kas'],
             'ads' => ['iklan', 'ads', 'campaign', 'roas', 'cpm', 'budget iklan'],
-            'marketing' => ['konten', 'marketing', 'video', 'instagram', 'tiktok', 'brand'],
-            'sales' => ['sales', 'prospek', 'lead', 'pipeline', 'pelanggan berbayar'],
+            'marketing' => ['konten', 'marketing', 'promosi', 'video', 'instagram', 'tiktok', 'brand', 'branding'],
+            'sales' => ['sales', 'jualan', 'prospek', 'lead', 'pipeline', 'closing', 'pelanggan berbayar'],
             'accounting' => ['akuntansi', 'rekonsiliasi', 'pembayaran', 'pencatatan', 'invoice'],
-            'cs' => ['customer', 'pelanggan', 'komplain', 'tiket', 'layanan', 'trial habis'],
+            'cs' => ['customer', 'pelanggan', 'user', 'komplain', 'keluhan', 'tiket', 'layanan', 'onboarding', 'trial habis'],
         ];
         $lower = Str::lower($text);
         $keys = [];

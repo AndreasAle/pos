@@ -86,10 +86,29 @@ class PlatformTelegramConversation
 
     private function respond(array $route, PlatformAiTelegramIdentity $identity, PlatformAiTelegramGroup $group, PlatformAiTelegramUpdate $update, ?int $threadId): void
     {
-        $agents = PlatformAiAgent::whereIn('key', array_slice($route['agents'], 0, 3))->where('status', 'active')->get();
+        $agentKeys = array_slice(array_values(array_unique($route['agents'])), 0, 3);
+        $agentsByKey = PlatformAiAgent::whereIn('key', $agentKeys)->where('status', 'active')->get()->keyBy('key');
+        $agents = collect($agentKeys)->map(fn (string $key) => $agentsByKey->get($key))->filter();
         foreach ($agents as $agent) {
-            $history = PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)->where(fn ($q) => $q->whereNull('platform_ai_agent_id')->orWhere('platform_ai_agent_id', $agent->id))->latest()->limit(8)->get()->reverse()->map(fn ($m) => ['role' => $m->direction === 'outbound' ? 'assistant' : 'user', 'content' => $m->content])->values()->all();
-            $result = app(PlatformAiOperations::class)->reply($agent, $route['question'], [], [], $identity->admin, 'telegram_chat', $history, (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
+            $history = PlatformAiTelegramMessage::with('agent')
+                ->where('platform_ai_telegram_group_id', $group->id)
+                ->where('thread_id', $threadId)
+                ->where(fn ($query) => $query->where('interaction_id', '!=', $update->interaction_id)->orWhere('direction', 'outbound'))
+                ->latest()->limit(12)->get()->reverse()
+                ->map(function (PlatformAiTelegramMessage $message) {
+                    if ($message->direction === 'outbound') {
+                        $speaker = $message->agent?->name ?? 'Rekan tim';
+
+                        return ['role' => 'assistant', 'content' => "[{$speaker}]: {$message->content}"];
+                    }
+
+                    return ['role' => 'user', 'content' => "[Bos]: {$message->content}"];
+                })->values()->all();
+            $question = $route['question'];
+            if ($agents->count() > 1) {
+                $question .= "\n\n[Konteks sistem: Ini diskusi grup kerja. Baca pendapat rekan yang sudah muncul di riwayat. Tambahkan sudut pandang bidangmu, tanggapi bila perlu, dan jangan mengulang isi mereka.]";
+            }
+            $result = app(PlatformAiOperations::class)->reply($agent, $question, [], [], $identity->admin, 'telegram_chat', $history, (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
             $targetBot = PlatformAiTelegramBot::where('platform_ai_agent_id', $agent->id)->where('status', 'active')->first();
             if (! $targetBot) {
                 continue;
@@ -176,8 +195,8 @@ class PlatformTelegramConversation
 
             return;
         }
-        PlatformAiTelegramGroup::updateOrCreate(['telegram_chat_id' => $update->telegram_chat_id], ['platform_admin_id' => $identity->platform_admin_id, 'title' => data_get($update->payload, 'message.chat.title'), 'enabled' => true, 'mode' => 'mention_only', 'notification_settings' => ['daily_briefing' => false, 'alerts' => true, 'quiet_start' => '22:00', 'quiet_end' => '07:00', 'timezone' => 'Asia/Jakarta', 'max_alerts_per_day' => 5, 'severity' => 'medium']]);
-        $this->gateway->sendRaw($bot, (string) $update->telegram_chat_id, 'Grup berhasil dijadikan Telegram Office. Mode awal: Mention Only.');
+        PlatformAiTelegramGroup::updateOrCreate(['telegram_chat_id' => $update->telegram_chat_id], ['platform_admin_id' => $identity->platform_admin_id, 'title' => data_get($update->payload, 'message.chat.title'), 'enabled' => true, 'mode' => 'smart_discussion', 'notification_settings' => ['daily_briefing' => false, 'alerts' => true, 'quiet_start' => '22:00', 'quiet_end' => '07:00', 'timezone' => 'Asia/Jakarta', 'max_alerts_per_day' => 5, 'severity' => 'medium']]);
+        $this->gateway->sendRaw($bot, (string) $update->telegram_chat_id, 'Grup berhasil dijadikan Telegram Office. Langsung ngobrol seperti biasa; Ramli akan mengarahkan agen yang paling relevan.');
         $this->finish($update);
     }
 

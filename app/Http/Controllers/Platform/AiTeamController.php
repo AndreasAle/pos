@@ -102,7 +102,7 @@ class AiTeamController extends Controller
     {
         abort_unless(auth('platform')->user()->isSuperAdmin() && $group->platform_admin_id === auth('platform')->id(), 403);
         $data = $request->validate([
-            'mode' => 'required|in:mention_only,smart_discussion', 'enabled' => 'nullable|boolean',
+            'mode' => 'required|in:smart_discussion', 'enabled' => 'nullable|boolean',
             'daily_briefing' => 'nullable|boolean', 'briefing_time' => 'required|date_format:H:i',
             'quiet_start' => 'required|date_format:H:i', 'quiet_end' => 'required|date_format:H:i',
             'severity' => 'required|in:low,medium,high', 'max_alerts_per_day' => 'required|integer|min:0|max:20',

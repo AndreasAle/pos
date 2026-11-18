@@ -57,7 +57,7 @@ class PlatformTelegramOfficeTest extends TestCase
         return PlatformAdmin::create(['name' => 'Owner', 'email' => 'owner@yoka.test', 'password' => 'password', 'role' => 'super_admin', 'is_active' => true]);
     }
 
-    private function linkedOffice(string $mode = 'mention_only'): array
+    private function linkedOffice(string $mode = 'smart_discussion'): array
     {
         $admin = $this->admin();
         $identity = PlatformAiTelegramIdentity::create(['platform_admin_id' => $admin->id, 'telegram_user_id' => 771122, 'status' => 'verified', 'verified_at' => now()]);
@@ -118,11 +118,11 @@ class PlatformTelegramOfficeTest extends TestCase
         $this->assertSame(0, PlatformAiTask::count());
     }
 
-    public function test_mention_only_routes_to_yusuf_and_keeps_other_agents_silent(): void
+    public function test_direct_agent_name_routes_to_yusuf_and_keeps_other_agents_silent(): void
     {
         [, , $group] = $this->linkedOffice();
         $bot = PlatformAiTelegramBot::where('credential_key', 'chief')->firstOrFail();
-        app(PlatformTelegramConversation::class)->process($this->update($bot, '@yusuf_yoka_bot ide konten hari ini?', 20, 771122, $group));
+        app(PlatformTelegramConversation::class)->process($this->update($bot, 'Yusuf, ide konten hari ini?', 20, 771122, $group));
 
         $outbound = PlatformAiTelegramMessage::where('direction', 'outbound')->get();
         $this->assertCount(1, $outbound);
@@ -200,14 +200,16 @@ class PlatformTelegramOfficeTest extends TestCase
         $this->assertSame(0, $notifications->pendingAlerts());
     }
 
-    public function test_router_bounds_participants_and_requires_mentions_in_default_mode(): void
+    public function test_natural_conversation_routes_without_mentions_and_bounds_participants(): void
     {
         [, , $group] = $this->linkedOffice();
         $router = app(PlatformTelegramRouter::class);
-        $this->assertSame('ignore', $router->route('gimana hari ini?', $group)['kind']);
-        $group->update(['mode' => 'smart_discussion']);
-        $route = $router->route('Bahas konten, iklan, biaya, sales, customer, dan akuntansi', $group->fresh());
+        $casual = $router->route('gimana prioritas Yoka hari ini?', $group);
+        $this->assertSame('message', $casual['kind']);
+        $this->assertSame(['chief'], $casual['agents']);
+        $route = $router->route('Bahas konten, iklan, biaya, sales, customer, dan akuntansi', $group);
         $this->assertCount(3, $route['agents']);
+        $this->assertSame(['marketing'], $router->route('Yusuf menurutmu gimana?', $group)['agents']);
     }
 
     public function test_telegram_created_task_appears_in_dashboard_and_remains_pending_approval(): void
