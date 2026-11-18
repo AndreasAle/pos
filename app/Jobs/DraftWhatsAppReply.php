@@ -39,6 +39,9 @@ class DraftWhatsAppReply implements ShouldQueue
 
     public const DAILY_LIMIT = 1500;
 
+    /** Harus sama dengan OnboardingController (ends_at = now()->addDays(7)). */
+    public const TRIAL_DAYS = 7;
+
     /** Bubble per nomor per jam: longgar untuk obrolan normal, menahan banjir. */
     public const PER_PHONE_HOURLY = 60;
 
@@ -103,6 +106,11 @@ class DraftWhatsAppReply implements ShouldQueue
             return;
         }
         $task = $this->recordOnKanban($adit, $inbound, $business, $sensitive, $decision, $replied);
+        if ($replied) {
+            // Draf balasan versi lama untuk nomor ini sudah basi: Adit sudah menjawab langsung.
+            PlatformAiTask::where('type', 'whatsapp_draft')->where('status', 'proposed')->where('payload->kind', 'reply')
+                ->where('payload->phone', $inbound->phone)->update(['status' => 'rejected', 'error' => 'Digantikan balasan otomatis Adit.']);
+        }
         PlatformAiWhatsAppMessage::where('phone', $inbound->phone)->whereNull('platform_ai_task_id')->where('created_at', '>=', today())
             ->update(['platform_ai_task_id' => $task->id]);
     }
@@ -124,6 +132,7 @@ class DraftWhatsAppReply implements ShouldQueue
             : 'Pengirim belum terdaftar (kemungkinan calon pelanggan).';
         $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'max_outlets', 'max_users'])
             ->map(fn ($p) => "{$p->name}: Rp ".number_format((float) $p->price, 0, ',', '.')."/bulan, {$p->max_outlets} outlet, {$p->max_users} user")->implode('; ');
+        $trialDays = self::TRIAL_DAYS;
         $style = self::STYLES[crc32($inbound->phone.today()->toDateString()) % count(self::STYLES)];
         $facts = json_encode(AgentBrain::productFacts(), JSON_UNESCAPED_UNICODE);
         $sensitiveRule = $sensitive
@@ -137,7 +146,7 @@ FAKTA PRODUK (satu-satunya sumber fitur): {$facts}
 PAKET AKTIF: {$plans}
 PELANGGAN: {$customer}
 
-CARA DAFTAR & BAYAR (fakta alur): daftar gratis di yokapos.com -> langsung masuk masa trial -> kapan saja bisa pilih paket di menu Langganan setelah login -> bayar online lewat Midtrans -> paket aktif 30 hari.
+CARA DAFTAR & BAYAR (fakta alur): daftar gratis di yokapos.com -> langsung masuk masa trial gratis {$trialDays} hari (BUKAN 30 hari; jangan sebut angka lain) -> kapan saja bisa pilih paket di menu Langganan setelah login -> bayar online lewat Midtrans -> paket aktif 30 hari.
 
 CARA NGOBROL (ini yang paling penting):
 - Kamu orang, bukan mesin penjawab. Gaya kamu hari ini dengan orang ini: {$style}. Ikuti energi pelanggan: dia nulis 3 kata, kamu jawab pendek; dia cerita panjang, kamu boleh lebih ngobrol.

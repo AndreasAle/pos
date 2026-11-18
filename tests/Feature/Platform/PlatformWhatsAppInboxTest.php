@@ -164,6 +164,27 @@ class PlatformWhatsAppInboxTest extends TestCase
         $this->assertStringContainsString('manual', $task->recommendation);
     }
 
+    public function test_dashboard_adit_is_synced_with_real_whatsapp_activity(): void
+    {
+        $adit = PlatformAiAgent::where('key', 'cs')->firstOrFail();
+        // Draf versi lama untuk nomor yang sama (sebelum balasan otomatis).
+        $old = $adit->tasks()->create(['type' => 'whatsapp_draft', 'title' => 'Balas WA · lama', 'summary' => 'x', 'status' => 'proposed', 'requires_approval' => true, 'risk' => 'medium', 'payload' => ['kind' => 'reply', 'phone' => '6281234567890']]);
+        $this->aiSays(['relevant' => true, 'reply' => 'bisa kak', 'closing' => false, 'summary' => 'Tanya kafe.']);
+        $this->inbound(['sender' => '6281234567890', 'message' => 'bisa buat cafe?', 'inboxid' => 'Y1']);
+
+        $this->assertSame('rejected', $old->fresh()->status);
+        $waPrompt = collect(Http::recorded())->map(fn ($p) => $p[0])->first(fn ($r) => str_contains($r->url(), 'ai.test'));
+        $this->assertStringContainsString('trial gratis 7 hari', json_encode($waPrompt->data(), JSON_UNESCAPED_UNICODE));
+
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response(['choices' => [['message' => ['content' => 'Udah aku balas 1 chat hari ini.']]]])]);
+        app(PlatformAiOperations::class)->reply($adit, 'kau sudah jawab semua belum');
+        Http::assertSent(function ($r) {
+            $body = json_encode($r->data(), JSON_UNESCAPED_UNICODE);
+
+            return str_contains($body, 'RINGKASAN WHATSAPP HARI INI') && str_contains($body, '1 pesan masuk') && str_contains($body, 'PENGECUALIAN UNTUK KAMU');
+        });
+    }
+
     public function test_group_and_own_device_messages_are_ignored(): void
     {
         $this->inbound(['sender' => '1203630@g.us', 'member' => '6281', 'message' => 'halo grup']);
