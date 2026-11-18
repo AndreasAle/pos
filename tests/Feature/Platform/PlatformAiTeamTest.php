@@ -600,17 +600,20 @@ class PlatformAiTeamTest extends TestCase
         $this->aiOn();
         $agent = PlatformAiAgent::where('key', 'chief')->firstOrFail();
         $luna = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+        $admin = $this->admin();
 
         Http::fakeSequence('https://ai.test/v1/chat/completions')
             ->push(['choices' => [['message' => ['content' => null, 'tool_calls' => [['id' => 'c1', 'type' => 'function', 'function' => ['name' => 'create_task', 'arguments' => json_encode(['title' => 'Hitung runway', 'summary' => 'Hitung runway 6 bulan.', 'assign_to' => 'finance'])]]]]]]])
             ->push(['choices' => [['message' => ['content' => 'Sudah kuajukan ke Luna, nunggu persetujuanmu dulu.']]]]);
 
-        $this->platformSession($this->admin())->postJson(route('platform.ai-team.chat', $agent), ['message' => 'minta Luna hitung runway'])->assertOk();
+        $this->platformSession($admin)->postJson(route('platform.ai-team.chat', $agent), ['message' => 'minta Luna hitung runway'])->assertOk();
 
-        $this->assertDatabaseHas('platform_ai_tasks', ['platform_ai_agent_id' => $luna->id, 'title' => 'Hitung runway', 'status' => 'proposed']);
+        $this->assertDatabaseHas('platform_ai_tasks', ['platform_ai_agent_id' => $luna->id, 'delegated_by_agent_id' => $agent->id, 'title' => 'Hitung runway', 'status' => 'proposed']);
         $this->assertDatabaseMissing('platform_ai_tasks', ['platform_ai_agent_id' => $agent->id, 'title' => 'Hitung runway']);
         $last = $agent->messages()->where('role', 'assistant')->latest('id')->first();
         $this->assertNotEmpty(data_get($last->meta, 'proposed_tasks'));
+        $this->platformSession($admin)->get(route('platform.ai-team.index', ['tab' => 'tasks']))
+            ->assertOk()->assertSee('Agen yang terlibat: Luna, Ramli')->assertSee('andreas.jpg', false);
     }
 
     public function test_ambiguous_chat_approval_never_approves_multiple_tasks(): void

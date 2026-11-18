@@ -82,14 +82,15 @@
                                     <p class="mt-2 text-sm leading-relaxed text-slate-500">Agen akan menggunakan data operasional yang tersedia. Jika koneksi belum lengkap, keterbatasannya akan disebutkan dalam jawaban.</p>
                                 </div>
                                 <template x-for="message in (messages[{{ $agent->id }}] || [])" :key="message.id">
-                                    <div class="flex" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
+                                    <div class="flex items-end gap-2.5" :class="message.role === 'user' ? 'flex-row-reverse justify-start' : 'justify-start'">
+                                        <img :src="message.role === 'user' ? @js(asset('images/ai-team/andreas.jpg')) : @js(asset(data_get($profiles,$agent->key.'.avatar')))" :alt="message.role === 'user' ? (message.admin || 'Anda') : @js($agent->name)" class="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm">
                                         <div class="max-w-[88%]">
                                             <div class="rounded-2xl px-4 py-3.5 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-700'"><p class="whitespace-pre-line break-words text-[14px] leading-7" x-text="message.content"></p><div x-show="(message.attachments || []).length" class="mt-3 space-y-1.5 border-t pt-3" :class="message.role === 'user' ? 'border-white/20' : 'border-slate-100'"><template x-for="file in (message.attachments || [])" :key="file.name"><div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs" :class="message.role === 'user' ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-600'"><svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg><span class="truncate" x-text="file.name"></span></div></template></div></div>
                                             <div class="mt-1 flex items-center gap-2 px-1 text-[10px] text-slate-400" :class="message.role === 'user' ? 'justify-end' : ''"><span x-text="message.role === 'user' ? (message.admin || 'Anda') : '{{ $agent->name }}'"></span><span>·</span><span x-text="message.time || 'Baru saja'"></span><span x-show="message.mode" class="rounded bg-slate-200 px-1.5 py-0.5 font-bold text-slate-600" x-text="modeLabel(message.mode)"></span></div>
                                         </div>
                                     </div>
                                 </template>
-                                <div x-show="sending && activeAgent === {{ $agent->id }}" class="flex justify-start"><div class="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm"><span class="inline-flex items-center gap-2"><span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>{{ $agent->name }} sedang membaca data…</span></div></div>
+                                <div x-show="sending && activeAgent === {{ $agent->id }}" class="flex items-end gap-2.5"><img src="{{ asset(data_get($profiles,$agent->key.'.avatar')) }}" alt="{{ $agent->name }}" class="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm"><div class="rounded-2xl rounded-bl-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm"><span class="inline-flex items-center gap-2"><span class="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>{{ $agent->name }} sedang membaca data…</span></div></div>
                             </div>
 
                             <footer class="border-t border-slate-200 bg-white p-4">
@@ -168,6 +169,15 @@
 
                             <div class="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
                                 @forelse($columnTasks as $task)
+                                    @php
+                                        $taskPeople = collect([
+                                            $task->platform_ai_agent_id,
+                                            $task->delegated_by_agent_id,
+                                            data_get($task->payload, 'agent_ids', []),
+                                            data_get($task->payload, 'participant_agent_ids', []),
+                                            data_get($task->payload, 'collaborator_agent_ids', []),
+                                        ])->flatten()->filter()->unique()->map(fn ($id) => $agents->firstWhere('id', (int) $id))->filter()->values();
+                                    @endphp
                                     <article
                                         x-show="taskMatches({{ $task->id }})"
                                         draggable="true"
@@ -178,7 +188,12 @@
                                         :class="draggedTask?.id === {{ $task->id }} ? 'opacity-40' : ''"
                                     >
                                         <div class="flex items-start justify-between gap-3">
-                                            <span class="rounded-md border px-2 py-1 text-[9px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span>
+                                            <div class="flex -space-x-2" aria-label="Agen yang terlibat: {{ $taskPeople->pluck('name')->join(', ') }}">
+                                                @foreach($taskPeople->take(5) as $person)
+                                                    <img src="{{ asset(data_get($profiles,$person->key.'.avatar')) }}" alt="{{ $person->name }}" title="{{ $person->name }} · {{ data_get($profiles,$person->key.'.title',$person->department) }}" class="h-8 w-8 rounded-full border-2 border-white object-cover shadow-sm ring-1 ring-slate-200">
+                                                @endforeach
+                                                @if($taskPeople->count() > 5)<span class="flex h-8 min-w-8 items-center justify-center rounded-full border-2 border-white bg-slate-100 px-1 text-[9px] font-black text-slate-600 shadow-sm">+{{ $taskPeople->count()-5 }}</span>@endif
+                                            </div>
                                             <span class="text-[10px] font-bold text-slate-400">#{{ $task->id }}</span>
                                         </div>
                                         <h4 class="mt-3 text-sm font-black leading-5 text-[#0B1B3F]">{{ $task->title }}</h4>

@@ -47,11 +47,11 @@ class AiTeamController extends Controller
             'rejected' => (clone $activeTasks)->where('status', 'rejected')->count(),
             'approval' => (clone $activeTasks)->where('requires_approval', true)->whereNull('approved_at')->count(),
         ];
-        $tasks = (clone $activeTasks)->with(['agent', 'executions' => fn ($query) => $query->latest()])
+        $tasks = (clone $activeTasks)->with(['agent', 'delegatedByAgent', 'executions' => fn ($query) => $query->latest()])
             ->latest()->orderByDesc('id')->limit(100)->get();
         $linkedTaskId = request()->integer('task');
         if ($linkedTaskId && ! $tasks->contains('id', $linkedTaskId)) {
-            $linkedTask = (clone $activeTasks)->with(['agent', 'executions' => fn ($query) => $query->latest()])
+            $linkedTask = (clone $activeTasks)->with(['agent', 'delegatedByAgent', 'executions' => fn ($query) => $query->latest()])
                 ->find($linkedTaskId);
             if ($linkedTask) {
                 $tasks->push($linkedTask);

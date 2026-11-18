@@ -18,6 +18,11 @@ class PlatformAiTask extends Model
         return $this->belongsTo(PlatformAiAgent::class, 'platform_ai_agent_id');
     }
 
+    public function delegatedByAgent()
+    {
+        return $this->belongsTo(PlatformAiAgent::class, 'delegated_by_agent_id');
+    }
+
     public function executions()
     {
         return $this->hasMany(PlatformAiTaskExecution::class);
