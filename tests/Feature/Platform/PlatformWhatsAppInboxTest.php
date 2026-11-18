@@ -114,6 +114,12 @@ class PlatformWhatsAppInboxTest extends TestCase
     {
         $b = DraftWhatsAppReply::bubbles("Bisa kak. Ada diskon 50% khusus kakak!\n\nsatu\n\ndua\n\ntiga\n\nempat");
         $this->assertSame(['Bisa kak.', 'satu', 'dua'], $b);
+
+        // Penutup basa-basi dari tes live 2026-11-19 dibuang; urutan isi tetap.
+        $live = DraftWhatsAppReply::bubbles("Kalau Kakak butuh bantuan lain seputar aplikasi kasir, jangan ragu tanya ya!\n\nUntuk pinjol, Yoka POS belum menyediakan fasilitas tersebut.");
+        $this->assertSame(['Untuk pinjol, Yoka POS belum menyediakan fasilitas tersebut.'], $live);
+        $this->assertSame(['Kakak bisa daftar di yokapos.com.'], DraftWhatsAppReply::bubbles('Kakak bisa daftar di yokapos.com. Kalau ada yang mau ditanyakan soal proses langganan, saya siap bantu ya.'));
+        $this->assertSame(['halo kak, siap bantu!'], DraftWhatsAppReply::bubbles('halo kak, siap bantu!'), 'Kalau cuma itu isinya, tetap dikirim.');
     }
 
     public function test_hourly_limit_stops_reply_loops(): void
