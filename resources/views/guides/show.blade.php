@@ -3,9 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $guide['title'] }} — Panduan Yoka POS</title>
-    <meta name="description" content="{{ $guide['summary'] }}">
-    <link rel="canonical" href="{{ route('guides.show', $slug) }}">
+    @include('partials.seo-meta', ['seoTitle' => $guide['title'].' — Panduan Yoka POS', 'seoDescription' => $guide['summary']])
     @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>

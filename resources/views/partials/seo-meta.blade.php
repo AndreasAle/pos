@@ -1,7 +1,11 @@
-{{-- Meta SEO bersama. Wajib: $seoTitle, $seoDescription. Opsional: $seoImage (path public), $seoType. --}}
+{{-- Meta SEO bersama. Wajib: $seoTitle, $seoDescription. Opsional: $seoImage (path public), $seoType.
+     Canonical selalu memakai APP_URL (tanpa www), supaya www.yokapos.com dan yokapos.com tidak
+     dihitung Google sebagai dua halaman berbeda. --}}
 @php
-    $seoUrl = url()->current();
-    $seoImageUrl = asset($seoImage ?? 'images/hero/slide-kasir.webp');
+    $seoBase = rtrim((string) config('app.url'), '/');
+    $seoPath = trim(request()->path(), '/');
+    $seoUrl = $seoPath === '' ? $seoBase : $seoBase.'/'.$seoPath;
+    $seoImageUrl = $seoBase.'/'.ltrim($seoImage ?? 'images/hero/slide-kasir.webp', '/');
 @endphp
 <title>{{ $seoTitle }}</title>
 <meta name="description" content="{{ $seoDescription }}">

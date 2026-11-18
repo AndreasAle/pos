@@ -3,8 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $feature['title'] }} — Yoka POS</title>
-    <meta name="description" content="{{ $feature['description'] }}">
+    @include('partials.seo-meta', ['seoTitle' => $feature['title'].' — Yoka POS', 'seoDescription' => $feature['description'], 'seoImage' => $feature['image']])
     @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>

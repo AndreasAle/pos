@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Yoka POS — Kasir Modern untuk Cafe, Resto, Bakery & Bisnis F&B</title>
-    <meta name="description" content="Kelola transaksi, QRIS, stok, shift kasir, laporan profit, dan insight bisnis dalam satu sistem POS untuk cafe, resto, bakery, dan UMKM.">
+    @include('partials.seo-meta', ['seoTitle' => 'Yoka POS — Kasir Modern untuk Cafe, Resto, Bakery & Bisnis F&B', 'seoDescription' => 'Aplikasi kasir (POS) untuk cafe, resto, bakery, dan UMKM di Indonesia: transaksi, QRIS, stok, shift kasir, dan laporan profit. Trial gratis 7 hari.'])
+    @include('partials.brand-schema')
 
 
     @include('layouts._fonts')

@@ -42,6 +42,32 @@ class ArticlePagesTest extends TestCase
         $res->assertDontSee('/platform', false)->assertDontSee('/login', false);
     }
 
+    public function test_canonical_ignores_www_host(): void
+    {
+        config(['app.url' => 'https://yokapos.com']);
+        $this->get('http://www.yokapos.com/fitur/pelanggan-promosi')->assertOk()
+            ->assertSee('<link rel="canonical" href="https://yokapos.com/fitur/pelanggan-promosi">', false);
+        $this->get('http://www.yokapos.com/')->assertOk()
+            ->assertSee('<link rel="canonical" href="https://yokapos.com">', false);
+    }
+
+    public function test_landing_declares_yoka_brand_schema(): void
+    {
+        $this->get('/')->assertOk()
+            ->assertSee('"@type":"Organization"', false)
+            ->assertSee('"@type":"SoftwareApplication"', false)
+            ->assertSee('Conwebid Indonesia Digital', false);
+    }
+
+    public function test_login_and_register_are_noindex_and_not_blocked_in_robots(): void
+    {
+        $this->get('/login')->assertOk()->assertSee('noindex', false);
+        $this->get('/register')->assertOk()->assertSee('noindex', false);
+        $robots = file_get_contents(public_path('robots.txt'));
+        $this->assertStringNotContainsString('Disallow: /login', $robots);
+        $this->assertStringContainsString('Sitemap: https://yokapos.com/sitemap.xml', $robots);
+    }
+
     public function test_articles_never_promise_a_30_day_trial(): void
     {
         $text = json_encode(ArticleController::articles(), JSON_UNESCAPED_UNICODE);

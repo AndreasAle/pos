@@ -1,6 +1,7 @@
+# Halaman login, daftar, dan platform tidak diblokir di sini, tetapi memakai
+# <meta name="robots" content="noindex">. Kalau diblokir, Google tidak bisa membaca
+# tanda noindex dan halaman yang sudah terindeks tetap muncul di hasil pencarian.
 User-agent: *
-Disallow: /platform
-Disallow: /login
-Disallow: /register
+Disallow:
 
 Sitemap: https://yokapos.com/sitemap.xml

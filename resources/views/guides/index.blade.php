@@ -3,9 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Panduan Yoka POS — Cara Pakai Aplikasi Kasir Langkah demi Langkah</title>
-    <meta name="description" content="Panduan lengkap Yoka POS: mulai pakai, printer struk, menu dan harga, shift kasir, stok dan resep, laporan, Bot Telegram, dan cara berlangganan.">
-    <link rel="canonical" href="{{ route('guides.index') }}">
+    @include('partials.seo-meta', ['seoTitle' => 'Panduan Yoka POS — Cara Pakai Aplikasi Kasir Langkah demi Langkah', 'seoDescription' => 'Panduan lengkap Yoka POS: mulai pakai, printer struk, menu dan harga, shift kasir, stok dan resep, laporan, Bot Telegram, dan cara berlangganan.'])
     @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>[x-cloak] { display: none !important; }</style>
