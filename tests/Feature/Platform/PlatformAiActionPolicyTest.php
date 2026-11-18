@@ -78,7 +78,7 @@ class PlatformAiActionPolicyTest extends TestCase
     private function send(PlatformAiTelegramGroup $group, string $text, ?int $replyTo = null, int $userId = 771122): void
     {
         $id = ++$this->messageId;
-        $message = ['message_id' => $id, 'text' => $text, 'chat' => ['id' => $group->telegram_chat_id, 'type' => 'supergroup', 'title' => $group->title], 'from' => ['id' => $userId, 'username' => 'owner', 'is_bot' => false]];
+        $message = ['message_id' => $id, 'date' => 1_790_000_000 + $id, 'text' => $text, 'chat' => ['id' => $group->telegram_chat_id, 'type' => 'supergroup', 'title' => $group->title], 'from' => ['id' => $userId, 'username' => 'owner', 'is_bot' => false]];
         if ($replyTo) {
             $message['reply_to_message'] = ['message_id' => $replyTo, 'from' => ['is_bot' => true]];
         }
@@ -419,6 +419,34 @@ class PlatformAiActionPolicyTest extends TestCase
         $this->assertLessThanOrEqual(2, count($style::bubbles($limited)));
 
         $this->assertSame('', ResponseGuard::validate('bos, aku sudah siapin tugas penting buat prioritas.', ['created_tasks' => []])['text']);
+    }
+
+    // Regresi nyata dari server: basic group memberi message_id berbeda per bot
+    // (msg 99 di bot 1, msg 66 di bot 2) untuk SATU pesan Bos.
+    public function test_basic_group_message_with_different_ids_per_bot_is_answered_once(): void
+    {
+        [, , $group] = $this->office();
+        $this->aiResponses = [$this->say('iya bos, lagi di sini'), $this->say('jawaban kembar')];
+        $service = app(PlatformTelegramConversation::class);
+        foreach (['chief' => 99, 'finance' => 66, 'marketing' => 41] as $key => $perBotId) {
+            $message = ['message_id' => $perBotId, 'date' => 1_790_000_123, 'text' => 'mana luna', 'chat' => ['id' => $group->telegram_chat_id, 'type' => 'group'], 'from' => ['id' => 771122, 'is_bot' => false]];
+            $update = PlatformAiTelegramUpdate::create([
+                'platform_ai_telegram_bot_id' => PlatformAiTelegramBot::where('credential_key', $key)->value('id'), 'platform_ai_telegram_group_id' => $group->id,
+                'telegram_update_id' => 7000 + $perBotId, 'telegram_chat_id' => $group->telegram_chat_id, 'telegram_message_id' => $perBotId,
+                'interaction_id' => (string) Str::uuid(), 'event_fingerprint' => hash('sha256', "basic|{$key}"), 'status' => 'received', 'payload' => ['message' => $message],
+            ]);
+            $service->process($update);
+        }
+
+        $this->assertSame(['iya bos, lagi di sini'], $this->outbound('finance')->pluck('content')->all());
+        $this->assertCount(1, $this->aiRequests());
+    }
+
+    public function test_webhook_fingerprint_ignores_per_bot_message_id_but_not_content(): void
+    {
+        $fp = fn (int $id, string $text) => \App\Http\Controllers\PlatformTelegramWebhookController::fingerprint(-100, 771122, 1_790_000_123, $text, $id);
+        $this->assertSame($fp(99, 'mana luna'), $fp(66, 'mana luna'));
+        $this->assertNotSame($fp(99, 'mana luna'), $fp(99, 'mana yusuf'));
     }
 
     public function test_roll_call_gets_exactly_one_short_answer_from_every_agent(): void

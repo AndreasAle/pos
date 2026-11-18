@@ -6,6 +6,7 @@ use App\Jobs\ProcessPlatformTelegramUpdate;
 use App\Models\PlatformAiTelegramBot;
 use App\Models\PlatformAiTelegramGroup;
 use App\Models\PlatformAiTelegramUpdate;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -32,10 +33,14 @@ class PlatformTelegramWebhookController extends Controller
             'message.reply_to_message' => 'nullable|array',
             'message.reply_to_message.message_id' => 'nullable|integer',
             'message.reply_to_message.from.is_bot' => 'nullable|boolean',
+            'message.reply_to_message.from.id' => 'nullable|integer',
+            'message.reply_to_message.date' => 'nullable|integer',
         ]);
         $chatId = (int) data_get($data, 'message.chat.id');
         $messageId = (int) data_get($data, 'message.message_id');
-        $fingerprint = hash('sha256', "message|{$chatId}|{$messageId}");
+        // Di basic group Telegram, message_id BERBEDA untuk tiap bot penerima, jadi tidak bisa jadi
+        // kunci dedup. Pengirim + waktu kirim + isi identik di semua bot: itu yang dipakai.
+        $fingerprint = self::fingerprint($chatId, data_get($data, 'message.from.id'), data_get($data, 'message.date'), data_get($data, 'message.text'), $messageId);
         if (PlatformAiTelegramUpdate::where('event_fingerprint', $fingerprint)->exists()) {
             return response()->json(['ok' => true, 'duplicate' => true]);
         }
@@ -43,11 +48,26 @@ class PlatformTelegramWebhookController extends Controller
         // Hanya ID pesan yang di-reply yang disimpan (bukan isinya): cukup untuk mencocokkan
         // dengan pesan agen yang sudah tercatat di platform_ai_telegram_messages.
         if ($replyId = data_get($data, 'message.reply_to_message.message_id')) {
-            $safe['message']['reply_to_message'] = ['message_id' => (int) $replyId, 'from' => ['is_bot' => (bool) data_get($data, 'message.reply_to_message.from.is_bot', false)]];
+            // Pengirim (bot) dan waktu pesan yang di-reply ikut disimpan: di basic group nomor
+            // pesannya berbeda per bot, jadi pencocokan juga memakai identitas bot + waktu.
+            $safe['message']['reply_to_message'] = ['message_id' => (int) $replyId, 'date' => data_get($data, 'message.reply_to_message.date'), 'from' => ['id' => data_get($data, 'message.reply_to_message.from.id'), 'is_bot' => (bool) data_get($data, 'message.reply_to_message.from.is_bot', false)]];
         }
-        $update = PlatformAiTelegramUpdate::create(['platform_ai_telegram_bot_id' => $bot->id, 'platform_ai_telegram_group_id' => PlatformAiTelegramGroup::where('telegram_chat_id', $chatId)->value('id'), 'telegram_update_id' => $data['update_id'], 'telegram_chat_id' => $chatId, 'telegram_message_id' => $messageId, 'interaction_id' => (string) Str::uuid(), 'event_fingerprint' => $fingerprint, 'status' => 'received', 'payload' => $safe]);
+        try {
+            $update = PlatformAiTelegramUpdate::create(['platform_ai_telegram_bot_id' => $bot->id, 'platform_ai_telegram_group_id' => PlatformAiTelegramGroup::where('telegram_chat_id', $chatId)->value('id'), 'telegram_update_id' => $data['update_id'], 'telegram_chat_id' => $chatId, 'telegram_message_id' => $messageId, 'interaction_id' => (string) Str::uuid(), 'event_fingerprint' => $fingerprint, 'status' => 'received', 'payload' => $safe]);
+        } catch (UniqueConstraintViolationException) {
+            // Bot lain menyimpan pesan yang sama sepersekian detik lebih dulu.
+            return response()->json(['ok' => true, 'duplicate' => true]);
+        }
         ProcessPlatformTelegramUpdate::dispatchAfterResponse($update->id);
 
         return response()->json(['ok' => true], 202);
+    }
+
+    public static function fingerprint(int $chatId, mixed $fromId, mixed $date, mixed $text, int $messageId): string
+    {
+        // Tanpa tanggal (payload tidak lazim) kembali ke message_id agar tidak salah menggabungkan.
+        $basis = $date ? "{$fromId}|{$date}|".hash('sha256', (string) $text) : "id|{$messageId}";
+
+        return hash('sha256', "message|{$chatId}|{$basis}");
     }
 }

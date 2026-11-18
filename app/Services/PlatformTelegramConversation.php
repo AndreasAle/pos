@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Http\Controllers\PlatformTelegramWebhookController;
 use App\Models\PlatformActivityLog;
 use App\Models\PlatformAiAgent;
 use App\Models\PlatformAiDiscussion;
@@ -16,6 +17,7 @@ use App\Models\PlatformAiTelegramUpdate;
 use App\Services\PlatformAgents\AgentIntent;
 use App\Services\PlatformAgents\ResponseGuard;
 use App\Services\PlatformAgents\WorkingMemory;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -72,7 +74,9 @@ class PlatformTelegramConversation
             $threadId = data_get($message, 'message_thread_id');
             // Satu pesan Bos = satu pemrosesan, apa pun jalurnya (jawaban, perintah, absen, meeting).
             // Pesan yang sama bisa masuk sebagai beberapa update (satu per bot di grup).
-            if (! PlatformAiTelegramNotification::claim('owner_message', $group, $threadId, (string) $update->telegram_message_id)) {
+            // Kunci = pengirim + waktu + isi (bukan message_id: di basic group nomornya beda per bot).
+            $messageKey = substr(PlatformTelegramWebhookController::fingerprint((int) $update->telegram_chat_id, $fromId, data_get($message, 'date'), $text, (int) $update->telegram_message_id), 0, 40);
+            if (! PlatformAiTelegramNotification::claim('owner_message', $group, $threadId, $messageKey)) {
                 app(PlatformAiTelemetry::class)->quality('duplicate_reply_blocked', null, ['stage' => 'message']);
                 $this->finish($update, 'duplicate');
 
@@ -161,7 +165,7 @@ class PlatformTelegramConversation
             }
             // Lapis kedua: satu agen menjawab satu pesan Bos tepat sekali, walau pesan yang sama
             // masuk lewat beberapa update (tujuh bot di grup yang sama) atau diproses ulang.
-            if (! PlatformAiTelegramNotification::claim('agent_reply', $group, $threadId, $update->telegram_message_id.':'.$agent->key)) {
+            if (! PlatformAiTelegramNotification::claim('agent_reply', $group, $threadId, $update->interaction_id.':'.$agent->key)) {
                 $telemetry->quality('duplicate_reply_blocked', $agent);
 
                 continue;
@@ -214,7 +218,7 @@ class PlatformTelegramConversation
             foreach ($guarded['violations'] as $violation) {
                 $telemetry->quality($violation === 'filler' ? 'filler_removed' : 'unsupported_claim_removed', $agent, ['type' => $violation]);
             }
-            $content = $guarded['text'] !== '' ? $guarded['text'] : 'hmm, yang ini aku belum punya jawaban yang bisa dipertanggungjawabkan, bos. detail apa yang kurang, biar langsung kuhitung di sini?';
+            $content = $guarded['text'] !== '' ? $guarded['text'] : 'iya bos?';
             // Hasil kerja (hitungan, draf, ide, analisis) boleh utuh; obrolan biasa dipaksa pendek.
             $text = $intent['deliverable']
                 ? PlatformTelegramStyle::clean($content)
@@ -294,9 +298,24 @@ class PlatformTelegramConversation
         if (! $repliedId) {
             return null;
         }
+        $base = fn () => PlatformAiTelegramMessage::with('agent')->where('platform_ai_telegram_group_id', $group->id)->where('direction', 'outbound');
+        // Di basic group nomor pesan berbeda per bot: cocokkan lewat bot pengirim + waktu kirim.
+        $botUserId = data_get($message, 'reply_to_message.from.id');
+        $sentAt = data_get($message, 'reply_to_message.date');
+        if ($botUserId && $sentAt) {
+            $botId = PlatformAiTelegramBot::where('telegram_bot_id', (int) $botUserId)->value('id');
+            if ($botId) {
+                $at = Carbon::createFromTimestamp((int) $sentAt);
+                $match = $base()->where('platform_ai_telegram_bot_id', $botId)
+                    ->whereBetween('delivered_at', [$at->copy()->subSeconds(5), $at->copy()->addSeconds(5)])->latest('id')->first()
+                    ?? $base()->where('platform_ai_telegram_bot_id', $botId)->where('telegram_message_id', (int) $repliedId)->latest('id')->first();
+                if ($match) {
+                    return $match;
+                }
+            }
+        }
 
-        return PlatformAiTelegramMessage::with('agent')->where('platform_ai_telegram_group_id', $group->id)
-            ->where('telegram_message_id', (int) $repliedId)->where('direction', 'outbound')->latest('id')->first();
+        return $base()->where('telegram_message_id', (int) $repliedId)->latest('id')->first();
     }
 
     private function namesAgent(string $text): bool
