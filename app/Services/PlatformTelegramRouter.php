@@ -14,6 +14,13 @@ class PlatformTelegramRouter
         if (preg_match('/^\/(help|tasks|status|team|briefing)(?:@\w+)?\b/u', $normalized, $m)) {
             return ['kind' => 'command', 'command' => $m[1], 'agents' => []];
         }
+        // Bos minta tim ngobrol sendiri: "/ngobrol", "kalian ngobrol dong", "diskusiin X dong".
+        if (preg_match('/^\/ngobrol(?:@\w+)?\s*(.*)$/isu', trim($text), $m)
+            || preg_match('/(kalian|tim|guys|semua).*(ngobrol|ngobrolin|diskusi|diskusiin)(.*)$/isu', trim($text), $m2)) {
+            $hint = trim($m[1] ?? ($m2[3] ?? ''));
+
+            return ['kind' => 'chatter', 'topic' => $hint !== '' ? $hint : trim($text), 'agents' => []];
+        }
         if (preg_match('/^\/meeting(?:@\w+)?\s+(.+)/isu', trim($text), $m)) {
             return ['kind' => 'meeting', 'objective' => trim($m[1]), 'agents' => $this->relevant($m[1], 4)];
         }

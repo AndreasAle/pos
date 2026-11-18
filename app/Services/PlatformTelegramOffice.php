@@ -21,14 +21,14 @@ use Illuminate\Support\Str;
  */
 class PlatformTelegramOffice
 {
-    public const DAILY_CHATTER_LIMIT = 6;
+    public const DAILY_CHATTER_LIMIT = 10;
 
     public const MAX_CHATTER_TURNS = 4;
 
-    public const IDLE_MINUTES = 40;
+    public const IDLE_MINUTES = 20;
 
     /** Peluang satu rekan ikut menimpali setelah agen menjawab Bos. */
-    public const CHIME_IN_CHANCE = 35;
+    public const CHIME_IN_CHANCE = 65;
 
     private const TOPICS = [
         'progress' => 'Ceritakan singkat ke grup apa yang lagi kamu pegang atau pikirkan hari ini di bidangmu (pakai data nyata lewat tool kalau perlu). Boleh colek satu rekan yang terkait.',
@@ -55,11 +55,13 @@ class PlatformTelegramOffice
             ->latest('id')->limit($limit)->get()->reverse()
             ->map(function (PlatformAiTelegramMessage $message) use ($self) {
                 if ($message->direction === 'outbound' && $message->platform_ai_agent_id === $self->id) {
-                    return ['role' => 'assistant', 'content' => $message->content];
+                    return ['role' => 'assistant', 'content' => PlatformTelegramStyle::clean($message->content)];
                 }
                 $speaker = $message->direction === 'outbound' ? ($message->agent?->name ?? 'Rekan') : 'Bos';
 
-                return ['role' => 'user', 'content' => "{$speaker}: {$message->content}"];
+                $content = $message->direction === 'outbound' ? PlatformTelegramStyle::clean($message->content) : $message->content;
+
+                return ['role' => 'user', 'content' => "{$speaker}: {$content}"];
             })->values()->all();
     }
 
@@ -98,29 +100,33 @@ class PlatformTelegramOffice
         return $started;
     }
 
-    public function runChatter(PlatformAiTelegramGroup $group, ?int $roll = null): bool
+    public function runChatter(PlatformAiTelegramGroup $group, ?int $roll = null, bool $forced = false, ?string $topicHint = null): bool
     {
         $settings = (array) $group->notification_settings;
-        if (data_get($settings, 'office_chatter', true) === false || $this->quiet($settings)) {
+        if (! $forced && (data_get($settings, 'office_chatter', true) === false || $this->quiet($settings))) {
             return false;
         }
         $lastAt = PlatformAiTelegramMessage::where('platform_ai_telegram_group_id', $group->id)->max('created_at');
-        if ($lastAt && now()->diffInMinutes($lastAt, true) < self::IDLE_MINUTES) {
+        if (! $forced && $lastAt && now()->diffInMinutes($lastAt, true) < self::IDLE_MINUTES) {
             return false;
         }
         $tz = data_get($settings, 'timezone', 'Asia/Jakarta');
         $counterKey = "telegram-office-chatter:{$group->id}:".now($tz)->format('Y-m-d');
-        if ((int) Cache::get($counterKey, 0) >= self::DAILY_CHATTER_LIMIT) {
+        if (! $forced && (int) Cache::get($counterKey, 0) >= self::DAILY_CHATTER_LIMIT) {
             return false;
         }
         // Dicek tiap 15 menit; peluang kecil supaya kemunculannya tidak bisa ditebak jamnya.
         $roll ??= random_int(1, 100);
-        if ($roll > 20) {
+        if (! $forced && $roll > 35) {
             return false;
         }
         Cache::put($counterKey, (int) Cache::get($counterKey, 0) + 1, now($tz)->endOfDay());
 
         $topicKey = array_rand(self::TOPICS);
+        $opening = self::TOPICS[$topicKey];
+        if ($topicHint) {
+            $opening = 'Bos minta kalian ngobrol di grup. Bahasannya: "'.Str::limit($topicHint, 300).'". Buka obrolannya dari sudut bidangmu dan colek rekan.';
+        }
         $keys = collect(['chief', 'marketing', 'ads', 'finance', 'accounting', 'cs', 'sales'])->shuffle()->all();
         $starter = null;
         foreach ($keys as $key) {
@@ -132,13 +138,13 @@ class PlatformTelegramOffice
             return false;
         }
         $interactionId = 'chatter-'.Str::uuid();
-        if (! $this->speak($group, $starter, self::TOPICS[$topicKey].' Kamu yang membuka obrolan, jadi jangan menunggu ditanya.', $interactionId, null)) {
+        if (! $this->speak($group, $starter, $opening.' Kamu yang membuka obrolan, jadi jangan menunggu ditanya.', $interactionId, null)) {
             return false;
         }
 
         // Rekan menimpali bergiliran, masing-masing membaca obrolan terbaru.
         $spoken = [$starter->key];
-        $turns = random_int(1, self::MAX_CHATTER_TURNS - 1);
+        $turns = $forced ? self::MAX_CHATTER_TURNS - 1 : random_int(2, self::MAX_CHATTER_TURNS - 1);
         foreach (collect($keys)->reject(fn ($k) => in_array($k, $spoken, true))->take($turns) as $key) {
             $agent = $this->activeAgentWithBot($key);
             if ($agent && $this->speak($group, $agent, 'Tanggapi obrolan rekan di atas seperti di grup kerja: setuju, bantah, tambah dari bidangmu, atau bercanda sedikit. Singkat. Kalau memang tidak ada yang mau kamu bilang, balas persis: SKIP', $interactionId, null)) {

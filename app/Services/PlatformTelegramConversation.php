@@ -70,6 +70,12 @@ class PlatformTelegramConversation
 
                 return;
             }
+            if ($route['kind'] === 'chatter') {
+                app(PlatformTelegramOffice::class)->runChatter($group, null, true, $route['topic']);
+                $this->finish($update);
+
+                return;
+            }
             if ($route['kind'] === 'meeting') {
                 $this->meeting($route, $identity, $group, $update, $threadId);
                 $this->finish($update);
@@ -139,7 +145,7 @@ class PlatformTelegramConversation
     {
         $chief = PlatformAiTelegramBot::whereHas('agent', fn ($q) => $q->where('key', 'chief'))->where('status', 'active')->first() ?: $update->bot;
         $text = match ($command) {
-            'help' => 'Perintah: /ask nama pertanyaan, /meeting topik, /tasks, /status, /team, /briefing. Approval sensitif tetap dilakukan di dashboard.',
+            'help' => 'Perintah: /ask nama pertanyaan, /ngobrol topik, /meeting topik, /tasks, /status, /team, /briefing. Approval sensitif tetap dilakukan di dashboard.',
             'tasks' => PlatformAiTask::with('agent')->whereIn('status', ['proposed', 'approved'])->latest()->limit(8)->get()->map(fn ($t) => "• {$t->title} — {$t->agent?->name} ({$t->status})")->prepend('Pekerjaan aktif:')->join("\n"),
             'team' => PlatformAiAgent::orderBy('id')->get()->map(fn ($a) => "• {$a->name} — {$a->status}")->prepend('Tim AI:')->join("\n"),
             'status' => "Telegram Office aktif. Mode grup: {$group->mode}. Approval sensitif tetap di Operations Center.",

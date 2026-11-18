@@ -304,4 +304,14 @@ class PlatformTelegramOfficeTest extends TestCase
         $this->travelTo(now('Asia/Jakarta')->setTime(23, 30));
         $this->assertFalse($office->runChatter($group, 1));
     }
+
+    public function test_owner_can_ask_team_to_chat_among_themselves(): void
+    {
+        [, , $group] = $this->linkedOffice();
+        $router = app(PlatformTelegramRouter::class);
+        $this->assertSame('chatter', $router->route('/ngobrol fitur trial', $group)['kind']);
+        $this->assertSame('fitur trial', $router->route('/ngobrol fitur trial', $group)['topic']);
+        $this->assertSame('chatter', $router->route('kalian ngobrol dong soal pengembangan sistem', $group)['kind']);
+        $this->assertSame('message', $router->route('yusuf gimana kontennya', $group)['kind']);
+    }
 }
