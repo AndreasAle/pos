@@ -480,21 +480,6 @@
         </div>
     </section>
 
-    {{-- ================= INTERACTIVE PRODUCT EXPERIENCE ================= --}}
-    <section id="demo-kasir" class="overflow-hidden bg-white py-20 md:py-28" aria-labelledby="product-experience-title">
-        <div class="w-full">
-            <div class="mx-auto max-w-[780px] px-6 text-center">
-                <h2 id="product-experience-title" class="mt-6 text-[34px] font-extrabold leading-[1.08] tracking-[-.035em] text-[#0B1B3F] sm:text-[44px] md:text-[56px]">Rasakan alur kasir Yoka,<br><span class="text-emerald-600">langsung dari browser.</span></h2>
-            </div>
-            <div class="mt-12 min-h-[580px] w-full overflow-hidden border-y border-slate-200 bg-[#2b241f] shadow-[0_30px_80px_rgba(15,23,42,.12)] sm:min-h-[680px]" data-yoka-product-experience data-signup-url="{{ route('register') }}">
-                <div class="flex min-h-[580px] items-center justify-center text-sm font-bold text-slate-400 sm:min-h-[680px]" role="status">
-                    <span class="mr-3 h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400"></span>Menyiapkan pengalaman 3D…
-                </div>
-            </div>
-            <noscript><p class="mt-4 text-center text-sm text-slate-300">Aktifkan JavaScript untuk mencoba demo kasir interaktif.</p></noscript>
-        </div>
-    </section>
-
     {{-- ================= INSIGHT BISNIS DEMO ================= --}}
     <section id="yoka-intelligence" class="relative overflow-hidden bg-white px-6 py-20 md:py-28">
         <div class="pointer-events-none absolute left-1/2 top-[46%] h-[520px] w-[900px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-100/55 blur-[100px]"></div>
