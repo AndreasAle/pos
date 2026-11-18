@@ -21,11 +21,11 @@
 </head>
 <body class="bg-white text-slate-800 antialiased">
     @php $waLink = 'https://wa.me/6285891111795?text='.rawurlencode('Halo, saya butuh bantuan: '.$guide['title']); @endphp
-    @include('partials.guide-header')
+    @include('partials.site-header', ['waLink' => $waLink, 'home' => route('landing')])
 
-    <main class="pt-[60px] sm:pt-[68px] lg:pt-[76px]">
+    <main>
         <article>
-            <header class="bg-emerald-600 text-white">
+            <header class="bg-emerald-600 text-white pt-[60px] sm:pt-[68px] lg:pt-[76px]">
                 <div class="max-w-[760px] mx-auto px-5 sm:px-6 py-10 sm:py-14">
                     <nav class="text-sm font-semibold text-emerald-100" aria-label="Breadcrumb">
                         <a href="{{ route('guides.index') }}" class="hover:text-white">Panduan</a>
@@ -107,5 +107,6 @@
     </main>
 
     @include('partials.site-footer', ['waLink' => $waLink, 'home' => route('landing')])
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </body>
 </html>
