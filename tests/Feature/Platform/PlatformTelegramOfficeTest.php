@@ -36,7 +36,7 @@ class PlatformTelegramOfficeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['services.yoka_ai.key' => null, 'queue.default' => 'sync']);
+        config(['services.yoka_ai.key' => null, 'queue.default' => 'sync', 'services.telegram_office.chime_in_chance' => 0]);
         foreach (['chief' => 'ramli', 'marketing' => 'yusuf', 'ads' => 'yono', 'finance' => 'luna', 'accounting' => 'nanda', 'cs' => 'adit', 'sales' => 'yosef'] as $key => $name) {
             config(["services.telegram_office.bots.{$key}" => ['token' => "{$name}:test-token", 'username' => "{$name}_yoka_bot", 'webhook_secret' => "secret-{$name}"]]);
         }
@@ -248,5 +248,60 @@ class PlatformTelegramOfficeTest extends TestCase
 
         $this->assertDatabaseHas('platform_ai_tasks', ['title' => 'Strategi konten tujuh hari', 'status' => 'proposed', 'requires_approval' => true]);
         $this->assertDatabaseMissing('platform_ai_tasks', ['title' => 'Strategi konten tujuh hari', 'status' => 'completed']);
+    }
+
+    public function test_agent_reply_is_cleaned_of_speaker_labels_markdown_and_split_into_bubbles(): void
+    {
+        [, , $group] = $this->linkedOffice();
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        $this->aiResponses = [['choices' => [['message' => ['content' => "[Yusuf]: **oke bos** ini idenya\n\nyang pertama demo kasir 30 detik"]]]]];
+        $bot = PlatformAiTelegramBot::where('credential_key', 'marketing')->firstOrFail();
+        app(PlatformTelegramConversation::class)->process($this->update($bot, 'yusuf kasih ide konten', 60, 771122, $group));
+
+        $sent = PlatformAiTelegramMessage::where('direction', 'outbound')->orderBy('id')->pluck('content')->all();
+        $this->assertSame(['oke bos ini idenya', 'yang pertama demo kasir 30 detik'], $sent);
+    }
+
+    public function test_history_never_labels_own_messages_so_model_does_not_copy_label_format(): void
+    {
+        [$admin, , $group] = $this->linkedOffice();
+        $yusuf = PlatformAiAgent::where('key', 'marketing')->firstOrFail();
+        $luna = PlatformAiAgent::where('key', 'finance')->firstOrFail();
+        PlatformAiTelegramMessage::create(['platform_ai_telegram_group_id' => $group->id, 'platform_admin_id' => $admin->id, 'direction' => 'inbound', 'channel' => 'telegram_group', 'content' => 'gimana konten', 'delivery_status' => 'received']);
+        PlatformAiTelegramMessage::create(['platform_ai_telegram_group_id' => $group->id, 'platform_ai_agent_id' => $yusuf->id, 'direction' => 'outbound', 'channel' => 'telegram_group', 'content' => 'aman bos', 'delivery_status' => 'delivered']);
+        PlatformAiTelegramMessage::create(['platform_ai_telegram_group_id' => $group->id, 'platform_ai_agent_id' => $luna->id, 'direction' => 'outbound', 'channel' => 'telegram_group', 'content' => 'budget aman', 'delivery_status' => 'delivered']);
+
+        $history = app(\App\Services\PlatformTelegramOffice::class)->history($group, $yusuf, null);
+
+        $this->assertSame([
+            ['role' => 'user', 'content' => 'Bos: gimana konten'],
+            ['role' => 'assistant', 'content' => 'aman bos'],
+            ['role' => 'user', 'content' => 'Luna: budget aman'],
+        ], $history);
+    }
+
+    public function test_office_chatter_respects_daily_limit_idle_time_and_cannot_create_tasks(): void
+    {
+        $this->travelTo(now('Asia/Jakarta')->setTime(14, 0));
+        [, , $group] = $this->linkedOffice();
+        $group->update(['notification_settings' => ['timezone' => 'Asia/Jakarta', 'quiet_start' => '22:00', 'quiet_end' => '07:00']]);
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        $office = app(\App\Services\PlatformTelegramOffice::class);
+
+        $this->aiResponses = [['choices' => [['message' => ['content' => null, 'tool_calls' => [['id' => 't1', 'type' => 'function', 'function' => ['name' => 'create_task', 'arguments' => json_encode(['title' => 'Tugas spontan', 'summary' => 'x'])]]]]]]]];
+        $this->assertTrue($office->runChatter($group, 1));
+        $this->assertDatabaseMissing('platform_ai_tasks', ['title' => 'Tugas spontan']);
+        $this->assertGreaterThan(0, PlatformAiTelegramMessage::where('direction', 'outbound')->count());
+
+        // Grup baru saja ramai: tidak boleh menyela.
+        $this->assertFalse($office->runChatter($group, 1));
+
+        // Peluang gagal: tidak mulai.
+        $this->travel(2)->hours();
+        $this->assertFalse($office->runChatter($group, 99));
+
+        // Jam tenang: diam.
+        $this->travelTo(now('Asia/Jakarta')->setTime(23, 30));
+        $this->assertFalse($office->runChatter($group, 1));
     }
 }

@@ -49,6 +49,43 @@ class PlatformTelegramGateway
         return $message->fresh();
     }
 
+    /**
+     * Kirim seperti orang mengetik: status "typing", jeda singkat, lalu beberapa bubble pendek.
+     * Riwayat yang tersimpan tetap utuh per bubble agar konteks agen lain sama dengan yang dilihat Bos.
+     */
+    public function sendHuman(PlatformAiTelegramBot $bot, PlatformAiTelegramGroup $group, string $text, ?string $interactionId = null, ?int $threadId = null, array $links = []): ?PlatformAiTelegramMessage
+    {
+        $last = null;
+        foreach (PlatformTelegramStyle::bubbles($text) as $i => $bubble) {
+            $this->typing($bot, $group, $threadId, $bubble, $i === 0);
+            $last = $this->send($bot, $group, $bubble, $interactionId, $threadId, $i === 0 ? $links : array_diff_key($links, ['task_id' => 1]));
+        }
+
+        return $last;
+    }
+
+    private function typing(PlatformAiTelegramBot $bot, PlatformAiTelegramGroup $group, ?int $threadId, string $bubble, bool $first): void
+    {
+        if (app()->runningUnitTests() || ! config('services.telegram_office.typing_delay', true)) {
+            return;
+        }
+        $token = $this->registry->token($bot);
+        if ($token) {
+            $payload = ['chat_id' => $group->telegram_chat_id, 'action' => 'typing'];
+            if ($threadId) {
+                $payload['message_thread_id'] = $threadId;
+            }
+            try {
+                Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendChatAction", $payload);
+            } catch (\Throwable) {
+                // Status mengetik hanya kosmetik.
+            }
+        }
+        // Kira-kira kecepatan mengetik orang, dibatasi supaya job tidak lama.
+        $ms = min(3500, ($first ? 600 : 900) + mb_strlen($bubble) * 18);
+        usleep($ms * 1000);
+    }
+
     public function sendRaw(PlatformAiTelegramBot $bot, int|string $chatId, string $text): bool
     {
         $token = $this->registry->token($bot);

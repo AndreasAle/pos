@@ -99,6 +99,9 @@ Schedule::call(fn () => app(PlatformTelegramNotifications::class)->briefings())
     ->everyMinute()->name('platform-telegram-briefing')->withoutOverlapping();
 Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts())
     ->everyFiveMinutes()->name('platform-telegram-alerts')->withoutOverlapping();
+// Obrolan kantor spontan antar agen di grup Telegram (jatah & jam tenang dibatasi di service).
+Schedule::call(fn () => app(\App\Services\PlatformTelegramOffice::class)->chatter())
+    ->everyFifteenMinutes()->name('platform-telegram-office-chatter')->withoutOverlapping(10);
 
 // ── Backup database terenkripsi — harian 02:30, hanya bila YOKA_BACKUP_ENABLED=true ──
 Schedule::command('yoka:backup')->dailyAt('02:30')->name('db-backup')->withoutOverlapping()

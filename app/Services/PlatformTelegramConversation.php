@@ -89,21 +89,9 @@ class PlatformTelegramConversation
         $agentKeys = array_slice(array_values(array_unique($route['agents'])), 0, 3);
         $agentsByKey = PlatformAiAgent::whereIn('key', $agentKeys)->where('status', 'active')->get()->keyBy('key');
         $agents = collect($agentKeys)->map(fn (string $key) => $agentsByKey->get($key))->filter();
+        $spoken = [];
         foreach ($agents as $agent) {
-            $history = PlatformAiTelegramMessage::with('agent')
-                ->where('platform_ai_telegram_group_id', $group->id)
-                ->where('thread_id', $threadId)
-                ->where(fn ($query) => $query->where('interaction_id', '!=', $update->interaction_id)->orWhere('direction', 'outbound'))
-                ->latest()->limit(12)->get()->reverse()
-                ->map(function (PlatformAiTelegramMessage $message) {
-                    if ($message->direction === 'outbound') {
-                        $speaker = $message->agent?->name ?? 'Rekan tim';
-
-                        return ['role' => 'assistant', 'content' => "[{$speaker}]: {$message->content}"];
-                    }
-
-                    return ['role' => 'user', 'content' => "[Bos]: {$message->content}"];
-                })->values()->all();
+            $history = app(PlatformTelegramOffice::class)->history($group, $agent, $threadId, $update->interaction_id);
             $question = $route['question'];
             if ($agents->count() > 1) {
                 $question .= "\n\n[Konteks sistem: Ini diskusi grup kerja. Baca pendapat rekan yang sudah muncul di riwayat. Tambahkan sudut pandang bidangmu, tanggapi bila perlu, dan jangan mengulang isi mereka.]";
@@ -120,6 +108,9 @@ class PlatformTelegramConversation
             $this->gateway->send($targetBot, $group, $text, $update->interaction_id, $threadId, ['task_id' => ($ids[0] ?? null)]);
             app(PlatformAiContext::class)->reviseConversationState($agent, $identity->admin, $route['question'], $ids ?? [], $result['content'], 'telegram_group', (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''));
         }
+        if ($spoken !== [] && filled(config('services.yoka_ai.key'))) {
+            app(PlatformTelegramOffice::class)->maybeChimeIn($group, $route['question'], $spoken, $update->interaction_id, $threadId);
+        }
     }
 
     private function meeting(array $route, PlatformAiTelegramIdentity $identity, PlatformAiTelegramGroup $group, PlatformAiTelegramUpdate $update, ?int $threadId): void
@@ -134,7 +125,7 @@ class PlatformTelegramConversation
         foreach ($discussion->fresh('contributions.agent')->contributions as $contribution) {
             $targetBot = PlatformAiTelegramBot::where('platform_ai_agent_id', $contribution->platform_ai_agent_id)->where('status', 'active')->first();
             if ($targetBot) {
-                $this->gateway->send($targetBot, $group, $contribution->content, $update->interaction_id, $threadId, ['discussion_id' => $discussion->id]);
+                $this->gateway->sendHuman($targetBot, $group, $contribution->content, $update->interaction_id, $threadId, ['discussion_id' => $discussion->id]);
             }
         }
         $chief = PlatformAiTelegramBot::whereHas('agent', fn ($q) => $q->where('key', 'chief'))->where('status', 'active')->first();
