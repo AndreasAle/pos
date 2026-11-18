@@ -58,6 +58,33 @@ class PlatformAiTeamTest extends TestCase
         $this->platformSession($this->admin('support'))->get(route('platform.ai-team.index'))->assertForbidden();
     }
 
+    public function test_workspace_metrics_disclose_the_limit_and_deep_link_loads_an_older_task(): void
+    {
+        $admin = $this->admin();
+        app(PlatformAiOperations::class)->ensureAgents();
+        $agent = PlatformAiAgent::firstOrFail();
+        $oldest = null;
+
+        foreach (range(1, 101) as $number) {
+            $task = PlatformAiTask::create([
+                'platform_ai_agent_id' => $agent->id,
+                'type' => 'manual',
+                'title' => $number === 1 ? 'Tugas lama untuk deep-link' : "Tugas {$number}",
+                'summary' => 'Data pengujian workspace.',
+                'status' => 'proposed',
+                'risk' => 'low',
+                'requires_approval' => true,
+                'payload' => [],
+            ]);
+            $oldest ??= $task;
+        }
+
+        $this->platformSession($admin)->get(route('platform.ai-team.index', ['tab' => 'tasks', 'task' => $oldest->id]))
+            ->assertOk()
+            ->assertSee('100 tugas terbaru dari total 101')
+            ->assertSee('Tugas lama untuk deep-link');
+    }
+
     public function test_owner_context_is_confirmed_and_only_super_admin_can_change_it(): void
     {
         $support = $this->admin('support');

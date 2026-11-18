@@ -38,9 +38,26 @@ class AiTeamController extends Controller
         $operations->ensureAgents();
         app(PlatformTelegramBotRegistry::class)->sync();
         $agents = PlatformAiAgent::withCount(['tasks as open_tasks_count' => fn ($q) => $q->whereIn('status', ['proposed', 'approved'])])->orderBy('id')->get();
-        $tasks = PlatformAiTask::with('agent')->latest()->limit(60)->get()
-            ->reject(fn ($task) => (bool) data_get($task->payload, 'archived'))
-            ->take(30)->values();
+        $activeTasks = PlatformAiTask::query()->where(fn ($query) => $query
+            ->whereNull('payload->archived')->orWhere('payload->archived', false));
+        $taskMetrics = [
+            'total' => (clone $activeTasks)->count(),
+            'proposed' => (clone $activeTasks)->where('status', 'proposed')->count(),
+            'approved' => (clone $activeTasks)->where('status', 'approved')->count(),
+            'rejected' => (clone $activeTasks)->where('status', 'rejected')->count(),
+            'approval' => (clone $activeTasks)->where('requires_approval', true)->whereNull('approved_at')->count(),
+        ];
+        $tasks = (clone $activeTasks)->with(['agent', 'executions' => fn ($query) => $query->latest()])
+            ->latest()->orderByDesc('id')->limit(100)->get();
+        $linkedTaskId = request()->integer('task');
+        if ($linkedTaskId && ! $tasks->contains('id', $linkedTaskId)) {
+            $linkedTask = (clone $activeTasks)->with(['agent', 'executions' => fn ($query) => $query->latest()])
+                ->find($linkedTaskId);
+            if ($linkedTask) {
+                $tasks->push($linkedTask);
+            }
+        }
+        $taskDatasetIsLimited = $taskMetrics['total'] > 100;
         $taskActivities = PlatformActivityLog::with('admin:id,name')
             ->where('subject_type', PlatformAiTask::class)
             ->whereIn('subject_id', $tasks->pluck('id'))
@@ -72,7 +89,7 @@ class AiTeamController extends Controller
         $telegramUpdates = PlatformAiTelegramUpdate::with('bot.agent')->latest()->limit(20)->get();
         $telegramDeliveries = PlatformAiTelegramMessage::where('direction', 'outbound')->latest()->limit(20)->get();
 
-        return view('platform.ai-team', compact('agents', 'tasks', 'taskActivities', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts', 'ownerContexts', 'memories', 'telegramBots', 'telegramGroup', 'telegramIdentity', 'telegramUpdates', 'telegramDeliveries'));
+        return view('platform.ai-team', compact('agents', 'tasks', 'taskMetrics', 'taskDatasetIsLimited', 'taskActivities', 'records', 'counts', 'connections', 'profiles', 'snapshots', 'conversations', 'unreadCounts', 'ownerContexts', 'memories', 'telegramBots', 'telegramGroup', 'telegramIdentity', 'telegramUpdates', 'telegramDeliveries'));
     }
 
     public function requestTelegramLink()

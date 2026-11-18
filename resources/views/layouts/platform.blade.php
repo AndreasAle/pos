@@ -46,7 +46,7 @@
     </header>
 
     <div x-show="menu" x-cloak class="fixed inset-0 z-20 bg-black/40 lg:hidden" @click="menu = false"></div>
-    <aside class="fixed bottom-0 left-0 top-16 z-30 w-64 border-r border-slate-200 bg-white p-4 transition-transform lg:translate-x-0" :class="menu ? 'translate-x-0' : '-translate-x-full'">
+    <aside class="fixed bottom-0 left-0 top-16 z-30 w-64 -translate-x-full border-r border-slate-200 bg-white p-4 transition-transform lg:translate-x-0" :class="menu && 'translate-x-0'">
         <nav class="space-y-1 text-sm font-semibold">
             <a href="{{ route('platform.dashboard') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.dashboard') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-emerald-600"></span> Ringkasan Platform

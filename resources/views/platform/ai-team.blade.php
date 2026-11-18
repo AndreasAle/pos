@@ -24,6 +24,13 @@
     $readRoutePayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => route('platform.ai-team.read', $agent)])->all();
     $unreadPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => (int) ($unreadCounts[$agent->id] ?? 0)])->all();
     $promptPayload = $agents->mapWithKeys(fn ($agent) => [$agent->id => data_get($profiles, $agent->key.'.prompts', [])])->all();
+    $taskPayload = $tasks->mapWithKeys(fn ($task) => [$task->id => [
+        'id' => $task->id, 'title' => $task->title, 'summary' => $task->summary,
+        'agent' => (string) $task->platform_ai_agent_id, 'agent_name' => $task->agent->name,
+        'status' => $task->status, 'risk' => $task->risk,
+        'approval' => ! $task->requires_approval ? 'none' : ($task->approved_at ? 'approved' : 'waiting'),
+        'labels' => data_get($task->payload, 'labels', []),
+    ]])->all();
     $taskColumns = [
         'proposed' => ['label' => 'Menunggu', 'description' => 'Perlu ditinjau', 'dot' => 'bg-amber-400', 'surface' => 'bg-amber-50/40'],
         'approved' => ['label' => 'Berjalan', 'description' => 'Sedang dikerjakan', 'dot' => 'bg-sky-500', 'surface' => 'bg-sky-50/40'],
@@ -33,7 +40,7 @@
 @endphp
 
 <div
-    x-data="aiTeamWorkspace(@js($selectedAgentId), @js($chatPayload), @js($routePayload), @js($readRoutePayload), @js($unreadPayload), @js($promptPayload))"
+    x-data="aiTeamWorkspace(@js($selectedAgentId), @js($chatPayload), @js($routePayload), @js($readRoutePayload), @js($unreadPayload), @js($promptPayload), @js($taskPayload))"
     class="space-y-5"
 >
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -121,11 +128,30 @@
             </aside>
         </div>
 
-        <div x-show="tab === 'tasks'" x-cloak class="p-5 sm:p-6">
-            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><div class="flex items-center gap-2"><h2 class="font-black text-[#0B1B3F]">Pekerjaan tim</h2><span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500">{{ $tasks->count() }}</span></div><p class="mt-1 text-sm text-slate-500">Geser kartu ke kolom lain untuk memperbarui progres.</p></div><button @click="newTask=true" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700">Buat tugas</button></div>
+        <div x-show="tab === 'tasks'" x-cloak class="bg-slate-50/70 p-4 sm:p-6">
+            <header class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div><p class="text-xs font-black uppercase tracking-[.16em] text-emerald-700">Operasi tenaga kerja digital</p><h1 class="mt-1 text-2xl font-black text-[#0B1B3F]">AI Workspace</h1><p class="mt-1 text-sm text-slate-500">Temukan pekerjaan, tinjau hasil nyata, dan ambil keputusan tanpa mencampur status tugas, approval, dan eksekusi.</p></div>
+                    <div class="flex items-center gap-2"><div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" aria-label="Pilih tampilan"><button type="button" @click="taskView='board'" class="rounded-md px-3 py-2 text-xs font-bold" :class="taskView==='board' ? 'bg-white text-[#0B1B3F] shadow-sm' : 'text-slate-500'">Papan</button><button type="button" @click="taskView='list'" class="rounded-md px-3 py-2 text-xs font-bold" :class="taskView==='list' ? 'bg-white text-[#0B1B3F] shadow-sm' : 'text-slate-500'">Daftar</button></div><button @click="newTask=true" class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700">Buat tugas</button></div>
+                </div>
+                <div class="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                    @foreach ([['Semua tugas',$taskMetrics['total']],['Menunggu',$taskMetrics['proposed']],['Berjalan',$taskMetrics['approved']],['Terhambat',$taskMetrics['rejected']],['Perlu approval',$taskMetrics['approval']]] as [$label,$value])
+                    <div class="rounded-lg border border-slate-200 bg-white px-3 py-2.5"><p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">{{ $label }}</p><p class="mt-1 text-xl font-black text-[#0B1B3F]">{{ $value }}</p></div>
+                    @endforeach
+                </div>
+                <div class="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_repeat(4,minmax(130px,auto))_auto]">
+                    <label class="relative"><span class="sr-only">Cari tugas</span><svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke-width="2"/><path d="m20 20-4-4" stroke-width="2"/></svg><input x-model.debounce.250ms="taskSearch" class="w-full rounded-lg border-slate-300 py-2 pl-9 pr-3 text-sm" placeholder="Cari judul, #ID, deskripsi, agen…"></label>
+                    <select x-model="taskAgent" class="rounded-lg border-slate-300 py-2 text-xs font-semibold"><option value="">Semua agen</option>@foreach($agents as $agent)<option value="{{ $agent->id }}">{{ $agent->name }}</option>@endforeach</select>
+                    <select x-model="taskStatus" class="rounded-lg border-slate-300 py-2 text-xs font-semibold"><option value="">Semua status</option>@foreach($taskColumns as $key=>$column)<option value="{{ $key }}">{{ $column['label'] }}</option>@endforeach</select>
+                    <select x-model="taskRisk" class="rounded-lg border-slate-300 py-2 text-xs font-semibold"><option value="">Semua risiko</option><option value="high">Tinggi</option><option value="medium">Sedang</option><option value="low">Rendah</option></select>
+                    <select x-model="taskApproval" class="rounded-lg border-slate-300 py-2 text-xs font-semibold"><option value="">Semua approval</option><option value="waiting">Menunggu approval</option><option value="approved">Sudah disetujui</option><option value="none">Tanpa approval</option></select>
+                    <button type="button" @click="resetTaskFilters()" class="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Reset</button>
+                </div>
+                <p class="mt-3 text-xs text-slate-500"><span x-text="visibleTaskCount()"></span> dari {{ $tasks->count() }} tugas yang dimuat ditampilkan.@if($taskDatasetIsLimited) Pencarian dan filter mencakup 100 tugas terbaru dari total {{ $taskMetrics['total'] }}; metrik di atas tetap menghitung seluruh tugas aktif.@endif</p>
+            </header>
 
-            <div class="mt-5 overflow-x-auto pb-3">
-                <div class="grid min-w-[1120px] grid-cols-4 gap-4" aria-label="Papan Kanban pekerjaan tim">
+            <div x-show="taskView === 'board'" class="mt-4 overflow-x-auto pb-3">
+                <div class="grid min-w-[1080px] grid-cols-4 gap-3" aria-label="Papan Kanban pekerjaan tim">
                     @foreach($taskColumns as $status => $column)
                         @php $columnTasks = $tasks->where('status', $status); @endphp
                         <section
@@ -140,22 +166,24 @@
                                 <span class="flex h-6 min-w-6 items-center justify-center rounded-full border border-slate-200 bg-white px-1.5 text-[10px] font-black text-slate-500">{{ $columnTasks->count() }}</span>
                             </header>
 
-                            <div class="flex flex-1 flex-col gap-3">
+                            <div class="flex flex-1 flex-col gap-2.5">
                                 @forelse($columnTasks as $task)
                                     <article
+                                        x-show="taskMatches({{ $task->id }})"
                                         draggable="true"
                                         @dragstart="startTaskDrag($event, {{ $task->id }}, @js($task->type), '{{ $task->status }}')"
                                         @dragend="endTaskDrag()"
-                                        class="cursor-grab rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md active:cursor-grabbing"
+                                        tabindex="0" role="button" @click="openTask({{ $task->id }}, $el)" @keydown.enter.prevent="openTask({{ $task->id }}, $el)" @keydown.space.prevent="openTask({{ $task->id }}, $el)"
+                                        class="cursor-pointer rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-emerald-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
                                         :class="draggedTask?.id === {{ $task->id }} ? 'opacity-40' : ''"
                                     >
                                         <div class="flex items-start justify-between gap-3">
                                             <span class="rounded-md border px-2 py-1 text-[9px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span>
-                                            <button type="button" @click="moveTask={{ $task->id }}" class="rounded-md px-1.5 py-0.5 text-lg leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label="Buka pengaturan tugas {{ $task->title }}">⋯</button>
+                                            <span class="text-[10px] font-bold text-slate-400">#{{ $task->id }}</span>
                                         </div>
                                         <h4 class="mt-3 text-sm font-black leading-5 text-[#0B1B3F]">{{ $task->title }}</h4>
                                         <p class="mt-2 max-h-[4.5rem] overflow-hidden text-xs leading-6 text-slate-500">{{ $task->summary }}</p>
-                                        @if($task->recommendation)<p class="mt-3 max-h-[4rem] overflow-hidden rounded-lg bg-slate-50 p-2.5 text-[11px] leading-5 text-slate-600"><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif
+                                        <div class="mt-3 flex flex-wrap gap-1.5">@if($task->requires_approval)<span class="rounded bg-violet-50 px-1.5 py-1 text-[9px] font-bold text-violet-700">{{ $task->approved_at ? 'Disetujui' : 'Perlu approval' }}</span>@endif @if($task->scheduled_for)<span class="rounded bg-slate-100 px-1.5 py-1 text-[9px] font-bold {{ $task->scheduled_for->isPast() && $task->status !== 'completed' ? 'text-rose-700' : 'text-slate-600' }}">{{ $task->scheduled_for->translatedFormat('d M') }}</span>@endif @if($task->executions->first())<span class="rounded bg-sky-50 px-1.5 py-1 text-[9px] font-bold text-sky-700">Run: {{ $task->executions->first()->status }}</span>@endif</div>
                                         <footer class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                                             <span class="text-[10px] font-bold {{ $task->risk === 'high' ? 'text-rose-700' : ($task->risk === 'medium' ? 'text-amber-700' : 'text-emerald-700') }}">Risiko {{ ['low'=>'rendah','medium'=>'sedang','high'=>'tinggi'][$task->risk] }}</span>
                                             <span class="text-[10px] text-slate-400">{{ $task->updated_at->diffForHumans() }}</span>
@@ -170,7 +198,8 @@
                     @endforeach
                 </div>
             </div>
-            <p class="mt-1 text-xs text-slate-400">Di ponsel, gunakan tombol ⋯ pada kartu untuk mengubah status. Tugas komunikasi eksternal tetap memerlukan persetujuan khusus.</p>
+            <div x-show="taskView === 'list'" x-cloak class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div class="overflow-x-auto"><table class="w-full min-w-[940px] text-left"><thead class="border-b border-slate-200 bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr><th class="px-4 py-3">Tugas</th><th class="px-4 py-3">Agen</th><th class="px-4 py-3">Status</th><th class="px-4 py-3">Risiko</th><th class="px-4 py-3">Approval</th><th class="px-4 py-3">Deadline</th><th class="px-4 py-3">Diperbarui</th></tr></thead><tbody class="divide-y divide-slate-100">@foreach($tasks as $task)<tr x-show="taskMatches({{ $task->id }})" tabindex="0" @click="openTask({{ $task->id }}, $el)" @keydown.enter.prevent="openTask({{ $task->id }}, $el)" class="cursor-pointer text-xs hover:bg-emerald-50/40 focus:bg-emerald-50 focus:outline-none"><td class="px-4 py-3"><b class="block text-sm text-[#0B1B3F]">{{ $task->title }}</b><span class="mt-0.5 block max-w-md truncate text-slate-500">#{{ $task->id }} · {{ $task->summary }}</span></td><td class="px-4 py-3 font-bold text-slate-700">{{ $task->agent->name }}</td><td class="px-4 py-3">{{ data_get($taskColumns,$task->status.'.label',$task->status) }}</td><td class="px-4 py-3 capitalize">{{ ['low'=>'Rendah','medium'=>'Sedang','high'=>'Tinggi'][$task->risk] }}</td><td class="px-4 py-3">{{ !$task->requires_approval ? 'Tidak wajib' : ($task->approved_at ? 'Disetujui' : 'Menunggu') }}</td><td class="px-4 py-3">{{ $task->scheduled_for?->translatedFormat('d M Y, H:i') ?? '—' }}</td><td class="px-4 py-3 text-slate-500">{{ $task->updated_at->diffForHumans() }}</td></tr>@endforeach</tbody></table></div><div x-show="visibleTaskCount() === 0" class="border-t border-slate-100 p-10 text-center text-sm text-slate-500">Tidak ada tugas yang cocok dengan filter.</div></div>
+            <p class="mt-3 text-xs text-slate-400">Perpindahan kolom mengubah status pekerjaan. Status eksekusi hanya ditampilkan bila ada run yang tercatat. Komunikasi eksternal tetap melalui approval khusus.</p>
         </div>
 
         <div x-show="tab === 'telegram'" x-cloak class="space-y-6 p-5 sm:p-6">
@@ -255,20 +284,25 @@
 
     <div x-show="newTask" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4" @keydown.escape.window="newTask=false"><div @click.outside="newTask=false" class="w-full max-w-xl rounded-xl bg-white shadow-2xl"><header class="flex items-start justify-between border-b border-slate-200 px-6 py-5"><div><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Tugas baru</p><h2 class="mt-1 text-xl font-black text-[#0B1B3F]">Delegasikan pekerjaan</h2></div><button type="button" @click="newTask=false" class="rounded-lg p-1 text-2xl text-slate-400">×</button></header><form method="POST" action="{{ route('platform.ai-team.tasks.store') }}" class="space-y-4 p-6">@csrf<label class="block text-sm font-bold text-slate-700">Anggota tim<select name="platform_ai_agent_id" required class="mt-1.5 w-full rounded-xl border-slate-300 text-sm">@foreach($agents as $agent)<option value="{{ $agent->id }}">{{ $agent->name }} · {{ $agent->department }}</option>@endforeach</select></label><label class="block text-sm font-bold text-slate-700">Nama tugas<input name="title" required maxlength="180" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Apa yang perlu dikerjakan?"></label><label class="block text-sm font-bold text-slate-700">Instruksi<textarea name="summary" required maxlength="2000" rows="4" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm" placeholder="Jelaskan hasil yang diharapkan dan batasannya"></textarea></label><div class="grid gap-4 sm:grid-cols-2"><label class="text-sm font-bold text-slate-700">Tingkat risiko<select name="risk" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"><option value="low">Rendah</option><option value="medium">Sedang</option><option value="high">Tinggi</option></select></label><label class="text-sm font-bold text-slate-700">Target selesai<input name="scheduled_for" type="datetime-local" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm"></label></div><div class="flex justify-end gap-2 border-t border-slate-100 pt-4"><button type="button" @click="newTask=false" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700">Batal</button><button class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white">Buat tugas</button></div></form></div></div>
 
-    <div x-show="moveTask !== null" x-cloak class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4" @keydown.escape.window="moveTask=null">
+    <div x-show="moveTask !== null" x-cloak class="fixed inset-0 z-[70] flex justify-end bg-slate-950/45" @keydown.escape.window="closeTask()" role="dialog" aria-modal="true" aria-label="Detail tugas">
         @foreach($tasks as $task)
+        @php
+            $latestExecution = $task->executions->first();
+            $createdActivity = $taskActivities->get($task->id, collect())->firstWhere('action', 'ai.task.create');
+        @endphp
         @if($task->type === 'whatsapp_draft' && $task->status === 'proposed')
         <form x-show="moveTask === {{ $task->id }}" @click.outside="moveTask=null" method="POST" action="{{ route('platform.ai-team.decision',$task) }}" class="w-full max-w-md rounded-xl bg-white shadow-2xl">@csrf @method('PATCH')<header class="flex items-start justify-between border-b border-slate-200 px-6 py-5"><div><p class="text-xs font-bold uppercase tracking-wider text-emerald-700">Draf WhatsApp</p><h2 class="mt-1 text-lg font-black leading-snug text-[#0B1B3F]">{{ $task->title }}</h2></div><button type="button" @click="moveTask=null" class="rounded-lg p-1 text-2xl text-slate-400 hover:bg-slate-100">×</button></header><div class="space-y-3 p-6"><p class="text-xs text-slate-500">Tujuan: <strong class="text-slate-800">{{ data_get($task->payload,'phone') }}</strong>. Pesan hanya terkirim setelah Anda menyetujui; boleh disunting dulu.</p><textarea name="message" rows="6" maxlength="600" class="w-full rounded-xl border-slate-300 text-sm">{{ $task->summary }}</textarea>@if($task->error)<p class="text-xs font-semibold text-rose-700">{{ $task->error }}</p>@endif<div class="flex justify-end gap-2 border-t border-slate-100 pt-4"><button name="decision" value="reject" class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700">Tolak</button><button name="decision" value="approve" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white">Setujui &amp; kirim</button></div></div></form>
         @else
-        <div x-show="moveTask === {{ $task->id }}" @click.outside="moveTask=null" class="flex max-h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+        <div x-data="{ detailTab: 'overview' }" x-show="moveTask === {{ $task->id }}" @click.outside="closeTask()" class="flex h-full w-full max-w-[680px] flex-col overflow-hidden bg-white shadow-2xl">
             <header class="flex items-start justify-between border-b border-slate-200 px-5 py-4 sm:px-7">
                 <div class="min-w-0"><div class="flex flex-wrap items-center gap-2"><span class="rounded-md border px-2 py-1 text-[9px] font-black uppercase {{ data_get($agentStyles,$task->agent->key.'.1','border-slate-200 bg-slate-50 text-slate-700') }}">{{ $task->agent->name }}</span><span class="text-xs text-slate-400">Tugas #{{ $task->id }}</span></div><h2 class="mt-2 truncate text-xl font-black text-[#0B1B3F]">{{ $task->title }}</h2></div>
-                <button type="button" @click="moveTask=null" class="rounded-lg p-1 text-2xl text-slate-400 hover:bg-slate-100">×</button>
+                <button type="button" x-ref="taskClose{{ $task->id }}" @click="closeTask()" class="rounded-lg p-1 text-2xl text-slate-400 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500" aria-label="Tutup detail tugas">×</button>
             </header>
+            <nav class="flex gap-1 overflow-x-auto border-b border-slate-200 px-5" aria-label="Bagian detail tugas">@foreach(['overview'=>'Ringkasan','output'=>'Output AI','activity'=>'Aktivitas'] as $detailKey=>$detailLabel)<button type="button" @click="detailTab='{{ $detailKey }}'" class="whitespace-nowrap border-b-2 px-3 py-3 text-xs font-bold" :class="detailTab==='{{ $detailKey }}' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500'">{{ $detailLabel }}</button>@endforeach @if($latestExecution)<button type="button" @click="detailTab='execution'" class="whitespace-nowrap border-b-2 px-3 py-3 text-xs font-bold" :class="detailTab==='execution' ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500'">Eksekusi</button>@endif</nav>
 
             <div class="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_280px] lg:overflow-hidden">
                 <main class="space-y-6 p-5 sm:p-7 lg:overflow-y-auto">
-                    <form method="POST" action="{{ route('platform.ai-team.tasks.update',$task) }}" class="space-y-5">@csrf @method('PATCH')
+                    <form x-show="detailTab === 'overview'" method="POST" action="{{ route('platform.ai-team.tasks.update',$task) }}" class="space-y-5">@csrf @method('PATCH')
                         <label class="block"><span class="text-xs font-black uppercase tracking-wider text-slate-400">Judul</span><input name="title" required maxlength="180" value="{{ $task->title }}" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm font-bold text-[#0B1B3F]"></label>
                         <label class="block"><span class="text-xs font-black uppercase tracking-wider text-slate-400">Deskripsi &amp; catatan</span><textarea name="summary" required maxlength="4000" rows="5" class="mt-1.5 w-full rounded-xl border-slate-300 text-sm leading-6">{{ $task->summary }}</textarea></label>
                         <div class="grid gap-4 sm:grid-cols-2">
@@ -280,18 +314,18 @@
                         <div class="flex justify-end"><button class="rounded-xl bg-[#0B1B3F] px-5 py-2.5 text-sm font-bold text-white">Simpan detail</button></div>
                     </form>
 
-                    @if($task->recommendation || $task->result || $task->error)
-                    <section><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Hasil pekerjaan</h3><div class="mt-2 space-y-2 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">@if($task->recommendation)<p><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif @if(data_get($task->result,'report'))<p><b class="text-slate-800">Laporan:</b> {{ data_get($task->result,'report') }}</p>@endif @if($task->error)<p class="text-rose-700"><b>Kendala:</b> {{ $task->error }}</p>@endif</div></section>
-                    @endif
+                    <section x-show="detailTab === 'output'" x-cloak><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Output yang tersimpan</h3>@if($task->recommendation || $task->result || $task->error)<div class="mt-3 space-y-3 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">@if($task->recommendation)<p><b class="text-slate-800">Rekomendasi:</b> {{ $task->recommendation }}</p>@endif @if(data_get($task->result,'report'))<p><b class="text-slate-800">Laporan:</b> {{ data_get($task->result,'report') }}</p>@endif @if($task->error)<p class="text-rose-700"><b>Kendala:</b> {{ $task->error }}</p>@endif</div>@else<div class="mt-3 rounded-xl border border-dashed border-slate-300 p-8 text-center"><b class="text-sm text-slate-700">Belum ada output AI</b><p class="mt-1 text-xs text-slate-500">Hasil akan muncul di sini setelah agen menyimpan hasil pekerjaan.</p></div>@endif</section>
 
-                    <section><div class="flex items-center justify-between"><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Lampiran</h3><span class="text-[10px] text-slate-400">Maks. 10 MB</span></div><div class="mt-2 space-y-2">@forelse(data_get($task->payload,'attachments',[]) as $attachment)<a href="{{ route('platform.ai-team.tasks.attachments.download',[$task,$attachment['id']]) }}" class="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 hover:border-emerald-300"><span class="truncate">{{ $attachment['name'] }}</span><span class="ml-3 shrink-0 text-slate-400">{{ number_format(($attachment['size'] ?? 0)/1024,1) }} KB</span></a>@empty<p class="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">Belum ada lampiran.</p>@endforelse</div><form method="POST" enctype="multipart/form-data" action="{{ route('platform.ai-team.tasks.attachments',$task) }}" class="mt-2 flex gap-2">@csrf<input type="file" name="attachment" required class="min-w-0 flex-1 rounded-xl border border-slate-300 text-xs file:mr-3 file:border-0 file:bg-slate-100 file:px-3 file:py-2.5 file:font-bold"><button class="rounded-xl border border-slate-300 px-3 text-xs font-bold">Unggah</button></form></section>
+                    @if($latestExecution)<section x-show="detailTab === 'execution'" x-cloak class="space-y-4"><div><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Eksekusi tercatat</h3><p class="mt-1 text-sm text-slate-500">Data berikut berasal dari record run, bukan dari posisi kartu.</p></div><div class="grid gap-3 sm:grid-cols-2">@foreach($task->executions as $execution)<article class="rounded-xl border border-slate-200 p-4 text-xs"><div class="flex justify-between"><b class="text-[#0B1B3F]">Run #{{ $execution->id }}</b><span class="font-bold uppercase text-sky-700">{{ $execution->status }}</span></div><dl class="mt-3 space-y-2 text-slate-500"><div class="flex justify-between"><dt>Percobaan</dt><dd class="font-bold text-slate-700">{{ $execution->attempt }}</dd></div><div class="flex justify-between"><dt>Mulai</dt><dd class="font-bold text-slate-700">{{ $execution->started_at?->translatedFormat('d M, H:i:s') }}</dd></div><div class="flex justify-between"><dt>Selesai</dt><dd class="font-bold text-slate-700">{{ $execution->finished_at?->translatedFormat('d M, H:i:s') ?? 'Belum' }}</dd></div></dl>@if($execution->error)<p class="mt-3 rounded-lg bg-rose-50 p-2 text-rose-700">{{ $execution->error }}</p>@endif</article>@endforeach</div></section>@endif
 
-                    <section><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Komentar &amp; aktivitas</h3><form method="POST" action="{{ route('platform.ai-team.tasks.comments',$task) }}" class="mt-2 flex gap-2">@csrf<input name="comment" required maxlength="1000" class="min-w-0 flex-1 rounded-xl border-slate-300 text-sm" placeholder="Tulis komentar atau arahan…"><button class="rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white">Kirim</button></form><div class="mt-4 space-y-3">@forelse($taskActivities->get($task->id,collect())->take(12) as $activity)<div class="flex gap-3"><span class="mt-1 h-2 w-2 shrink-0 rounded-full {{ $activity->action === 'ai.task.comment' ? 'bg-emerald-500' : 'bg-slate-300' }}"></span><div class="min-w-0"><p class="text-xs leading-5 text-slate-600"><b class="text-slate-800">{{ $activity->admin?->name ?? 'Sistem' }}</b> {{ data_get($activity->metadata,'comment',$activity->description) }}</p><p class="text-[10px] text-slate-400">{{ $activity->created_at->diffForHumans() }}</p></div></div>@empty<p class="text-xs text-slate-400">Belum ada aktivitas tercatat.</p>@endforelse</div></section>
+                    <section x-show="detailTab === 'overview'"><div class="flex items-center justify-between"><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Lampiran</h3><span class="text-[10px] text-slate-400">Maks. 10 MB</span></div><div class="mt-2 space-y-2">@forelse(data_get($task->payload,'attachments',[]) as $attachment)<a href="{{ route('platform.ai-team.tasks.attachments.download',[$task,$attachment['id']]) }}" class="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 hover:border-emerald-300"><span class="truncate">{{ $attachment['name'] }}</span><span class="ml-3 shrink-0 text-slate-400">{{ number_format(($attachment['size'] ?? 0)/1024,1) }} KB</span></a>@empty<p class="rounded-xl border border-dashed border-slate-300 p-4 text-center text-xs text-slate-400">Belum ada lampiran.</p>@endforelse</div><form method="POST" enctype="multipart/form-data" action="{{ route('platform.ai-team.tasks.attachments',$task) }}" class="mt-2 flex gap-2">@csrf<input type="file" name="attachment" required class="min-w-0 flex-1 rounded-xl border border-slate-300 text-xs file:mr-3 file:border-0 file:bg-slate-100 file:px-3 file:py-2.5 file:font-bold"><button class="rounded-xl border border-slate-300 px-3 text-xs font-bold">Unggah</button></form></section>
+
+                    <section x-show="detailTab === 'activity'" x-cloak><h3 class="text-xs font-black uppercase tracking-wider text-slate-400">Komentar &amp; aktivitas</h3><form method="POST" action="{{ route('platform.ai-team.tasks.comments',$task) }}" class="mt-2 flex gap-2">@csrf<input name="comment" required maxlength="1000" class="min-w-0 flex-1 rounded-xl border-slate-300 text-sm" placeholder="Tulis komentar atau arahan…"><button class="rounded-xl bg-emerald-600 px-4 text-xs font-bold text-white">Kirim</button></form><div class="mt-4 space-y-3">@forelse($taskActivities->get($task->id,collect())->take(30) as $activity)<div class="flex gap-3"><span class="mt-1 h-2 w-2 shrink-0 rounded-full {{ $activity->action === 'ai.task.comment' ? 'bg-emerald-500' : 'bg-slate-300' }}"></span><div class="min-w-0"><p class="text-xs leading-5 text-slate-600"><b class="text-slate-800">{{ $activity->admin?->name ?? 'Sistem / AI' }}</b> {{ data_get($activity->metadata,'comment',$activity->description) }}</p><p class="text-[10px] text-slate-400">{{ $activity->created_at->translatedFormat('d M Y, H:i') }}</p></div></div>@empty<p class="text-xs text-slate-400">Belum ada aktivitas tercatat.</p>@endforelse</div></section>
                 </main>
 
                 <aside class="space-y-5 border-t border-slate-200 bg-slate-50 p-5 lg:overflow-y-auto lg:border-l lg:border-t-0">
                     <form method="POST" action="{{ route('platform.ai-team.tasks.move',$task) }}">@csrf @method('PATCH')<label class="text-xs font-black uppercase tracking-wider text-slate-400">Status<select name="status" required class="mt-2 w-full rounded-xl border-slate-300 bg-white text-sm"><option value="proposed" @selected($task->status==='proposed')>Menunggu</option><option value="approved" @selected($task->status==='approved')>Berjalan</option><option value="completed" @selected($task->status==='completed')>Selesai</option><option value="rejected" @selected($task->status==='rejected')>Terhambat</option></select></label><button class="mt-2 w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white">Perbarui status</button></form>
-                    <div class="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs"><div class="flex justify-between gap-3"><span class="text-slate-500">Dibuat</span><b class="text-right text-slate-700">{{ $task->created_at->translatedFormat('d M Y, H:i') }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Diperbarui</span><b class="text-right text-slate-700">{{ $task->updated_at->diffForHumans() }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Approval</span><b class="text-right text-slate-700">{{ $task->requires_approval ? 'Wajib' : 'Tidak' }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Eksekusi</span><b class="text-right text-slate-700">{{ $task->executed_at?->translatedFormat('d M, H:i') ?? 'Belum' }}</b></div></div>
+                    <div class="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-xs"><div class="flex justify-between gap-3"><span class="text-slate-500">Pemilik</span><b class="text-right text-slate-700">{{ $task->agent->name }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Dibuat oleh</span><b class="text-right text-slate-700">{{ $createdActivity?->admin?->name ?? (data_get($task->payload,'created_manually') ? 'Admin platform' : 'Sistem / AI') }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Dibuat</span><b class="text-right text-slate-700">{{ $task->created_at->translatedFormat('d M Y, H:i') }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Approval</span><b class="text-right text-slate-700">{{ !$task->requires_approval ? 'Tidak wajib' : ($task->approved_at ? 'Disetujui' : 'Menunggu') }}</b></div><div class="flex justify-between gap-3"><span class="text-slate-500">Eksekusi</span><b class="text-right text-slate-700">{{ $latestExecution ? ucfirst($latestExecution->status) : 'Belum ada run' }}</b></div></div>
                     <div><p class="text-xs font-black uppercase tracking-wider text-slate-400">Label</p><div class="mt-2 flex flex-wrap gap-1.5">@forelse(data_get($task->payload,'labels',[]) as $label)<span class="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-800">{{ $label }}</span>@empty<span class="text-xs text-slate-400">Belum ada label</span>@endforelse</div></div>
                     <form method="POST" action="{{ route('platform.ai-team.tasks.archive',$task) }}" onsubmit="return confirm('Arsipkan tugas ini?')">@csrf @method('DELETE')<button class="w-full rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-50">Arsipkan tugas</button></form>
                 </aside>
@@ -303,10 +337,11 @@
 </div>
 
 <script>
-function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, initialUnread, prompts) {
+function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, initialUnread, prompts, taskData) {
     return {
         tab: sessionStorage.getItem('yokaAiTeamTab') || 'workspace', activeAgent: initialAgent, messages: initialMessages, chatRoutes, readRoutes, unread: initialUnread, prompts,
         draft: '', files: [], sending: false, chatError: '', newTask: false, moveTask: null, intake: false,
+        taskData, taskView: localStorage.getItem('yokaAiTaskView') || 'board', taskSearch: '', taskAgent: '', taskStatus: '', taskRisk: '', taskApproval: '', taskTrigger: null,
         draggedTask: null, kanbanOver: null,
         startTaskDrag(event, id, type, status) {
             this.draggedTask={id,type,status};
@@ -330,7 +365,17 @@ function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, 
             this.draggedTask=null;
             form.requestSubmit();
         },
-        selectTab(tab) { this.tab=tab; sessionStorage.setItem('yokaAiTeamTab',tab); },
+        taskMatches(id) {
+            const task=this.taskData[id]; if(!task) return false;
+            const query=this.taskSearch.trim().toLowerCase();
+            const haystack=[task.id,task.title,task.summary,task.agent_name,...(task.labels||[])].join(' ').toLowerCase();
+            return (!query || haystack.includes(query)) && (!this.taskAgent || task.agent===this.taskAgent) && (!this.taskStatus || task.status===this.taskStatus) && (!this.taskRisk || task.risk===this.taskRisk) && (!this.taskApproval || task.approval===this.taskApproval);
+        },
+        visibleTaskCount() { return Object.keys(this.taskData).filter(id=>this.taskMatches(id)).length; },
+        resetTaskFilters() { this.taskSearch=''; this.taskAgent=''; this.taskStatus=''; this.taskRisk=''; this.taskApproval=''; },
+        openTask(id, trigger=null) { this.taskTrigger=trigger || document.activeElement; this.moveTask=id; const url=new URL(location.href); url.searchParams.set('tab','tasks'); url.searchParams.set('task',id); history.replaceState({},'',url); this.$nextTick(()=>this.$refs['taskClose'+id]?.focus()); },
+        closeTask() { const trigger=this.taskTrigger; this.moveTask=null; const url=new URL(location.href); url.searchParams.delete('task'); history.replaceState({},'',url); this.$nextTick(()=>trigger?.focus()); },
+        selectTab(tab) { this.tab=tab; sessionStorage.setItem('yokaAiTeamTab',tab); const url=new URL(location.href); url.searchParams.set('tab',tab); history.replaceState({},'',url); },
         selectAgent(id) { this.activeAgent=id; this.draft=''; this.files=[]; this.chatError=''; this.markRead(id); this.$nextTick(()=>this.scrollMessages()); },
         async markRead(id) { if (!this.unread[id]) return; this.unread[id]=0; try { await fetch(this.readRoutes[id],{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content}}); } catch(error) { } },
         modeLabel(mode) { return mode === 'ai' ? 'AI + data' : (mode === 'fallback' ? 'Fallback data' : 'Data internal'); },
@@ -372,7 +417,7 @@ function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, 
             } finally { this.sending=false; this.$nextTick(()=>this.scrollMessages()); }
         },
         scrollMessages() { const area=this.$refs['messageArea'+this.activeAgent]; if(area)area.scrollTop=area.scrollHeight; },
-        init() { this.markRead(this.activeAgent); this.$nextTick(()=>this.scrollMessages()); }
+        init() { const params=new URLSearchParams(location.search); if(params.get('tab')) this.tab=params.get('tab'); if(params.get('task') && this.taskData[params.get('task')]) this.moveTask=Number(params.get('task')); this.$watch('taskView',value=>localStorage.setItem('yokaAiTaskView',value)); this.markRead(this.activeAgent); this.$nextTick(()=>this.scrollMessages()); }
     }
 }
 </script>
