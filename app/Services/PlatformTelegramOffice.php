@@ -300,6 +300,34 @@ SYS],
         return ['name' => $target->name, 'content' => $content];
     }
 
+    /**
+     * "Semuanya absen": tiap agen aktif menjawab sekali, satu bubble pendek, dengan apa yang
+     * benar-benar sedang ia pegang (dari memori kerja). Tanpa tugas, tanpa gerbang kontribusi.
+     */
+    public function rollCall(PlatformAiTelegramGroup $group, ?string $interactionId, ?int $threadId, ?PlatformAdmin $admin): int
+    {
+        $answered = 0;
+        foreach (['chief', 'marketing', 'ads', 'finance', 'accounting', 'cs', 'sales'] as $key) {
+            $agent = $this->activeAgentWithBot($key);
+            if (! $agent) {
+                continue;
+            }
+            $bot = PlatformAiTelegramBot::where('platform_ai_agent_id', $agent->id)->where('status', 'active')->first();
+            $question = '[Konteks sistem: Bos minta semua absen. Jawab SATU kalimat pendek: hadir, lalu apa yang sedang kamu pegang sekarang menurut memori kerjamu (atau bilang lagi kosong). Jangan tanya balik, jangan tawarkan apa pun.]';
+            $result = app(PlatformAiOperations::class)->reply($agent, $question, [], [WorkingMemory::asFact($agent, $group, $threadId)], $admin, 'telegram_chat', $this->history($group, $agent, $threadId, null, 6), (string) $group->telegram_chat_id.($threadId ? ':'.$threadId : ''), ['allow_tasks' => false]);
+            $text = ($result['mode'] ?? null) === 'ai'
+                ? PlatformTelegramStyle::chatLimit(ResponseGuard::validate((string) $result['content'])['text'], 1, 200)
+                : '';
+            if ($text === '') {
+                $text = 'hadir bos';
+            }
+            $this->gateway->send($bot, $group, $text, $interactionId, $threadId);
+            $answered++;
+        }
+
+        return $answered;
+    }
+
     /** @return array<int,string> nama agen yang benar-benar punya pesan di grup ini 2 jam terakhir */
     private function recentSpeakers(PlatformAiTelegramGroup $group): array
     {

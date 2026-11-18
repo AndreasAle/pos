@@ -17,6 +17,14 @@ class PlatformTelegramRouter
         if (preg_match('/^\/(help|tasks|status|team|briefing)(?:@\w+)?\b/u', $normalized, $m)) {
             return ['kind' => 'command', 'command' => $m[1], 'agents' => []];
         }
+        // "semuanya absen", "absen dulu", "/absen": tiap agen menjawab hadir + kerjaannya.
+        if (preg_match('/^\/absen\b|^absen\b|\b(semua(nya)?|tim|guys|kalian|everyone)\b.{0,20}\babsen\b/u', $normalized)) {
+            return ['kind' => 'roll_call', 'agents' => []];
+        }
+        // "hapus/batalin semua tugas": pembersihan papan, selalu lewat konfirmasi.
+        if (preg_match('/\b(hapus|hapusin|bersihin|bersihkan|batalin|batalkan|kosongin|kosongkan|buang)\b.{0,25}\b(tugas|task|kerjaan)/u', $normalized)) {
+            return ['kind' => 'task_cleanup', 'agents' => []];
+        }
         // Bos minta tim ngobrol sendiri: "/ngobrol", "kalian ngobrol dong", "diskusiin X dong".
         if (preg_match('/^\/ngobrol(?:@\w+)?\s*(.*)$/isu', trim($text), $m)
             || preg_match('/\b(kalian|tim|guys|semua)\b.*\b(ngobrol|ngobrolin|diskusi|diskusiin)\b(.*)$/isu', trim($text), $m2)) {

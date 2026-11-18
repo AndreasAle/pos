@@ -421,6 +421,44 @@ class PlatformAiActionPolicyTest extends TestCase
         $this->assertSame('', ResponseGuard::validate('bos, aku sudah siapin tugas penting buat prioritas.', ['created_tasks' => []])['text']);
     }
 
+    public function test_roll_call_gets_exactly_one_short_answer_from_every_agent(): void
+    {
+        [, , $group] = $this->office();
+        $this->send($group, 'semuanya absen dlu coba');
+
+        $speakers = $this->outbound()->groupBy('platform_ai_agent_id')->map->count();
+        $this->assertCount(7, $speakers);
+        $this->assertSame([1], $speakers->values()->unique()->values()->all());
+        $this->assertDatabaseCount('platform_ai_tasks', 0);
+    }
+
+    public function test_task_cleanup_needs_confirmation_and_only_archives_pending_tasks(): void
+    {
+        [, , $group] = $this->office();
+        $pending = $this->telegramTask($group, 'chief', ['title' => 'Tugas iseng']);
+        $running = $this->telegramTask($group, 'chief', ['title' => 'Tugas jalan', 'status' => 'approved', 'approved_at' => now()]);
+
+        $this->send($group, 'ramli hapus semua tugas tugas iutub');
+        $this->assertSame('proposed', $pending->fresh()->status, 'Tanpa konfirmasi tidak ada yang berubah.');
+        $this->assertStringContainsString('ya batalkan', $this->outbound('chief')->last()->content);
+
+        $this->send($group, 'ya batalkan');
+        $this->assertSame('rejected', $pending->fresh()->status);
+        $this->assertSame('approved', $running->fresh()->status);
+        // Diarsipkan, bukan dihapus permanen.
+        $this->assertDatabaseHas('platform_ai_tasks', ['id' => $pending->id]);
+        $this->assertSame([], $this->aiRequests());
+    }
+
+    public function test_cleanup_confirmation_is_ignored_without_a_pending_request(): void
+    {
+        [, , $group] = $this->office();
+        $task = $this->telegramTask($group, 'chief');
+        $this->aiResponses = [$this->say('oke')];
+        $this->send($group, 'ya batalkan');
+        $this->assertSame('proposed', $task->fresh()->status);
+    }
+
     public function test_intent_classifier_covers_core_intents(): void
     {
         $cases = [

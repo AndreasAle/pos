@@ -11,6 +11,8 @@ Dokumen ini menjelaskan kapan agen **langsung mengerjakan**, kapan **membuat usu
 | Aksi eksternal / sensitif | Kirim WA ke pelanggan, pasang/ubah iklan, ubah harga, refund, transfer | Hanya boleh berupa usulan tugas yang menunggu approval. Agen tidak punya tool untuk mengeksekusinya. | `AgentIntent::EXTERNAL_ACTION` + tidak ada tool eksekusi |
 | Rujukan ke hasil sebelumnya | "Coba kirim di sini dulu", reply ke pesan agen | Hasil yang sudah ada dikirim apa adanya. Kalau belum ada, agen mengakuinya lalu mengerjakan langsung. | `PlatformTelegramConversation::resolveDeliverable` |
 | Kolaborasi | "Yusuf, tanya Luna apakah ini masuk budget" | Luna benar-benar dijalankan, jawabannya dikirim dengan identitas Luna dan disimpan sebagai kontribusi diskusi. Yusuf lalu menjawab berdasarkan jawaban itu. Maksimal satu lompatan, tanpa tugas. | `PlatformTelegramOffice::consult` |
+| Bersihkan papan | "Ramli hapus semua tugas" | Ramli menampilkan tugas yang menunggu approve, lalu menunggu balasan "ya batalkan" dalam 10 menit. Tugas diarsipkan (`rejected`), tidak dihapus permanen. Tugas yang sudah di-approve atau sedang jalan tidak disentuh. Tanpa model. | `PlatformTelegramConversation::proposeCleanup` / `confirmCleanup` |
+| Absen | "semuanya absen" | Setiap agen aktif menjawab tepat sekali, satu kalimat, dari memori kerjanya. | `PlatformTelegramOffice::rollCall` |
 | Pekerjaan panjang | Tugas yang sudah di-approve | Dijalankan queue (`RunPlatformAiTask`). Hasil atau kegagalan dikirim balik ke grup asal. | `PlatformAiOperations::execute` → `PlatformTelegramNotifications::taskOutcome` |
 
 Kata seperti "buat", "analisis", atau "coba" **tidak** otomatis memicu pembuatan tugas.

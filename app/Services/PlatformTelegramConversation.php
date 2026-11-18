@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\PlatformActivityLog;
 use App\Models\PlatformAiAgent;
 use App\Models\PlatformAiDiscussion;
 use App\Models\PlatformAiTask;
@@ -15,6 +16,7 @@ use App\Models\PlatformAiTelegramUpdate;
 use App\Services\PlatformAgents\AgentIntent;
 use App\Services\PlatformAgents\ResponseGuard;
 use App\Services\PlatformAgents\WorkingMemory;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -67,8 +69,16 @@ class PlatformTelegramConversation
 
                 return;
             }
-            $group->update(['last_activity_at' => now()]);
             $threadId = data_get($message, 'message_thread_id');
+            // Satu pesan Bos = satu pemrosesan, apa pun jalurnya (jawaban, perintah, absen, meeting).
+            // Pesan yang sama bisa masuk sebagai beberapa update (satu per bot di grup).
+            if (! PlatformAiTelegramNotification::claim('owner_message', $group, $threadId, (string) $update->telegram_message_id)) {
+                app(PlatformAiTelemetry::class)->quality('duplicate_reply_blocked', null, ['stage' => 'message']);
+                $this->finish($update, 'duplicate');
+
+                return;
+            }
+            $group->update(['last_activity_at' => now()]);
             PlatformAiTelegramMessage::create(['platform_ai_telegram_group_id' => $group->id, 'platform_admin_id' => $identity->platform_admin_id, 'interaction_id' => $update->interaction_id, 'direction' => 'inbound', 'channel' => $threadId ? 'telegram_topic' : 'telegram_group', 'telegram_message_id' => $update->telegram_message_id, 'thread_id' => $threadId, 'content' => $text, 'delivery_status' => 'received']);
             // Balasan (reply) ke pesan agen: catat pesan yang dirujuk agar konteksnya bisa diselesaikan.
             $replied = $this->repliedMessage($group, $message);
@@ -76,6 +86,24 @@ class PlatformTelegramConversation
             $route['replied_message_id'] = $replied?->id;
             if ($route['kind'] === 'ignore') {
                 $this->finish($update, 'ignored');
+
+                return;
+            }
+            // Konfirmasi pembersihan papan yang sebelumnya diminta Bos di grup ini.
+            if ($this->confirmCleanup($text, $group, $update, $threadId)) {
+                $this->finish($update);
+
+                return;
+            }
+            if ($route['kind'] === 'roll_call') {
+                app(PlatformTelegramOffice::class)->rollCall($group, $update->interaction_id, $threadId, $identity->admin);
+                $this->finish($update);
+
+                return;
+            }
+            if ($route['kind'] === 'task_cleanup') {
+                $this->proposeCleanup($group, $update, $threadId);
+                $this->finish($update);
 
                 return;
             }
@@ -210,6 +238,53 @@ class PlatformTelegramConversation
         if ($spoken !== [] && filled(config('services.yoka_ai.key')) && ! $intent['reference']) {
             $office->maybeChimeIn($group, $route['question'], array_merge($spoken, $consulted), $update->interaction_id, $threadId);
         }
+    }
+
+    /**
+     * Langkah 1 pembersihan papan: Ramli menyebut tugas yang akan dibatalkan dan minta konfirmasi.
+     * Hanya tugas yang masih menunggu approve; tugas yang sedang/sudah dikerjakan tidak disentuh.
+     */
+    private function proposeCleanup(PlatformAiTelegramGroup $group, PlatformAiTelegramUpdate $update, ?int $threadId): void
+    {
+        $chief = $this->chiefBot($update);
+        $tasks = PlatformAiTask::with('agent:id,name')->where('status', 'proposed')->latest('id')->get(['id', 'title', 'platform_ai_agent_id']);
+        if ($tasks->isEmpty()) {
+            $this->gateway->send($chief, $group, 'papan udah bersih bos, gak ada tugas yang nunggu approve.', $update->interaction_id, $threadId);
+
+            return;
+        }
+        Cache::put($this->cleanupKey($group, $threadId), ['ids' => $tasks->pluck('id')->all(), 'by' => $update->telegram_message_id], now()->addMinutes(10));
+        $list = $tasks->take(8)->map(fn ($t) => '- '.Str::limit($t->title, 70).' ('.$t->agent?->name.')')->join("\n");
+        $more = $tasks->count() > 8 ? "\n…dan ".($tasks->count() - 8).' lainnya' : '';
+        $this->gateway->send($chief, $group, "ada {$tasks->count()} tugas yang nunggu approve:\n{$list}{$more}\n\nbalas \"ya batalkan\" dalam 10 menit buat batalin semuanya. tugasnya diarsipkan (status ditolak), bukan dihapus permanen. yang lagi jalan gak kusentuh.", $update->interaction_id, $threadId);
+    }
+
+    /** Langkah 2: hanya balasan konfirmasi yang jelas, dari grup yang sama, dalam 10 menit. */
+    private function confirmCleanup(string $text, PlatformAiTelegramGroup $group, PlatformAiTelegramUpdate $update, ?int $threadId): bool
+    {
+        $pending = Cache::get($this->cleanupKey($group, $threadId));
+        if (! $pending || ! preg_match('/^(ya|iya|yes|ok|oke|gas)\b.{0,6}\b(batal(kan|in)?|hapus|bersihin)\b/iu', trim($text))) {
+            return false;
+        }
+        Cache::forget($this->cleanupKey($group, $threadId));
+        $tasks = PlatformAiTask::whereIn('id', (array) $pending['ids'])->where('status', 'proposed')->get();
+        foreach ($tasks as $task) {
+            $task->update(['status' => 'rejected', 'error' => 'Dibatalkan pemilik lewat Telegram Office.']);
+        }
+        PlatformActivityLog::record('ai.task.bulk_reject', "Membatalkan {$tasks->count()} tugas tertunda lewat Telegram Office.");
+        $this->gateway->send($this->chiefBot($update), $group, "beres bos, {$tasks->count()} tugas udah dibatalin. masih bisa dilihat di arsip Operations Center kalau perlu.", $update->interaction_id, $threadId);
+
+        return true;
+    }
+
+    private function cleanupKey(PlatformAiTelegramGroup $group, ?int $threadId): string
+    {
+        return "telegram-office:cleanup:{$group->id}:".($threadId ?? 0);
+    }
+
+    private function chiefBot(PlatformAiTelegramUpdate $update): PlatformAiTelegramBot
+    {
+        return PlatformAiTelegramBot::whereHas('agent', fn ($q) => $q->where('key', 'chief'))->where('status', 'active')->first() ?: $update->bot;
     }
 
     /** Pesan agen yang di-reply Bos, hanya dari grup yang sama. */
