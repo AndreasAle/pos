@@ -49,6 +49,14 @@ let sock = null;
 let status = 'starting';
 let lastQr = null;
 let me = null;
+// Simpan pesan keluar terakhir: WhatsApp meminta kirim ulang (retry) bila HP penerima
+// gagal membuka pesan ("Menunggu pesan ini"); tanpa getMessage retry itu gagal.
+const sentCache = new Map();
+function rememberSent(res) {
+  if (!res?.key?.id || !res.message) return;
+  sentCache.set(res.key.id, res.message);
+  while (sentCache.size > 500) sentCache.delete(sentCache.keys().next().value);
+}
 
 async function connect() {
   const { state, saveCreds } = await useMultiFileAuthState(path.join(DATA_DIR, 'auth'));
@@ -60,6 +68,7 @@ async function connect() {
     logger: log.child({ module: 'baileys' }, { level: 'warn' }),
     markOnlineOnConnect: false,
     syncFullHistory: false,
+    getMessage: async (key) => sentCache.get(key.id),
   });
   sock.ev.on('creds.update', saveCreds);
 
@@ -174,6 +183,7 @@ async function send(target, message, typing, delaySec) {
       await sleep(Math.min(15, delaySec) * 1000);
     }
     const res = await sock.sendMessage(jid, { text: message });
+    rememberSent(res);
     lastSentAt = Date.now();
     guard.recordSent(target, message, again.kind);
     return { status: true, id: res?.key?.id, kind: again.kind };
