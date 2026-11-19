@@ -66,10 +66,15 @@ async function connect() {
       lastQr = qr;
       status = 'waiting_qr';
       log.info('QR baru tersedia di /qr');
+      // Cadangan bila /qr tak bisa dibuka (mis. hosting tanpa tunnel): `cat data/qr.txt`.
+      try {
+        fs.writeFileSync(path.join(DATA_DIR, 'qr.txt'), await QRCode.toString(qr, { type: 'terminal', small: true }));
+      } catch (e) { log.warn({ err: e.message }, 'Gagal menulis qr.txt'); }
     }
     if (connection === 'open') {
       status = 'connected';
       lastQr = null;
+      fs.rmSync(path.join(DATA_DIR, 'qr.txt'), { force: true });
       me = (sock.user?.id || '').split(':')[0].split('@')[0];
       log.info({ me }, 'WhatsApp terhubung');
     }
