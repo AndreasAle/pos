@@ -122,10 +122,10 @@ async function handleInbound(m) {
   const jid = m.key.remoteJid || '';
   // Hanya chat pribadi. Grup, status, channel, dan pesan dari diri sendiri diabaikan.
   if (m.key.fromMe) return;
-  // WhatsApp kini sering memakai ID privasi (@lid); nomor aslinya ada di key.senderPn.
+  // WhatsApp kini sering memakai ID privasi (@lid); nomor aslinya ada di key.remoteJidAlt (v7) / senderPn (v6).
   let pnJid = jid;
   if (jid.endsWith('@lid')) {
-    pnJid = m.key.senderPn || '';
+    pnJid = m.key.remoteJidAlt || m.key.senderPn || '';
     if (!pnJid) { log.warn({ jid }, 'pesan @lid tanpa nomor asli, dilewati'); return; }
   }
   if (!pnJid.endsWith('@s.whatsapp.net')) return;
