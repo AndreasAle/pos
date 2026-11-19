@@ -112,8 +112,15 @@ function textOf(msg) {
 async function handleInbound(m) {
   const jid = m.key.remoteJid || '';
   // Hanya chat pribadi. Grup, status, channel, dan pesan dari diri sendiri diabaikan.
-  if (m.key.fromMe || !jid.endsWith('@s.whatsapp.net')) return;
-  const phone = jid.split('@')[0];
+  if (m.key.fromMe) return;
+  // WhatsApp kini sering memakai ID privasi (@lid); nomor aslinya ada di key.senderPn.
+  let pnJid = jid;
+  if (jid.endsWith('@lid')) {
+    pnJid = m.key.senderPn || '';
+    if (!pnJid) { log.warn({ jid }, 'pesan @lid tanpa nomor asli, dilewati'); return; }
+  }
+  if (!pnJid.endsWith('@s.whatsapp.net')) return;
+  const phone = pnJid.split('@')[0].split(':')[0];
   const text = textOf(m).trim();
   if (!text) return;
 
