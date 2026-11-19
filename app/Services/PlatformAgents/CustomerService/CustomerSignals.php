@@ -70,6 +70,10 @@ final class CustomerSignals
         if (in_array(self::PRICE, $found, true) && ! preg_match('/\b(harga|biaya|tarif|paket|langganan|bulan|bayar)\b/iu', $text)) {
             $found = array_values(array_diff($found, [self::PRICE]));
         }
+        // "Bisa bikin promo happy hour?" = tanya fitur Promo & Diskon untuk pembeli toko, bukan minta diskon langganan.
+        if (in_array(self::DISCOUNT, $found, true) && preg_match('/\b(bikin|buat|atur|setting|pasang|fitur|menu|kasih ke (pembeli|pelanggan|customer)) ?(promo|diskon|voucher)|\b(promo|diskon) (untuk|ke|buat) (pembeli|pelanggan|customer|member)|happy hour|harga coret/iu', $text)) {
+            $found = array_values(array_diff($found, [self::DISCOUNT]));
+        }
         // Ucapan terima kasih yang juga mengeluh bukan penutup.
         if (in_array(self::THANKS, $found, true) && array_intersect($found, [self::COMPLAINT, self::ANGER, self::CHURN]) && ! preg_match('/\b(udah|sudah) bisa\b|\bberhasil\b/iu', $text)) {
             $found = array_values(array_diff($found, [self::THANKS]));

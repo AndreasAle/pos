@@ -262,6 +262,40 @@ class AditCustomerServiceTest extends TestCase
         $this->assertSame('approved', $card->status);
     }
 
+    public static function guideQuestions(): array
+    {
+        return [
+            ['kak saya lupa password', 'lupa-password'],
+            ['cara tambah kasir baru dan pin nya gimana', 'tambah-kasir-dan-pin'],
+            ['mau buka cabang kedua, tambah outlet gimana?', 'tambah-outlet'],
+            ['salah input, cara void order gimana', 'void-dan-refund-order'],
+            ['laporan bisa export ke excel?', 'ekspor-laporan-excel-pdf'],
+            ['bisa pesan lewat qr di meja?', 'qr-meja-pesan-dari-meja'],
+            ['catat hutang supplier dimana', 'catat-biaya-hutang-piutang'],
+        ];
+    }
+
+    #[DataProvider('guideQuestions')]
+    public function test_new_guides_are_found_for_common_questions(string $question, string $slug): void
+    {
+        $slugs = array_column(\App\Services\PlatformAgents\CustomerService\ProductKnowledge::match($question), 'slug');
+        $this->assertContains($slug, $slugs);
+        $this->get('/panduan/'.$slug)->assertOk();
+    }
+
+    public function test_merchant_promo_feature_can_be_explained_but_yoka_discount_cannot(): void
+    {
+        $this->assertNotContains(S::DISCOUNT, S::detect('bisa bikin promo happy hour buat pembeli?'));
+        $this->assertSame(
+            ['bisa kak, pakai menu Promo & Diskon untuk pembeli di toko.'],
+            DraftWhatsAppReply::bubbles("bisa kak, pakai menu Promo & Diskon untuk pembeli di toko.\n\naku kasih diskon 20% langganan buat kakak.")
+        );
+        $facts = json_encode(\App\Services\PlatformAgents\AgentBrain::productFacts());
+        foreach (['QR Meja', 'hutang', 'Excel', 'PIN', 'Audit Log'] as $feature) {
+            $this->assertStringContainsString($feature, $facts, "Adit harus tahu fitur {$feature}.");
+        }
+    }
+
     public function test_one_model_call_per_message(): void
     {
         $this->aiSays('oke kak');

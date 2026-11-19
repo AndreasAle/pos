@@ -21,7 +21,13 @@ final class ProductKnowledge
         'laporan' => 'laporan', 'omzet' => 'laporan', 'penjualan' => 'laporan', 'profit' => 'laporan',
         'telegram' => 'telegram', 'notifikasi' => 'telegram',
         'langganan' => 'berlangganan', 'bayar' => 'berlangganan', 'paket' => 'berlangganan', 'trial' => 'trial', 'aktif' => 'berlangganan',
-        'daftar' => 'mulai', 'mulai' => 'mulai', 'outlet' => 'outlet', 'kasir' => 'kasir',
+        'daftar' => 'mulai', 'mulai' => 'mulai', 'outlet' => 'outlet', 'cabang' => 'outlet', 'kasir' => 'kasir',
+        'password' => 'password', 'kata sandi' => 'password', 'lupa' => 'lupa', 'reset' => 'password', 'pin' => 'pin',
+        'staf' => 'kasir', 'karyawan' => 'kasir', 'user' => 'user', 'role' => 'user', 'tablet' => 'pin',
+        'void' => 'void', 'refund' => 'refund', 'batalkan' => 'void', 'batalin' => 'void', 'salah input' => 'void',
+        'export' => 'ekspor', 'ekspor' => 'ekspor', 'excel' => 'ekspor', 'pdf' => 'ekspor', 'unduh' => 'ekspor', 'download' => 'ekspor',
+        'qr' => 'qr', 'meja' => 'meja', 'self order' => 'qr',
+        'hutang' => 'hutang', 'utang' => 'hutang', 'piutang' => 'piutang', 'biaya' => 'biaya', 'pengeluaran' => 'biaya', 'supplier' => 'hutang', 'laba rugi' => 'biaya',
     ];
 
     /** @return array<int, array{slug:string, title:string, score:int}> */

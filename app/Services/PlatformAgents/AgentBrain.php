@@ -468,9 +468,17 @@ PROMPT;
     public static function productFacts(): array
     {
         return [
-            'diperbarui' => '2026-11-16',
+            'diperbarui' => '2026-11-19',
+            // Diverifikasi dari menu samping (layouts/app.blade.php) dan routes/web.php.
             'fitur_aktif' => [
-                'Kasir/POS, riwayat order, shift kasir, stok bahan dan resep, laporan penjualan',
+                'Kasir/POS, riwayat order, shift kasir, login kasir di tablet pakai PIN, void dan refund order dengan alasan wajib',
+                'Banyak outlet dan Manajemen User dengan role Admin, Kasir, Dapur, dan Gudang; layar dapur untuk role Dapur',
+                'QR Meja: pelanggan pesan dari meja lewat QR, kasir menerima di Pesanan QR lalu bayar tunai, QRIS, atau debit',
+                'Produk dan kategori, Bundling Produk, data Pelanggan, Promo & Diskon untuk pembeli di toko (dibuat sendiri oleh pemilik toko)',
+                'Stok: bahan baku, resep, pergerakan stok, laporan inventory',
+                'Laporan: penjualan, produk terlaris, kasir, shift, estimasi profit, laba rugi, pajak, retur transaksi; ekspor ke Excel (.xlsx) dan PDF',
+                'Keuangan: biaya, pembelian, supplier, hutang ke supplier, piutang',
+                'Audit Log aktivitas, Pengaturan Struk (printer lewat dialog print browser atau Bluetooth lewat RawBT di Android)',
                 'Tanya Yoka: chat AI soal bisnis pemilik, bisa membaca lampiran Excel, PDF, dan gambar',
                 'Bot Telegram: ringkasan harian jam 21.00, analisis AI mingguan, peringatan stok menipis, peringatan shift belum ditutup, notifikasi pesanan lunas dan void/refund, perintah /ringkasan',
                 'Feed penjualan ke Google Sheets (halaman Integrasi)',
@@ -478,6 +486,7 @@ PROMPT;
             ],
             'kerangka_belum_aktif' => ['Integrasi GoFood dan ShopeeFood: kerangka sudah ada, belum aktif sampai kredensial resmi tersedia. Jangan dipromosikan sebagai fitur jadi.'],
             'sedang_dibangun' => ['Aplikasi Android dan iOS: belum rilis, jangan dijanjikan tanggal.'],
+            'belum_dipastikan' => ['Printer LAN/WiFi khusus dan daftar merek tablet yang pasti cocok: belum ada daftar resmi. Jangan menjamin; sarankan coba dengan dialog print browser saat trial.'],
             'dilarang' => 'Jangan mengklaim fitur di luar daftar ini, jangan menyebut data klien nyata, dan jangan menjanjikan tanggal rilis.',
         ];
     }

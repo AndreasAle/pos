@@ -170,6 +170,122 @@ class GuideController extends Controller
                 ],
             ],
 
+            'lupa-password' => [
+                'category' => 'Akun',
+                'title' => 'Lupa password',
+                'summary' => 'Atur ulang password lewat tautan yang dikirim ke email akun.',
+                'minutes' => 2,
+                'steps' => [
+                    ['Buka halaman masuk', 'Di halaman Masuk yokapos.com, tekan Lupa password?.', null],
+                    ['Isi email akun', 'Pada halaman Atur Ulang Password, isi email yang kamu pakai saat mendaftar, lalu kirim.', 'Kalau dulu daftar pakai Google, isi email Google tersebut.'],
+                    ['Buka tautan di email', 'Buka email dari Yoka dan tekan tautan atur ulang password. Cek folder Spam bila belum masuk.', null],
+                    ['Buat password baru', 'Isi password baru minimal 8 karakter, ulangi, lalu simpan. Setelah itu masuk dengan password baru.', null],
+                ],
+                'faq' => [
+                    ['Kasir lupa PIN?', 'PIN kasir diatur pemilik atau admin di Manajemen User, Edit, PIN Kasir. Tidak perlu email.'],
+                    ['Tim Yoka bisa kirim password saya?', 'Tidak. Demi keamanan, password hanya bisa diatur ulang lewat email akun sendiri.'],
+                ],
+            ],
+
+            'tambah-kasir-dan-pin' => [
+                'category' => 'Akun',
+                'title' => 'Tambah kasir dan login pakai PIN',
+                'summary' => 'Buat akun staf dengan role yang tepat, lalu kasir masuk di tablet cukup dengan PIN.',
+                'minutes' => 5,
+                'steps' => [
+                    ['Buka Manajemen User', 'Di menu samping, buka Manajemen User, lalu tekan Tambah user.', 'Hanya pemilik dan admin yang bisa menambah user.'],
+                    ['Isi data dan role', 'Isi Nama Lengkap, Email, dan No. HP. Pilih Role: Admin, Kasir, Dapur, atau Gudang, lalu pilih Outlet tempat dia bekerja.', 'Kasir hanya melihat layar kasir; Admin bisa membuka laporan.'],
+                    ['Atur password dan PIN', 'Isi Password minimal 8 karakter. Di bagian PIN Kasir, isi PIN angka untuk login cepat di tablet.', null],
+                    ['Pasangkan tablet ke outlet', 'Di tablet kasir, buka yokapos.com/kasir, lalu isi Kode Outlet pada halaman Pasangkan Perangkat.', 'Kode Outlet ada di menu Outlet.'],
+                    ['Kasir masuk dengan PIN', 'Setelah tablet terpasang, kasir cukup memasukkan PIN untuk membuka kasir.', null],
+                ],
+                'faq' => [
+                    ['Muncul "Belum ada kasir dengan PIN"?', 'Atur PIN dulu di Manajemen User, Edit, PIN Kasir.'],
+                    ['Staf keluar kerja?', 'Edit user tersebut dan matikan User aktif, atau hapus PIN-nya supaya tidak bisa masuk lewat tablet.'],
+                ],
+            ],
+
+            'tambah-outlet' => [
+                'category' => 'Persiapan',
+                'title' => 'Tambah outlet atau cabang',
+                'summary' => 'Kelola beberapa cabang dalam satu akun, dengan menu, kasir, dan laporan per outlet.',
+                'minutes' => 3,
+                'steps' => [
+                    ['Buka menu Outlet', 'Di menu samping, buka Outlet, lalu tambah outlet baru.', null],
+                    ['Isi informasi outlet', 'Isi Nama Outlet, Kode Outlet (misalnya CB-01), No. Telepon, dan Alamat, lalu pastikan Outlet aktif tercentang.', 'Kode Outlet dipakai untuk memasangkan tablet kasir.'],
+                    ['Atur produk per outlet', 'Di Produk / Menu, pilih Outlet tempat tiap produk dijual.', null],
+                    ['Tempatkan staf', 'Di Manajemen User, pilih Outlet untuk tiap kasir.', null],
+                ],
+                'faq' => [
+                    ['Berapa outlet yang bisa dipakai?', 'Jumlah outlet mengikuti paket langganan. Lihat perbandingannya di menu Langganan.'],
+                ],
+            ],
+
+            'void-dan-refund-order' => [
+                'category' => 'Kasir',
+                'title' => 'Membatalkan (void) atau refund order',
+                'summary' => 'Batalkan transaksi yang salah input atau kembalikan uang pembeli, dengan alasan yang tercatat.',
+                'minutes' => 2,
+                'steps' => [
+                    ['Buka Riwayat Order', 'Di menu samping, buka Riwayat Order, lalu buka order yang sudah lunas.', null],
+                    ['Pilih tindakan', 'Tekan Batalkan Order untuk transaksi yang salah input, atau Refund Order bila uang dikembalikan ke pembeli.', 'Batalkan Order mengembalikan stok.'],
+                    ['Isi alasan', 'Alasan wajib diisi, misalnya salah input menu atau pembeli batal.', 'Alasan tercatat di detail order dan laporan Retur Transaksi.'],
+                    ['Cek laporan', 'Order yang dibatalkan atau di-refund tidak dihitung sebagai penjualan. Bila Bot Telegram aktif, pemilik menerima notifikasinya.', null],
+                ],
+                'faq' => [
+                    ['Bisa void order yang belum dibayar?', 'Tombol ini hanya untuk order yang sudah lunas.'],
+                ],
+            ],
+
+            'ekspor-laporan-excel-pdf' => [
+                'category' => 'Laporan',
+                'title' => 'Ekspor laporan ke Excel atau PDF',
+                'summary' => 'Unduh laporan penjualan, produk, shift, dan profit untuk arsip atau pembukuan.',
+                'minutes' => 2,
+                'steps' => [
+                    ['Buka laporan', 'Di menu samping, buka laporan yang dibutuhkan, misalnya Laporan Penjualan, Produk Terlaris, Laporan Shift, atau Estimasi Profit.', 'Laporan hanya bisa dibuka pemilik dan admin.'],
+                    ['Atur periode', 'Pilih rentang tanggal dan outlet pada filter di atas laporan.', null],
+                    ['Tekan Ekspor', 'Tekan Ekspor, lalu pilih Excel (.xlsx) atau PDF. File langsung terunduh.', null],
+                ],
+                'faq' => [
+                    ['Mau data otomatis ke Google Sheets?', 'Bisa, lewat halaman Integrasi (feed penjualan ke Google Sheets).'],
+                ],
+            ],
+
+            'qr-meja-pesan-dari-meja' => [
+                'category' => 'Kasir',
+                'title' => 'QR Meja: pelanggan pesan dari meja',
+                'summary' => 'Pelanggan scan QR di meja dan memesan sendiri; kasir menerima dan menagih.',
+                'minutes' => 6,
+                'steps' => [
+                    ['Buat area dan meja', 'Di menu samping, buka QR Meja. Tambah area bila perlu, lalu isi nomor meja (misalnya A01) dan tekan Buat meja dan QR.', null],
+                    ['Cetak QR', 'Tekan Cetak dan tempel QR di meja. QR bersifat tetap; tiap kunjungan dibuat sebagai sesi baru.', null],
+                    ['Terima pesanan', 'Pesanan masuk ke Pesanan QR. Periksa, lalu tekan Terima pesanan atau Tolak. Stok baru berkurang dan tiket masuk dapur setelah diterima.', null],
+                    ['Tagih pembayaran', 'Pilih Tunai, QRIS di kasir, atau Debit / EDC, lalu Konfirmasi bayar.', null],
+                    ['Tutup sesi meja', 'Setelah pelanggan selesai, tekan Tutup sesi meja di QR Meja.', null],
+                ],
+                'faq' => [
+                    ['QR bocor atau disalahgunakan?', 'Tekan Ganti URL pada meja tersebut, lalu cetak ulang QR-nya.'],
+                ],
+            ],
+
+            'catat-biaya-hutang-piutang' => [
+                'category' => 'Laporan',
+                'title' => 'Catat biaya, hutang, dan piutang',
+                'summary' => 'Catat pengeluaran operasional, pembelian ke supplier, dan tagihan supaya laba rugi akurat.',
+                'minutes' => 5,
+                'steps' => [
+                    ['Catat biaya', 'Buka Biaya, tekan Catat biaya, lalu isi tanggal, kategori, outlet, dan jumlah (misalnya sewa, listrik, gaji).', 'Biaya masuk ke perhitungan Laba Rugi.'],
+                    ['Catat pembelian dan hutang', 'Buka Pembelian, tekan Catat pembelian, pilih Supplier dan jatuh tempo. Pembelian yang belum lunas muncul di Hutang.', null],
+                    ['Bayar hutang', 'Di Hutang, tekan Bayar pada tagihan yang dilunasi. Sisa dan status jatuh tempo diperbarui.', null],
+                    ['Catat piutang', 'Buka Piutang, tekan Catat piutang, isi pihak, jumlah, dan jatuh tempo untuk uang yang belum diterima.', null],
+                    ['Lihat hasilnya', 'Buka Laba Rugi untuk melihat penjualan dikurangi modal dan biaya.', null],
+                ],
+                'faq' => [
+                    ['Salah catat biaya?', 'Biaya yang salah bisa dibatalkan; statusnya menjadi Dibatalkan dan tidak dihitung.'],
+                ],
+            ],
+
             'cara-berlangganan' => [
                 'category' => 'Akun',
                 'title' => 'Cara berlangganan setelah trial',
