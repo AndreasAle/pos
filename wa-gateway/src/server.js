@@ -20,6 +20,8 @@ import { Guard } from './guard.js';
 const env = (k, d) => process.env[k] ?? d;
 const PORT = Number(env('PORT', 3100));
 const HOST = env('HOST', '127.0.0.1');
+// Hosting bersama yang mengunci port: dengar lewat file socket (mis. data/gateway.sock).
+const SOCKET = env('SOCKET_PATH', '');
 const TOKEN = env('GATEWAY_TOKEN', '');
 const WEBHOOK_URL = env('WEBHOOK_URL', '');
 const DATA_DIR = path.resolve(env('DATA_DIR', './data'));
@@ -190,7 +192,7 @@ async function readBody(req) {
 
 const json = (res, code, data) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
 
-http.createServer(async (req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://local');
   try {
     if (url.pathname === '/health') return json(res, 200, { ok: true, status });
@@ -219,6 +221,13 @@ http.createServer(async (req, res) => {
     log.error(e, 'request gagal');
     json(res, 500, { status: false, reason: 'kesalahan gateway' });
   }
-}).listen(PORT, HOST, () => log.info(`Gateway jalan di http://${HOST}:${PORT}`));
+});
+if (SOCKET) {
+  const sockPath = path.resolve(SOCKET);
+  fs.rmSync(sockPath, { force: true });
+  server.listen(sockPath, () => { fs.chmodSync(sockPath, 0o600); log.info(`Gateway jalan di socket ${sockPath}`); });
+} else {
+  server.listen(PORT, HOST, () => log.info(`Gateway jalan di http://${HOST}:${PORT}`));
+}
 
 connect().catch((e) => { log.error(e, 'gagal start'); process.exit(1); });

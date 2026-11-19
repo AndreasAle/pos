@@ -93,6 +93,8 @@ return [
         'driver' => env('YOKA_WA_DRIVER', 'fonnte'),
         'gateway_url' => env('YOKA_WA_GATEWAY_URL'),
         'gateway_token' => env('YOKA_WA_GATEWAY_TOKEN'),
+        // Path file socket gateway (hosting bersama yang mengunci port), mis. /home/u.../wa-gateway/data/gateway.sock.
+        'gateway_socket' => env('YOKA_WA_GATEWAY_SOCKET'),
     ],
 
     'postmark' => [

@@ -14,7 +14,7 @@ class PlatformWhatsApp
     public static function configured(): bool
     {
         return self::usesGateway()
-            ? filled(config('services.yoka_fonnte.gateway_url')) && filled(config('services.yoka_fonnte.gateway_token'))
+            ? (filled(config('services.yoka_fonnte.gateway_url')) || filled(config('services.yoka_fonnte.gateway_socket'))) && filled(config('services.yoka_fonnte.gateway_token'))
             : filled(config('services.yoka_fonnte.token'));
     }
 
@@ -53,12 +53,17 @@ class PlatformWhatsApp
 
         // Gateway meniru API Fonnte; bedanya hanya URL dan token. Gateway antre
         // satu per satu dengan jeda + efek mengetik, jadi timeout dibuat lebih longgar.
-        $url = $gateway ? rtrim((string) config('services.yoka_fonnte.gateway_url'), '/').'/send' : 'https://api.fonnte.com/send';
+        $url = $gateway ? rtrim((string) (config('services.yoka_fonnte.gateway_url') ?: 'http://localhost'), '/').'/send' : 'https://api.fonnte.com/send';
         $token = $gateway ? config('services.yoka_fonnte.gateway_token') : config('services.yoka_fonnte.token');
 
         try {
-            $response = Http::withHeaders(['Authorization' => $token])
-                ->asForm()->timeout($gateway ? 60 : 20)
+            $request = Http::withHeaders(['Authorization' => $token])->asForm()->timeout($gateway ? 60 : 20);
+            // Hosting bersama tanpa port lokal: gateway didengar lewat file socket.
+            $socket = (string) config('services.yoka_fonnte.gateway_socket');
+            if ($gateway && $socket !== '') {
+                $request = $request->withOptions(['curl' => [CURLOPT_UNIX_SOCKET_PATH => $socket]]);
+            }
+            $response = $request
                 ->post($url, ['target' => $target, 'message' => $message, 'typing' => $typing, 'delay' => max(0, min(15, $delay))]);
 
             if (! $response->successful() || $response->json('status') === false) {
