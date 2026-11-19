@@ -88,6 +88,11 @@ return [
         'token' => env('YOKA_FONNTE_TOKEN'),
         // Bagian rahasia di URL webhook pesan masuk. Kosong = webhook mati.
         'webhook_secret' => env('YOKA_FONNTE_WEBHOOK_SECRET'),
+        // "fonnte" (default) atau "gateway" = Yoka WA Gateway sendiri (folder wa-gateway/).
+        // Gateway memakai webhook masuk yang sama, jadi hanya jalur kirim yang berubah.
+        'driver' => env('YOKA_WA_DRIVER', 'fonnte'),
+        'gateway_url' => env('YOKA_WA_GATEWAY_URL'),
+        'gateway_token' => env('YOKA_WA_GATEWAY_TOKEN'),
     ],
 
     'postmark' => [

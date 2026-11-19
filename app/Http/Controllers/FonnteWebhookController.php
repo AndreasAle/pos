@@ -10,9 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 /**
- * Webhook pesan masuk dari device Fonnte resmi tim Yoka. Tanpa login; diverifikasi lewat secret
- * di URL (YOKA_FONNTE_WEBHOOK_SECRET). Pesan hanya disimpan lalu Adit membuat DRAF balasan;
- * tidak ada yang terkirim tanpa "Setujui & kirim".
+ * Webhook pesan masuk ke nomor WA resmi Yoka, dari Fonnte atau dari Yoka WA Gateway sendiri
+ * (wa-gateway/, format field sama). Tanpa login; diverifikasi lewat secret di URL
+ * (YOKA_FONNTE_WEBHOOK_SECRET). Adit membalas sendiri dengan batas keras di DraftWhatsAppReply
+ * (lihat AGENTS.md), dan gateway menambah rem anti-spam sendiri.
  */
 class FonnteWebhookController extends Controller
 {
