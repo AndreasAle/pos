@@ -227,7 +227,7 @@ class GuideController extends Controller
                 'summary' => 'Batalkan transaksi yang salah input atau kembalikan uang pembeli, dengan alasan yang tercatat.',
                 'minutes' => 2,
                 'steps' => [
-                    ['Buka Riwayat Order', 'Di menu samping, buka Riwayat Order, lalu buka order yang sudah lunas.', null],
+                    ['Buka Riwayat Order', 'Di menu samping, buka Riwayat Order, lalu buka order yang sudah lunas.', 'Hanya pemilik dan admin yang bisa membatalkan atau refund, supaya transaksi lunas tidak bisa dihapus kasir.'],
                     ['Pilih tindakan', 'Tekan Batalkan Order untuk transaksi yang salah input, atau Refund Order bila uang dikembalikan ke pembeli.', 'Batalkan Order mengembalikan stok.'],
                     ['Isi alasan', 'Alasan wajib diisi, misalnya salah input menu atau pembeli batal.', 'Alasan tercatat di detail order dan laporan Retur Transaksi.'],
                     ['Cek laporan', 'Order yang dibatalkan atau di-refund tidak dihitung sebagai penjualan. Bila Bot Telegram aktif, pemilik menerima notifikasinya.', null],

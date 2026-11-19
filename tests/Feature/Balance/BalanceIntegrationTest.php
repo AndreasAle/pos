@@ -75,7 +75,7 @@ class BalanceIntegrationTest extends TestCase
         $this->actingAs($this->cashier)->postJson(route('pos.qris-confirm', $order))->assertOk();
         $this->assertEquals(100000, $this->business->fresh()->balance);
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.refund', $order), ['reason' => 'Komplain'])
             ->assertRedirect();
 
@@ -89,7 +89,7 @@ class BalanceIntegrationTest extends TestCase
         $order = $this->qrisDraft(100000);
         $this->actingAs($this->cashier)->postJson(route('pos.qris-confirm', $order))->assertOk();
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.void', $order), ['reason' => 'Salah input'])
             ->assertRedirect();
 
@@ -104,7 +104,7 @@ class BalanceIntegrationTest extends TestCase
             ['product_id' => $product->id, 'qty' => 1, 'price' => 100000],
         ]));
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.refund', $order), ['reason' => 'Komplain'])
             ->assertRedirect();
 

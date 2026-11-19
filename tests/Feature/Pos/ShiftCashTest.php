@@ -201,7 +201,7 @@ class ShiftCashTest extends TestCase
         $this->sell(150000, ['payment_method' => 'cash', 'paid_amount' => 150000]);
 
         $order = \App\Models\Order::sole();
-        $this->actingAs($this->cashier)->post(route('orders.void', $order), ['reason' => 'Salah']);
+        $this->actingAs($this->manager())->post(route('orders.void', $order), ['reason' => 'Salah']);
 
         // The money went back to the customer, so only the float should remain.
         $closed = $this->shifts()->closeShift($this->shift->fresh(), 100000, null);

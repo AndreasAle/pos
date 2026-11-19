@@ -471,7 +471,7 @@ PROMPT;
             'diperbarui' => '2026-11-19',
             // Diverifikasi dari menu samping (layouts/app.blade.php) dan routes/web.php.
             'fitur_aktif' => [
-                'Kasir/POS, riwayat order, shift kasir, login kasir di tablet pakai PIN, void dan refund order dengan alasan wajib',
+                'Kasir/POS, riwayat order, shift kasir, login kasir di tablet pakai PIN, void dan refund order lunas dengan alasan wajib (hanya pemilik dan admin)',
                 'Banyak outlet dan Manajemen User dengan role Admin, Kasir, Dapur, dan Gudang; layar dapur untuk role Dapur',
                 'QR Meja: pelanggan pesan dari meja lewat QR, kasir menerima di Pesanan QR lalu bayar tunai, QRIS, atau debit',
                 'Produk dan kategori, Bundling Produk, data Pelanggan, Promo & Diskon untuk pembeli di toko (dibuat sendiri oleh pemilik toko)',

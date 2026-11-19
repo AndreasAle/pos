@@ -349,8 +349,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     // Orders
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::post('orders/{order}/void', [OrderController::class, 'void'])->name('orders.void');
-    Route::post('orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
+    // Membatalkan/refund order lunas mengubah uang dan stok: hanya pemilik dan admin (cegah kecurangan kasir).
+    Route::post('orders/{order}/void', [OrderController::class, 'void'])->middleware('role:owner,admin')->name('orders.void');
+    Route::post('orders/{order}/refund', [OrderController::class, 'refund'])->middleware('role:owner,admin')->name('orders.refund');
 
     // Receipt
     Route::get('receipt/{order}', [ReceiptController::class, 'show'])->name('receipt.show');

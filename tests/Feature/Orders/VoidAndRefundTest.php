@@ -35,7 +35,7 @@ class VoidAndRefundTest extends TestCase
         ]));
         $this->assertEquals(970, $ingredient->fresh()->current_stock);
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.void', $order), ['reason' => 'Salah input'])
             ->assertRedirect();
 
@@ -55,7 +55,7 @@ class VoidAndRefundTest extends TestCase
             ['product_id' => $product->id, 'qty' => 1, 'price' => 20000],
         ]));
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.void', $order), [])
             ->assertSessionHasErrors('reason');
 
@@ -70,8 +70,8 @@ class VoidAndRefundTest extends TestCase
             ['product_id' => $product->id, 'qty' => 3, 'price' => 20000],
         ]));
 
-        $this->actingAs($this->cashier)->post(route('orders.void', $order), ['reason' => 'Salah input']);
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())->post(route('orders.void', $order), ['reason' => 'Salah input']);
+        $this->actingAs($this->manager())
             ->post(route('orders.void', $order), ['reason' => 'Lagi'])
             ->assertStatus(422);
 
@@ -95,7 +95,7 @@ class VoidAndRefundTest extends TestCase
         // 500 - 200 redeemed + floor(80.000 * 0.001) = 380
         $this->assertSame(380, $customer->fresh()->loyalty_points);
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.void', $order), ['reason' => 'Batal'])
             ->assertRedirect();
 
@@ -121,7 +121,7 @@ class VoidAndRefundTest extends TestCase
             ['product_id' => $product->id, 'qty' => 2, 'price' => 20000],
         ]));
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.refund', $order), ['reason' => 'Komplain rasa'])
             ->assertRedirect();
 
@@ -144,7 +144,7 @@ class VoidAndRefundTest extends TestCase
         ]));
         $this->assertEquals(940, $ingredient->fresh()->current_stock);
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.refund', $order), ['reason' => 'Batal pesanan'])
             ->assertRedirect();
 
@@ -165,7 +165,7 @@ class VoidAndRefundTest extends TestCase
         // back the 30 units the order actually consumed, not 3 x the new figure.
         $product->recipe->items()->update(['qty' => 25]);
 
-        $this->actingAs($this->cashier)
+        $this->actingAs($this->manager())
             ->post(route('orders.void', $order), ['reason' => 'Salah input'])
             ->assertRedirect();
 

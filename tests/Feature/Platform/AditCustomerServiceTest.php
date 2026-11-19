@@ -122,7 +122,7 @@ class AditCustomerServiceTest extends TestCase
 
         $prompt = $this->lastPrompt();
         $this->assertStringContainsString('PRINSIP PELAYANAN PRIMA', $prompt);
-        $this->assertLessThan(12000, mb_strlen($prompt), 'Prompt tetap ringkas, buku tidak dikirim utuh.');
+        $this->assertLessThan(16000, mb_strlen($prompt), 'Prompt tetap terkendali: buku dan panduan tidak dikirim utuh.');
         $card = $this->card();
         $this->assertNotNull($card);
         $this->assertSame($escalates, (bool) $card->payload['escalation'], 'Status eskalasi sesuai aturan.');
@@ -294,6 +294,21 @@ class AditCustomerServiceTest extends TestCase
         foreach (['QR Meja', 'hutang', 'Excel', 'PIN', 'Audit Log'] as $feature) {
             $this->assertStringContainsString($feature, $facts, "Adit harus tahu fitur {$feature}.");
         }
+    }
+
+    public function test_prompt_carries_the_full_menu_map_and_the_matching_menu_detail(): void
+    {
+        $this->aiSays('bisa kak');
+        $this->say('bisa bayar sebagian cash sebagian qris?');
+
+        $prompt = $this->lastPrompt();
+        $this->assertStringContainsString('PETA MENU APLIKASI', $prompt);
+        foreach (['Audit Log', 'Laporan Pajak', 'Dapur (KDS)', 'Piutang'] as $menu) {
+            $this->assertStringContainsString($menu, $prompt);
+        }
+        $this->assertStringContainsString('[Kasir / POS]', $prompt);
+        $this->assertStringContainsString('Bayar terpisah', $prompt);
+        $this->assertLessThan(16000, mb_strlen($prompt));
     }
 
     public function test_one_model_call_per_message(): void

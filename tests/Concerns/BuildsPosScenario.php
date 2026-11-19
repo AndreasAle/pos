@@ -200,4 +200,13 @@ trait BuildsPosScenario
             'paid_amount'    => 1000000,
         ], $overrides);
     }
+
+    /** Void/refund order lunas hanya untuk pemilik/admin; dipakai tes yang membatalkan order. */
+    protected function manager(): User
+    {
+        return User::firstOrCreate(
+            ['business_id' => $this->business->id, 'role' => 'admin', 'email' => 'admin-'.$this->business->id.'@test.local'],
+            ['name' => 'Admin Uji', 'password' => bcrypt('rahasia-uji-123'), 'outlet_id' => $this->outlet->id, 'is_active' => true]
+        );
+    }
 }

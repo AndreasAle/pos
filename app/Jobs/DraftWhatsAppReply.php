@@ -10,6 +10,7 @@ use App\Models\PlatformAiWhatsAppMessage;
 use App\Models\SubscriptionPlan;
 use App\Services\PlatformAgents\AgentBrain;
 use App\Services\PlatformAgents\CustomerService\CustomerSignals;
+use App\Services\PlatformAgents\CustomerService\MenuKnowledge;
 use App\Services\PlatformAgents\CustomerService\ProductKnowledge;
 use App\Services\PlatformAgents\CustomerService\ServicePlaybook;
 use App\Services\PlatformAiTelemetry;
@@ -192,7 +193,8 @@ class DraftWhatsAppReply implements ShouldQueue
             ? 'PESAN INI SENSITIF (uang/data/keamanan/hukum). Balas SATU bubble singkat yang tenang: pesannya sudah diterima dan tim sedang mengecek langsung. Jangan menjanjikan refund, waktu, atau hasil apa pun, jangan minta password/OTP.'
             : '';
         $playbook = ServicePlaybook::render($signals);
-        $knowledge = ProductKnowledge::render($pending !== '' ? $pending : $inbound->body);
+        $asked = $pending !== '' ? $pending : $inbound->body;
+        $knowledge = trim(MenuKnowledge::peta()."\n\n".MenuKnowledge::detail($asked)."\n\n".ProductKnowledge::render($asked));
         $escalationRule = $escalated
             ? 'ESKALASI: kasus ini SUDAH tercatat untuk ditangani tim manusia Yoka. Sampaikan jujur bahwa kamu sudah meneruskannya ke tim, tanpa menyebut waktu atau hasil. Tetap bantu dengan info yang aman sambil menunggu.'
             : 'Kasus ini BELUM diteruskan ke manusia. Jangan bilang sudah diteruskan/dilaporkan ke tim atau bahwa tim akan menghubungi. Bila menurutmu perlu manusia, isi "needs_human": true.';

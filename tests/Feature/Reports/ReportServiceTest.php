@@ -80,8 +80,8 @@ class ReportServiceTest extends TestCase
         $voided   = $this->sell(50000);
         $refunded = $this->sell(70000);
 
-        $this->actingAs($this->cashier)->post(route('orders.void', $voided), ['reason' => 'Salah']);
-        $this->actingAs($this->cashier)->post(route('orders.refund', $refunded), ['reason' => 'Komplain']);
+        $this->actingAs($this->manager())->post(route('orders.void', $voided), ['reason' => 'Salah']);
+        $this->actingAs($this->manager())->post(route('orders.refund', $refunded), ['reason' => 'Komplain']);
 
         $data = $this->report()->salesReport($this->business, []);
 
