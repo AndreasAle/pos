@@ -668,6 +668,16 @@
                 <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Pilih Paket Sesuai Skala Bisnis Anda</h2>
                 <p class="text-slate-600 mt-3">Mulai dari UMKM kecil hingga bisnis multi-outlet — semua bisa disesuaikan.</p>
             </div>
+            @php
+                // Harga resmi dari tabel paket (sumber yang sama dengan checkout Midtrans); fallback bila DB belum siap.
+                try {
+                    $planPrices = \App\Models\SubscriptionPlan::where('is_active', true)->pluck('price', 'slug')->map(fn ($p) => (float) $p)->all();
+                } catch (\Throwable $e) {
+                    $planPrices = [];
+                }
+                $planPrices += ['starter' => 99000, 'business' => 249000, 'enterprise' => 499000];
+                $priceOf = ['Starter' => 'starter', 'Business' => 'business', 'Custom' => 'enterprise'];
+            @endphp
             <div class="grid lg:grid-cols-3 gap-6">
                 @foreach ([
                     ['Starter', 'Untuk UMKM kecil yang baru memulai digitalisasi kasir', ['POS transaksi', 'Manajemen produk & stok', 'QRIS static', 'Cetak struk', 'Laporan dasar'], false, 'Pilih Starter'],
@@ -679,7 +689,12 @@
                             <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold mb-3">Paling Direkomendasikan</span>
                         @endif
                         <h3 class="text-xl font-extrabold text-slate-900">{{ $name }}</h3>
-                        <p class="text-sm text-slate-500 mt-1 mb-6">{{ $desc }}</p>
+                        <p class="text-sm text-slate-500 mt-1">{{ $desc }}</p>
+                        <p class="mt-5 mb-6">
+                            @if($name === 'Custom')<span class="block text-sm text-slate-500">Mulai dari</span>@endif
+                            <span class="text-3xl font-extrabold text-slate-900">Rp{{ number_format($planPrices[$priceOf[$name]], 0, ',', '.') }}</span>
+                            <span class="text-sm text-slate-500">/ bulan</span>
+                        </p>
                         <ul class="space-y-3 mb-8">
                             @foreach ($features as $f)
                                 <li class="flex items-start gap-2 text-sm text-slate-600">
@@ -695,7 +710,7 @@
                     </div>
                 @endforeach
             </div>
-            <p class="text-center text-sm text-slate-400 mt-8">* Harga &amp; detail paket dapat disesuaikan — hubungi kami untuk penawaran terbaik.</p>
+            <p class="text-center text-sm text-slate-500 mt-8">Harga dalam Rupiah (IDR) per bulan per bisnis. Coba gratis 7 hari, pembayaran langganan aman lewat Midtrans.</p>
         </div>
     </section>
 
