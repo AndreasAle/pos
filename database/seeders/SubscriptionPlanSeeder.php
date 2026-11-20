@@ -42,7 +42,7 @@ class SubscriptionPlanSeeder extends Seeder
                 'sort_order'  => 3,
             ],
             [
-                'name'        => 'Enterprise',
+                'name'        => 'Custom',
                 'slug'        => 'enterprise',
                 'price'       => 499000,
                 'max_outlets' => 999,
