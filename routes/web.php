@@ -217,6 +217,14 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::get('finance/export', [\App\Http\Controllers\Platform\FinanceController::class, 'export'])->middleware('throttle:30,1')->name('finance.export');
             Route::get('system', [SystemController::class, 'index'])->name('system');
             Route::post('system/test-mail', [SystemController::class, 'testMail'])->middleware('throttle:3,10')->name('system.test-mail');
+            Route::get('prospects', [\App\Http\Controllers\Platform\ProspectController::class, 'index'])->name('prospects.index');
+            Route::post('prospects', [\App\Http\Controllers\Platform\ProspectController::class, 'store'])->middleware('throttle:120,1')->name('prospects.store');
+            Route::post('prospects/paste', [\App\Http\Controllers\Platform\ProspectController::class, 'paste'])->middleware('throttle:10,1')->name('prospects.paste');
+            Route::patch('prospects/{prospect}', [\App\Http\Controllers\Platform\ProspectController::class, 'update'])->middleware('throttle:240,1')->name('prospects.update');
+            Route::delete('prospects/{prospect}', [\App\Http\Controllers\Platform\ProspectController::class, 'destroy'])->name('prospects.destroy');
+            Route::post('prospects/{prospect}/status', [\App\Http\Controllers\Platform\ProspectController::class, 'status'])->name('prospects.status');
+            Route::post('prospects-check', [\App\Http\Controllers\Platform\ProspectController::class, 'checkAll'])->middleware('throttle:10,1')->name('prospects.check');
+            Route::post('prospects-draft', [\App\Http\Controllers\Platform\ProspectController::class, 'draftToday'])->middleware('throttle:10,1')->name('prospects.draft');
             Route::get('ai-team', [AiTeamController::class, 'index'])->name('ai-team.index');
             Route::post('ai-team/agents/{agent}/run', [AiTeamController::class, 'run'])->middleware('throttle:20,1')->name('ai-team.run');
             Route::post('ai-team/agents/{agent}/chat', [AiTeamController::class, 'chat'])->middleware('throttle:30,1')->name('ai-team.chat');

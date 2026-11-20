@@ -103,6 +103,15 @@ Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts
 Schedule::call(fn () => app(\App\Services\PlatformTelegramOffice::class)->chatter())
     ->everyFifteenMinutes()->name('platform-telegram-office-chatter')->withoutOverlapping(10);
 
+// Prospek Adit: draf pesan pembuka/follow-up maks 3 per hari (tetap menunggu "Setujui & kirim"), dan status trial/bayar.
+Schedule::call(function () {
+    $desk = app(\App\Services\PlatformAgents\ProspectDesk::class);
+    $desk->refreshConversions();
+    if ($adit = \App\Models\PlatformAiAgent::where('key', 'cs')->where('status', 'active')->first()) {
+        $desk->draftToday($adit);
+    }
+})->dailyAt('09:00')->timezone('Asia/Jakarta')->name('prospect-drafts')->withoutOverlapping();
+
 // Keuangan Yoka: biaya OpenAI persis dari Costs API (hanya bila OPENAI_ADMIN_KEY diisi) + peringatan saldo.
 Schedule::command('yoka:finance-sync-openai')->twiceDaily(7, 19)->name('finance-sync-openai')->withoutOverlapping()
     ->when(fn () => filled(config('services.openai_admin.key')));

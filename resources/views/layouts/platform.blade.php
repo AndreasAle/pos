@@ -73,6 +73,9 @@
                 <span class="h-2 w-2 bg-fuchsia-600"></span> Tim AI
                 @if($platformAiUnread > 0)<span class="ml-auto flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white">{{ $platformAiUnread > 99 ? '99+' : $platformAiUnread }}</span>@endif
             </a>
+            <a href="{{ route('platform.prospects.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.prospects.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
+                <span class="h-2 w-2 bg-lime-600"></span> Prospek Adit
+            </a>
             <a href="{{ route('platform.team') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.team*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-teal-600"></span> Tim Yoka
             </a>

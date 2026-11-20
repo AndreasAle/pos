@@ -327,6 +327,9 @@ class AiTeamController extends Controller
 
         if ($decision === 'reject') {
             $task->update(['status' => 'rejected']);
+            if (data_get($task->payload, 'prospect_id')) {
+                app(\App\Services\PlatformAgents\ProspectDesk::class)->markRejected($task);
+            }
             PlatformActivityLog::record('ai.task.reject', "Menolak tugas {$task->title}.", $task);
 
             return back()->with('success', 'Tugas ditolak.');
@@ -350,6 +353,9 @@ class AiTeamController extends Controller
         $result = app(PlatformWhatsApp::class)->send((string) data_get($task->payload, 'phone'), $message);
         if ($result['ok']) {
             $task->update(['summary' => $message, 'status' => 'completed', 'executed_at' => now(), 'result' => ['sent' => true], 'error' => null]);
+            if (data_get($task->payload, 'prospect_id')) {
+                app(\App\Services\PlatformAgents\ProspectDesk::class)->markSent($task);
+            }
             PlatformActivityLog::record('ai.whatsapp.sent', "WhatsApp terkirim: {$task->title}.", $task, metadata: ['business_id' => data_get($task->payload, 'business_id')]);
             // Simpan di kotak WA supaya Adit tahu apa yang sudah dibalas di percakapan berikutnya.
             if ($phone = PlatformWhatsApp::normalize((string) data_get($task->payload, 'phone'))) {

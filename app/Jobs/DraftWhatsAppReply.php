@@ -93,6 +93,9 @@ class DraftWhatsAppReply implements ShouldQueue
 
     public function __construct(public int $messageId) {}
 
+    /** Konteks prospek (diisi saat pesan dari nomor di Prospek Adit). */
+    private ?string $prospectContext = null;
+
     public function handle(): void
     {
         $inbound = PlatformAiWhatsAppMessage::find($this->messageId);
@@ -112,6 +115,9 @@ class DraftWhatsAppReply implements ShouldQueue
 
         $business = $this->business($inbound->phone);
         $inbound->update(['business_id' => $business?->id]);
+        // Prospek yang kita hubungi duluan: catat balasannya, hormati permintaan berhenti, beri Adit konteks penjualan.
+        $prospect = $business ? null : app(\App\Services\PlatformAgents\ProspectDesk::class)->inbound($inbound->phone, $inbound->body);
+        $this->prospectContext = $prospect ? app(\App\Services\PlatformAgents\ProspectDesk::class)->context($prospect) : null;
         $sensitive = (bool) preg_match(self::SENSITIVE, $inbound->body);
 
         // Pesan beruntun sejak balasan terakhir dibaca sebagai satu maksud.
@@ -183,7 +189,7 @@ class DraftWhatsAppReply implements ShouldQueue
         $sub = $business ? BusinessSubscription::where('business_id', $business->id)->latest('id')->first() : null;
         $customer = $business
             ? "Pengirim adalah pemilik/tim toko terdaftar \"{$business->name}\", status langganan ".($sub?->status ?? 'tidak diketahui').($sub?->ends_at ? ' sampai '.$sub->ends_at->toDateString() : '').'.'
-            : 'Pengirim belum terdaftar (kemungkinan calon pelanggan).';
+            : ($this->prospectContext ?? 'Pengirim belum terdaftar (kemungkinan calon pelanggan).');
         $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'max_outlets', 'max_users'])
             ->map(fn ($p) => "{$p->name}: Rp ".number_format((float) $p->price, 0, ',', '.')."/bulan, {$p->max_outlets} outlet, {$p->max_users} user")->implode('; ');
         $trialDays = self::TRIAL_DAYS;
