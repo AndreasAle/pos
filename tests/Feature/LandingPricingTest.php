@@ -15,7 +15,7 @@ class LandingPricingTest extends TestCase
     {
         SubscriptionPlan::updateOrCreate(['slug' => 'starter'], ['name' => 'Starter', 'price' => 99000, 'is_active' => true]);
         SubscriptionPlan::updateOrCreate(['slug' => 'business'], ['name' => 'Business', 'price' => 249000, 'is_active' => true]);
-        SubscriptionPlan::updateOrCreate(['slug' => 'enterprise'], ['name' => 'Enterprise', 'price' => 499000, 'is_active' => true]);
+        SubscriptionPlan::updateOrCreate(['slug' => 'enterprise'], ['name' => 'Custom', 'price' => 499000, 'is_active' => true]);
 
         $this->get('/')->assertOk()
             ->assertSee('Rp99.000')->assertSee('Rp249.000')->assertSee('Rp499.000')
