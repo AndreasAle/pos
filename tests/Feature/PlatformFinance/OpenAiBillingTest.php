@@ -121,4 +121,21 @@ class OpenAiBillingTest extends TestCase
         $as->post(route('platform.finance.openai.credit'), ['kind' => 'opening', 'credited_at' => '2026-11-20', 'amount_usd' => 1, 'amount_idr' => 1])->assertSessionHasErrors('finance');
         $this->assertSame(0, Expense::count());
     }
+
+    public function test_opening_snapshots_same_day_usage_and_calibrate_matches_dashboard(): void
+    {
+        $this->fakeCosts();
+        $billing = app(OpenAiBilling::class);
+        // Saldo awal dicatat 10 Nov saat biaya hari itu (0,25) sudah dipotong dashboard.
+        $billing->recordCredit(['kind' => 'opening', 'credited_at' => '2026-11-10', 'amount_usd' => 2.41, 'amount_idr' => 43000], $this->owner);
+        $this->assertSame(2.33, $billing->status()['balance_usd'], '2,41 - 0,0812 (biaya 18 Nov); biaya 10 Nov tidak dipotong dua kali.');
+
+        $r = $billing->calibrate(2.28, $this->owner);
+        $this->assertSame(2.28, $r['after']);
+        $this->assertSame(2.28, $billing->status()['balance_usd']);
+        $this->assertSame(1, \App\Models\PlatformFinance\AuditEvent::where('action', 'ai_credit.calibrated')->count());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $billing->calibrate(-1, $this->owner);
+    }
 }

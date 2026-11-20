@@ -212,6 +212,7 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('finance/revenue-recognition', [\App\Http\Controllers\Platform\FinanceController::class, 'recognizeRevenue'])->name('finance.recognize');
             Route::post('finance/openai/credits', [\App\Http\Controllers\Platform\FinanceController::class, 'openAiCredit'])->name('finance.openai.credit');
             Route::post('finance/openai/sync', [\App\Http\Controllers\Platform\FinanceController::class, 'openAiSync'])->middleware('throttle:6,1')->name('finance.openai.sync');
+            Route::post('finance/openai/calibrate', [\App\Http\Controllers\Platform\FinanceController::class, 'openAiCalibrate'])->middleware('throttle:6,1')->name('finance.openai.calibrate');
             Route::post('finance/openai/expense', [\App\Http\Controllers\Platform\FinanceController::class, 'openAiExpense'])->name('finance.openai.expense');
             Route::get('finance/export', [\App\Http\Controllers\Platform\FinanceController::class, 'export'])->middleware('throttle:30,1')->name('finance.export');
             Route::get('system', [SystemController::class, 'index'])->name('system');

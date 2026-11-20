@@ -107,8 +107,21 @@ class OpenAiBilling
             default => null,
         };
 
-        return DB::transaction(function () use ($data, $kind, $usd, $idr, $date, $credit, $by) {
+        $baseline = 0.0;
+        if ($kind === 'opening') {
+            if ($this->configured()) {
+                try {
+                    $this->sync(3);
+                } catch (RuntimeException) {
+                    // tetap catat; kalibrasi bisa dilakukan nanti
+                }
+            }
+            $baseline = (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', $date->toDateString())->sum('amount_usd');
+        }
+
+        return DB::transaction(function () use ($data, $kind, $usd, $idr, $date, $credit, $by, $baseline) {
             $id = DB::table('platform_fin_ai_credits')->insertGetId([
+                'usage_baseline_usd' => round($baseline, 6),
                 'provider' => self::PROVIDER, 'kind' => $kind, 'credited_at' => $date->toDateString(), 'amount_usd' => $usd, 'amount_idr' => $kind === 'grant' ? 0 : $idr,
                 'paid_from' => $data['paid_from'] ?? null, 'expires_at' => $data['expires_at'] ?? null, 'reference' => isset($data['reference']) ? mb_substr((string) $data['reference'], 0, 120) : null,
                 'created_by' => $by->id, 'created_at' => now(), 'updated_at' => now(),
@@ -130,12 +143,9 @@ class OpenAiBilling
         $credits = DB::table('platform_fin_ai_credits')->where('provider', self::PROVIDER);
         $since = (clone $credits)->min('credited_at');
         $added = (float) (clone $credits)->sum('amount_usd');
-        // Saldo awal diambil dari dashboard yang SUDAH dipotong pemakaian hari itu, jadi biaya baru dihitung mulai besoknya.
-        $opening = (clone $credits)->where('kind', 'opening')->value('credited_at');
-        $usage = DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER);
-        $used = ! $since ? 0.0 : (float) ($opening && $opening === $since
-            ? $usage->where('usage_date', '>', $opening)->sum('amount_usd')
-            : $usage->where('usage_date', '>=', $since)->sum('amount_usd'));
+        // Biaya yang sudah dipotong dashboard saat saldo awal dicatat (titik acuan) tidak dikurangi lagi.
+        $baseline = (float) (clone $credits)->sum('usage_baseline_usd');
+        $used = $since ? max(0.0, (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', $since)->sum('amount_usd') - $baseline) : 0.0;
         $month = (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', today()->startOfMonth()->toDateString())->sum('amount_usd');
         $last7 = (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', today()->subDays(7)->toDateString())->where('usage_date', '<', today()->toDateString())->sum('amount_usd');
         $balance = $since ? round($added - $used, 2) : null;
@@ -154,8 +164,40 @@ class OpenAiBilling
             'low_threshold_usd' => (float) config('yoka_finance.openai_low_balance_usd', 5),
             'low' => $balance !== null && $balance < (float) config('yoka_finance.openai_low_balance_usd', 5),
             'rate_idr_per_usd' => $this->rate(),
-            'note' => $since ? 'Biaya persis dari Costs API OpenAI (bisa tertunda sampai sehari). Saldo = semua kredit yang dicatat dikurangi biaya setelah tanggal saldo awal.' : 'Catat saldo awal kredit OpenAI dulu agar saldo bisa dihitung.',
+            'note' => $since ? 'Biaya persis dari Costs API OpenAI (bisa tertunda sampai sehari). Saldo = kredit yang dicatat dikurangi biaya sejak saldo awal. Dashboard OpenAI realtime, Costs API bisa telat beberapa jam: selisih kecil sementara itu normal dan hilang setelah sinkron.' : 'Catat saldo awal kredit OpenAI dulu agar saldo bisa dihitung.',
         ];
+    }
+
+    /**
+     * Samakan dengan dashboard: isi saldo yang tampil di dashboard OpenAI saat ini.
+     * Sinkron dulu, lalu titik acuan saldo awal disetel agar saldo = angka dashboard. Tercatat di audit.
+     */
+    public function calibrate(float $dashboardBalanceUsd, PlatformAdmin $by): array
+    {
+        if (! $by->canWriteFinance()) {
+            throw new InvalidArgumentException('Hanya admin keuangan aktif.');
+        }
+        if ($dashboardBalanceUsd < 0 || $dashboardBalanceUsd > 100000) {
+            throw new InvalidArgumentException('Saldo dashboard tidak valid.');
+        }
+        $opening = DB::table('platform_fin_ai_credits')->where('provider', self::PROVIDER)->where('kind', 'opening')->first()
+            ?? throw new InvalidArgumentException('Catat saldo awal dulu.');
+        if ($this->configured()) {
+            $this->sync(3);
+        }
+        $before = $this->status()['balance_usd'];
+        $credits = (float) DB::table('platform_fin_ai_credits')->where('provider', self::PROVIDER)->sum('amount_usd');
+        $since = DB::table('platform_fin_ai_credits')->where('provider', self::PROVIDER)->min('credited_at');
+        $usage = (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', $since)->sum('amount_usd');
+        $otherBaselines = (float) DB::table('platform_fin_ai_credits')->where('provider', self::PROVIDER)->where('id', '!=', $opening->id)->sum('usage_baseline_usd');
+        // saldo = kredit - (biaya - acuan)  =>  acuan = saldo - kredit + biaya
+        $newBaseline = round($dashboardBalanceUsd - $credits + $usage - $otherBaselines, 6);
+        DB::table('platform_fin_ai_credits')->where('id', $opening->id)->update(['usage_baseline_usd' => $newBaseline, 'updated_at' => now()]);
+        $after = $this->status()['balance_usd'];
+        AuditEvent::log('admin', $by->id, 'ai_credit.calibrated', \App\Models\PlatformFinance\Entry::find($opening->platform_fin_entry_id) ?? new \App\Models\PlatformFinance\Entry(),
+            ['balance_usd' => $before, 'usage_baseline_usd' => (float) $opening->usage_baseline_usd], ['balance_usd' => $after, 'usage_baseline_usd' => $newBaseline, 'dashboard_usd' => $dashboardBalanceUsd]);
+
+        return ['before' => $before, 'after' => $after];
     }
 
     /** Kurs rata-rata tertimbang dari kredit yang benar-benar dibayar (rupiah / USD). */

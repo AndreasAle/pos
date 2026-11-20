@@ -82,6 +82,13 @@
             <label class="text-sm font-semibold">No. invoice<input name="reference" maxlength="120" class="{{ $input }} mt-1"></label>
             <button class="sm:col-span-6 rounded-lg bg-[#0B1B3F] px-4 py-2.5 text-sm font-bold text-white">Catat kredit</button>
         </form>
+        @if($openai['tracking_since'])
+        <form method="POST" action="{{ route('platform.finance.openai.calibrate') }}" class="mt-3 flex flex-wrap items-center gap-2">
+            @csrf<input type="number" step="0.01" min="0" name="dashboard_usd" required placeholder="Saldo di dashboard OpenAI" class="{{ $input }} w-56">
+            <button class="border border-slate-300 px-3 py-2.5 text-sm font-bold">Samakan dengan dashboard</button>
+            <span class="text-xs text-slate-500">Sinkron dulu otomatis, lalu saldo disetel persis sama dengan angka dashboard. Tercatat di audit.</span>
+        </form>
+        @endif
         <form method="POST" action="{{ route('platform.finance.openai.expense') }}" class="mt-3 flex flex-wrap items-center gap-2">
             @csrf<input type="month" name="period" value="{{ today()->subMonth()->format('Y-m') }}" max="{{ today()->subMonth()->format('Y-m') }}" class="{{ $input }} w-44">
             <button class="border border-slate-300 px-3 py-2.5 text-sm font-bold">Ajukan beban AI bulan itu</button>

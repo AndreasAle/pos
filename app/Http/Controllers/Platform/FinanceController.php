@@ -377,6 +377,19 @@ class FinanceController extends Controller
         return back()->with('status', 'Kredit OpenAI dicatat.');
     }
 
+    public function openAiCalibrate(Request $request, OpenAiBilling $billing)
+    {
+        $this->guard();
+        $value = (float) $request->validate(['dashboard_usd' => 'required|numeric|min:0|max:100000'])['dashboard_usd'];
+        try {
+            $r = $billing->calibrate($value, auth('platform')->user());
+        } catch (InvalidArgumentException|\RuntimeException $e) {
+            return back()->withErrors(['finance' => $e->getMessage()]);
+        }
+
+        return back()->with('status', 'Saldo OpenAI disamakan dengan dashboard: US$'.number_format((float) $r['after'], 2).'.');
+    }
+
     public function openAiSync(OpenAiBilling $billing)
     {
         $by = $this->guard();
