@@ -35,6 +35,7 @@ class AgentFinanceTools
             'review' => $this->review->run($to),
             'payables' => app(ExpenseWorkflow::class)->payables($to),
             'cost_centers' => $this->ledger->costCenterReport($from, $to),
+            'ai_credits' => app(OpenAiBilling::class)->status(),
             'fixed_assets' => ['aset' => app(FixedAssets::class)->register()],
             'deferred_revenue' => ['saldo_diterima_di_muka' => app(RevenueRecognition::class)->deferredBalance($to), 'catatan' => 'Paket lebih dari 1 bulan diakui merata per bulan layanan.'],
             'reconciliation' => ['bank' => app(Reconciliation::class)->summary('1100', $to), 'midtrans' => app(Reconciliation::class)->summary('1200', $to)],

@@ -53,6 +53,42 @@
 
 <div x-show="tab === 'ringkasan'" x-cloak class="space-y-6">
     <div class="grid gap-6 lg:grid-cols-2">
+    <section class="rounded-xl border border-slate-200 bg-white p-6 lg:col-span-2">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-black">Kredit OpenAI</h2>
+                <p class="mt-1 text-xs text-slate-500">{{ $openai['note'] }}</p>
+            </div>
+            @if($openai['configured'])
+                @if($canWrite)<form method="POST" action="{{ route('platform.finance.openai.sync') }}">@csrf<button class="border border-slate-300 px-3 py-2 text-sm font-bold">Sinkron sekarang</button></form>@endif
+            @else
+                <x-pill tone="amber">Belum terhubung: isi OPENAI_ADMIN_KEY di .env server</x-pill>
+            @endif
+        </div>
+        <div class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+            <div class="rounded-lg p-3 {{ $openai['low'] ? 'bg-red-50' : 'bg-slate-50' }}"><p class="text-xs text-slate-500">Saldo</p><p class="text-xl font-black {{ $openai['low'] ? 'text-red-600' : '' }}">{{ $openai['balance_usd'] === null ? '-' : 'US$'.number_format($openai['balance_usd'], 2) }}</p><p class="text-xs text-slate-500">{{ $openai['days_left'] !== null ? 'cukup ±'.number_format($openai['days_left'], 1, ',', '.').' hari' : '' }}</p></div>
+            <div class="rounded-lg bg-slate-50 p-3"><p class="text-xs text-slate-500">Biaya bulan ini</p><p class="text-xl font-black">US${{ number_format($openai['this_month_usd'], 2) }}</p><p class="text-xs text-slate-500">rata-rata 7 hari US${{ number_format($openai['avg_daily_usd_7d'], 2) }}/hari</p></div>
+            <div class="rounded-lg bg-slate-50 p-3"><p class="text-xs text-slate-500">Kredit dicatat</p><p class="text-xl font-black">US${{ number_format($openai['credits_added_usd'], 2) }}</p><p class="text-xs text-slate-500">{{ $openai['tracking_since'] ? 'sejak '.\Illuminate\Support\Carbon::parse($openai['tracking_since'])->format('d/m/Y') : 'belum ada' }}</p></div>
+            <div class="rounded-lg bg-slate-50 p-3"><p class="text-xs text-slate-500">Sinkron terakhir</p><p class="font-black">{{ $openai['last_sync'] ? \Illuminate\Support\Carbon::parse($openai['last_sync'])->timezone('Asia/Jakarta')->format('d/m H:i') : '-' }}</p><p class="text-xs text-slate-500">{{ $openai['rate_idr_per_usd'] ? 'kurs rata-rata Rp '.number_format($openai['rate_idr_per_usd'], 0, ',', '.') : '' }}</p></div>
+        </div>
+        @if($canWrite)
+        <form method="POST" action="{{ route('platform.finance.openai.credit') }}" class="mt-5 grid gap-3 border-t border-slate-100 pt-4 sm:grid-cols-6">
+            @csrf
+            <label class="text-sm font-semibold">Jenis<select name="kind" class="{{ $input }} mt-1"><option value="opening">Saldo awal (angka di dashboard sekarang)</option><option value="purchase">Top-up / beli kredit</option><option value="grant">Kredit gratis / promo</option></select></label>
+            <label class="text-sm font-semibold">Tanggal<input type="date" name="credited_at" value="{{ today()->toDateString() }}" max="{{ today()->toDateString() }}" class="{{ $input }} mt-1" required></label>
+            <label class="text-sm font-semibold">USD<input type="number" step="0.01" min="0.01" name="amount_usd" class="{{ $input }} mt-1" required></label>
+            <label class="text-sm font-semibold">Rupiah terpotong<input type="number" step="1" min="0" name="amount_idr" class="{{ $input }} mt-1" placeholder="dari mutasi kartu/bank"></label>
+            <label class="text-sm font-semibold">Dibayar dari<select name="paid_from" class="{{ $input }} mt-1">@foreach($cashAccounts as $c)<option value="{{ $c->code }}">{{ $c->name }}</option>@endforeach<option value="reimbursement">Kartu pribadi, diganti</option><option value="capital">Kartu pribadi, modal</option></select></label>
+            <label class="text-sm font-semibold">No. invoice<input name="reference" maxlength="120" class="{{ $input }} mt-1"></label>
+            <button class="sm:col-span-6 rounded-lg bg-[#0B1B3F] px-4 py-2.5 text-sm font-bold text-white">Catat kredit</button>
+        </form>
+        <form method="POST" action="{{ route('platform.finance.openai.expense') }}" class="mt-3 flex flex-wrap items-center gap-2">
+            @csrf<input type="month" name="period" value="{{ today()->subMonth()->format('Y-m') }}" max="{{ today()->subMonth()->format('Y-m') }}" class="{{ $input }} w-44">
+            <button class="border border-slate-300 px-3 py-2.5 text-sm font-bold">Ajukan beban AI bulan itu</button>
+            <span class="text-xs text-slate-500">Biaya USD persis x kurs rata-rata kredit yang dibayar, masuk antrean persetujuan.</span>
+        </form>
+        @endif
+    </section>
     <section class="rounded-xl border border-slate-200 bg-white p-6">
         <h2 class="text-lg font-black">Perbandingan</h2>
         <p class="mt-1 text-xs text-slate-500">{{ $comparison['labels']['mom'] }} · {{ $comparison['labels']['ytd'] }}</p>

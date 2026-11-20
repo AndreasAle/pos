@@ -13,6 +13,12 @@ return [
         'webhook_secret' => env('BAYARPRO_WEBHOOK_SECRET'),
     ],
 
+    // Admin key organisasi OpenAI, HANYA untuk membaca biaya (Costs API) ke Keuangan Yoka.
+    'openai_admin' => [
+        'key' => env('OPENAI_ADMIN_KEY'),
+        'url' => env('OPENAI_ADMIN_BASE_URL', 'https://api.openai.com/v1'),
+    ],
+
     'yoka_ai' => [
         'key' => env('YOKA_AI_API_KEY'),
         'url' => env('YOKA_AI_BASE_URL', 'https://api.openai.com/v1'),

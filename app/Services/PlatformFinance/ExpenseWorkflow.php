@@ -44,7 +44,7 @@ class ExpenseWorkflow
             throw new InvalidArgumentException('Akun beban tidak valid.');
         }
         $payable = Account::whereIn('subtype', ['cash', 'bank', 'clearing'])->pluck('code')->all();
-        if (! in_array($data['paid_from'], $payable, true) && ! array_key_exists($data['paid_from'], Transactions::OWNER_FUNDING) && $data['paid_from'] !== Transactions::PAYABLE) {
+        if (! in_array($data['paid_from'], $payable, true) && ! array_key_exists($data['paid_from'], Transactions::OWNER_FUNDING) && ! in_array($data['paid_from'], [Transactions::PAYABLE, Transactions::PREPAID], true)) {
             throw new InvalidArgumentException('Sumber pembayaran tidak valid.');
         }
         $due = $data['paid_from'] === Transactions::PAYABLE && filled($data['due_date'] ?? null) ? Carbon::parse($data['due_date']) : null;

@@ -26,12 +26,19 @@ class Transactions
     /** Biaya ditagih tapi belum dibayar: dikreditkan ke Hutang Usaha. */
     public const PAYABLE = 'payable';
 
+    /** Biaya yang memakai kredit yang sudah dibayar di muka (mis. kredit OpenAI): dikreditkan ke Biaya Dibayar di Muka. */
+    public const PREPAID = 'prepaid';
+
     public function __construct(private Ledger $ledger) {}
 
     /** Beban dibayar dari akun kas/bank/Midtrans, atau ditalangi pemilik (paid_by = capital|loan|reimbursement). */
     public function expense(string $date, string $expenseCode, float $amount, string $paidFrom, string $description, ?int $by = null, ?string $evidence = null, ?string $key = null, ?string $costCenter = null): Entry
     {
-        $credit = $paidFrom === self::PAYABLE ? '2000' : (self::OWNER_FUNDING[$paidFrom] ?? $paidFrom);
+        $credit = match ($paidFrom) {
+            self::PAYABLE => '2000',
+            self::PREPAID => '1400',
+            default => self::OWNER_FUNDING[$paidFrom] ?? $paidFrom,
+        };
 
         return $this->ledger->post($date, $description, [[$expenseCode, $amount, 0, null, $costCenter], [$credit, 0, $amount]], 'manual', $key, null, $by, $evidence);
     }

@@ -46,6 +46,35 @@ class PlatformTelegramNotifications
         return $sent;
     }
 
+    /** Peringatan saldo kredit OpenAI rendah. Sekali per grup per hari per angka saldo. */
+    public function lowAiCreditAlert(float $balanceUsd, ?float $daysLeft): int
+    {
+        $sent = 0;
+        foreach (PlatformAiTelegramGroup::where('enabled', true)->get() as $group) {
+            if (! data_get($group->notification_settings, 'alerts', true)) {
+                continue;
+            }
+            $claim = PlatformAiTelegramNotification::claim('ai_credit_low', $group, null, today('Asia/Jakarta')->toDateString());
+            if (! $claim) {
+                continue;
+            }
+            $bot = $this->chief();
+            if (! $bot) {
+                $claim->update(['status' => 'skipped']);
+
+                continue;
+            }
+            $text = 'Saldo kredit OpenAI tinggal US$'.number_format($balanceUsd, 2)
+                .($daysLeft !== null ? ', cukup sekitar '.number_format($daysLeft, 1, ',', '.').' hari' : '')
+                .'. Auto-reload mati: kalau habis, Adit dan tim AI berhenti. Top-up lalu catat di Keuangan Yoka.';
+            $message = $this->gateway->send($bot, $group, $text);
+            $claim->update(['status' => $message->delivery_status, 'platform_ai_telegram_message_id' => $message->id]);
+            $sent += $message->delivery_status === 'delivered' ? 1 : 0;
+        }
+
+        return $sent;
+    }
+
     public function pendingAlerts(): int
     {
         $sent = 0;

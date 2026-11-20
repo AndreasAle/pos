@@ -103,6 +103,10 @@ Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts
 Schedule::call(fn () => app(\App\Services\PlatformTelegramOffice::class)->chatter())
     ->everyFifteenMinutes()->name('platform-telegram-office-chatter')->withoutOverlapping(10);
 
+// Keuangan Yoka: biaya OpenAI persis dari Costs API (hanya bila OPENAI_ADMIN_KEY diisi) + peringatan saldo.
+Schedule::command('yoka:finance-sync-openai')->twiceDaily(7, 19)->name('finance-sync-openai')->withoutOverlapping()
+    ->when(fn () => filled(config('services.openai_admin.key')));
+
 // Keuangan Yoka: akui pendapatan diterima di muka yang jatuh waktu (idempoten).
 Schedule::command('yoka:finance-recognize-revenue')->dailyAt('01:10')->name('finance-recognize-revenue')->withoutOverlapping();
 

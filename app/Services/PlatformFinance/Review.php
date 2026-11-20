@@ -75,6 +75,12 @@ class Review
             $findings[] = ['severity' => 'medium', 'issue' => 'Mutasi rekening belum dicocokkan', 'detail' => "{$unmatched} baris mutasi bank/Midtrans belum ada pasangannya di buku besar. Catat transaksinya atau tandai diabaikan dengan alasan."];
         }
 
+        // Saldo kredit OpenAI (biaya persis dari Costs API).
+        $ai = app(OpenAiBilling::class)->status();
+        if ($ai['low']) {
+            $findings[] = ['severity' => 'high', 'issue' => 'Saldo kredit OpenAI rendah', 'detail' => 'Sisa US$'.number_format($ai['balance_usd'], 2).($ai['days_left'] !== null ? ', sekitar '.$ai['days_left'].' hari lagi' : '').'. Top-up sebelum layanan AI berhenti.'];
+        }
+
         // Tagihan (hutang usaha) yang lewat jatuh tempo.
         $ap = app(ExpenseWorkflow::class)->payables($asOf);
         if ($ap['overdue'] > 0) {

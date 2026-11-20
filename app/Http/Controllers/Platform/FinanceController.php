@@ -19,6 +19,7 @@ use App\Services\PlatformFinance\Reconciliation;
 use App\Services\PlatformFinance\BudgetPlanner;
 use App\Services\PlatformFinance\CashForecast;
 use App\Services\PlatformFinance\FixedAssets;
+use App\Services\PlatformFinance\OpenAiBilling;
 use App\Services\PlatformFinance\RevenueRecognition;
 use App\Models\PlatformFinance\BudgetVersion;
 use App\Models\PlatformFinance\StatementLine;
@@ -84,6 +85,7 @@ class FinanceController extends Controller
             'assets' => app(FixedAssets::class)->register(),
             'deferred' => app(RevenueRecognition::class)->deferredBalance($to),
             'costCenterLabels' => Ledger::COST_CENTERS,
+            'openai' => app(OpenAiBilling::class)->status(),
         ]);
     }
 
@@ -357,6 +359,48 @@ class FinanceController extends Controller
         }
 
         return back()->with('status', count($done).' aset disusutkan untuk '.$period.'.');
+    }
+
+    public function openAiCredit(Request $request, OpenAiBilling $billing)
+    {
+        $this->guard();
+        $data = $request->validate([
+            'kind' => 'required|in:opening,purchase,grant', 'credited_at' => 'required|date|before_or_equal:today', 'amount_usd' => 'required|numeric|min:0.01|max:100000',
+            'amount_idr' => 'nullable|numeric|min:0', 'paid_from' => 'nullable|string|max:20', 'expires_at' => 'nullable|date', 'reference' => 'nullable|string|max:120',
+        ]);
+        try {
+            $billing->recordCredit($data, auth('platform')->user());
+        } catch (InvalidArgumentException $e) {
+            return back()->withInput()->withErrors(['finance' => $e->getMessage()]);
+        }
+
+        return back()->with('status', 'Kredit OpenAI dicatat.');
+    }
+
+    public function openAiSync(OpenAiBilling $billing)
+    {
+        $by = $this->guard();
+        try {
+            $rows = $billing->sync(31);
+        } catch (\RuntimeException $e) {
+            return back()->withErrors(['finance' => $e->getMessage()]);
+        }
+        AuditEvent::log('admin', $by, 'ai_usage.synced', Entry::latest('id')->first() ?? new Entry(), null, ['rows' => $rows]);
+
+        return back()->with('status', "Biaya OpenAI disinkron ({$rows} baris).");
+    }
+
+    public function openAiExpense(Request $request, OpenAiBilling $billing)
+    {
+        $by = $this->guard();
+        $period = $request->validate(['period' => 'required|date_format:Y-m'])['period'];
+        try {
+            $billing->draftMonthlyExpense($period, 'admin', $by);
+        } catch (InvalidArgumentException $e) {
+            return back()->withErrors(['finance' => $e->getMessage()]);
+        }
+
+        return back()->with('status', "Beban OpenAI {$period} diajukan. Setujui di antrean persetujuan.");
     }
 
     public function recognizeRevenue(RevenueRecognition $recognition)
