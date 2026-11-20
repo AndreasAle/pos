@@ -245,6 +245,13 @@ class MidtransController extends Controller
                         'notes' => 'Pembayaran Midtrans berhasil',
                     ]);
                 });
+                // Buku besar Yoka: idempoten per langganan. Gagal mencatat tidak boleh menggagalkan
+                // aktivasi langganan; selisihnya ditangkap ulang oleh yoka:finance-sync-midtrans.
+                try {
+                    app(\App\Services\PlatformFinance\Transactions::class)->subscriptionPaid($sub->fresh());
+                } catch (\Throwable $e) {
+                    Log::warning('Platform ledger: subscription payment not posted', ['subscription_id' => $sub->id, 'error' => class_basename($e)]);
+                }
             } elseif (in_array($txStatus, ['deny', 'cancel', 'expire'], true) && $sub->status === 'pending') {
                 $sub->update(['status' => 'cancelled', 'notes' => 'Pembayaran Midtrans '.$txStatus]);
             }

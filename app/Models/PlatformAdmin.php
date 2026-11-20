@@ -65,6 +65,17 @@ class PlatformAdmin extends Authenticatable
         return in_array($this->role, ['super_admin', 'finance'], true);
     }
 
+    /** Halaman Keuangan Yoka: auditor keuangan boleh melihat dan mengekspor, tidak boleh mengubah. */
+    public function canViewYokaFinance(): bool
+    {
+        return in_array($this->role, ['super_admin', 'finance', 'finance_auditor'], true);
+    }
+
+    public function canWriteFinance(): bool
+    {
+        return $this->is_active && in_array($this->role, ['super_admin', 'finance'], true);
+    }
+
     /** Buat 8 kode pemulihan sekali pakai. Yang disimpan hanya hash-nya; kode asli dikembalikan sekali. */
     public function generateRecoveryCodes(): array
     {

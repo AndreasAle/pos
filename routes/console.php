@@ -103,6 +103,9 @@ Schedule::call(fn () => app(PlatformTelegramNotifications::class)->pendingAlerts
 Schedule::call(fn () => app(\App\Services\PlatformTelegramOffice::class)->chatter())
     ->everyFifteenMinutes()->name('platform-telegram-office-chatter')->withoutOverlapping(10);
 
+// Keuangan Yoka: akui pendapatan diterima di muka yang jatuh waktu (idempoten).
+Schedule::command('yoka:finance-recognize-revenue')->dailyAt('01:10')->name('finance-recognize-revenue')->withoutOverlapping();
+
 // ── Backup database terenkripsi — harian 02:30, hanya bila YOKA_BACKUP_ENABLED=true ──
 Schedule::command('yoka:backup')->dailyAt('02:30')->name('db-backup')->withoutOverlapping()
     ->when(fn () => (bool) config('backup.enabled'));

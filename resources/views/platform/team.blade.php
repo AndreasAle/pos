@@ -2,7 +2,7 @@
 @section('title', 'Tim Yoka')
 
 @section('content')
-@php $input = 'w-full border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-emerald-600 focus:outline-none'; $roles = ['super_admin' => 'Super admin', 'support' => 'Support', 'finance' => 'Finance']; @endphp
+@php $input = 'w-full border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-emerald-600 focus:outline-none'; $roles = ['super_admin' => 'Super admin', 'support' => 'Support', 'finance' => 'Finance', 'finance_auditor' => 'Auditor keuangan (lihat saja)']; @endphp
 <div class="mb-7">
     <h1 class="text-3xl font-black">Tim Yoka</h1>
     <p class="mt-1 text-sm text-slate-500">Akun yang bisa masuk ke platform. Super admin: semua akses · Support: toko dan bantuan · Finance: penarikan dan keuangan.</p>

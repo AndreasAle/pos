@@ -13,7 +13,7 @@ use Illuminate\Validation\Rule;
 /** Kelola akun tim Yoka (khusus super admin). Semua perubahan tercatat. */
 class TeamController extends Controller
 {
-    private const ROLES = ['super_admin', 'support', 'finance'];
+    private const ROLES = ['super_admin', 'support', 'finance', 'finance_auditor'];
 
     public function index()
     {

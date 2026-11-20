@@ -23,7 +23,7 @@ class CreatePlatformAdmin extends Command
 
         $validator = Validator::make(compact('email', 'role', 'name', 'password'), [
             'email' => ['required', 'email'],
-            'role' => ['required', Rule::in(['super_admin', 'support', 'finance'])],
+            'role' => ['required', Rule::in(['super_admin', 'support', 'finance', 'finance_auditor'])],
             'name' => ['required', 'string', 'max:100'],
             'password' => ['required', 'string', 'min:12'],
         ]);
