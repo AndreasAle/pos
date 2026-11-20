@@ -149,6 +149,16 @@
             </x-nav-group>
             @endif
 
+            @if($role === 'owner')
+            <x-nav-group title="Langganan & Saldo" :routes="['saas.*','balance.*']">
+                {{-- Selalu tampil untuk owner: halaman paket hanya menawarkan upgrade, tidak mengunci akses (penguncian diatur FEATURE_SUBSCRIPTION). --}}
+                <x-nav-item route="saas.plans" icon="credit-card">Paket Langganan</x-nav-item>
+                @if(config('pos.features.balance'))
+                <x-nav-item route="balance.index" icon="banknotes">Saldo & Penarikan</x-nav-item>
+                @endif
+            </x-nav-group>
+            @endif
+
         </nav>
 
         @php $supportUrl = config('pos.support_url') ?: 'mailto:' . config('mail.from.address'); @endphp

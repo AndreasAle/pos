@@ -19,6 +19,7 @@ class LandingPricingTest extends TestCase
 
         $this->get('/')->assertOk()
             ->assertSee('Rp99.000')->assertSee('Rp249.000')->assertSee('Rp499.000')
-            ->assertSee('/ bulan')->assertSee('Harga dalam Rupiah (IDR)');
+            ->assertSee('/ bulan')->assertSee('Harga dalam Rupiah (IDR)')
+            ->assertSee('href="'.route('register').'"', false);
     }
 }

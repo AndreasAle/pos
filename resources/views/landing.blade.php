@@ -703,7 +703,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <a href="{{ $waLink }}" target="_blank"
+                        <a href="{{ $name === 'Custom' ? $waLink : route('register') }}" @if($name === 'Custom') target="_blank" rel="noopener" @endif
                            class="block text-center px-4 py-3 rounded-xl font-semibold transition-colors {{ $highlight ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">
                             {{ $cta }}
                         </a>
