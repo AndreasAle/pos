@@ -62,10 +62,10 @@ class OpenAiBillingTest extends TestCase
         $this->fakeCosts();
         app(OpenAiBilling::class)->sync(31);
         $billing = app(OpenAiBilling::class);
-        $billing->recordCredit(['kind' => 'opening', 'credited_at' => '2026-11-01', 'amount_usd' => 2.66, 'amount_idr' => 43000], $this->owner);
+        $billing->recordCredit(['kind' => 'opening', 'credited_at' => '2026-11-10', 'amount_usd' => 2.41, 'amount_idr' => 43000], $this->owner);
 
         $s = $billing->status();
-        $this->assertSame(2.33, $s['balance_usd'], 'US$2,66 - 0,25 - 0,0812 = US$2,33 (biaya Oktober sebelum saldo awal tidak dihitung).');
+        $this->assertSame(2.33, $s['balance_usd'], 'Saldo awal 10 Nov US$2,41 (dashboard sudah memotong biaya 10 Nov) - biaya 18 Nov 0,0812 = US$2,33.');
         $this->assertTrue($s['low']);
         $this->assertContains('Saldo kredit OpenAI rendah', array_column(app(Review::class)->run()['findings'], 'issue'));
 

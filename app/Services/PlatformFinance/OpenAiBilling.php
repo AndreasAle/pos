@@ -130,7 +130,12 @@ class OpenAiBilling
         $credits = DB::table('platform_fin_ai_credits')->where('provider', self::PROVIDER);
         $since = (clone $credits)->min('credited_at');
         $added = (float) (clone $credits)->sum('amount_usd');
-        $used = $since ? (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', $since)->sum('amount_usd') : 0.0;
+        // Saldo awal diambil dari dashboard yang SUDAH dipotong pemakaian hari itu, jadi biaya baru dihitung mulai besoknya.
+        $opening = (clone $credits)->where('kind', 'opening')->value('credited_at');
+        $usage = DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER);
+        $used = ! $since ? 0.0 : (float) ($opening && $opening === $since
+            ? $usage->where('usage_date', '>', $opening)->sum('amount_usd')
+            : $usage->where('usage_date', '>=', $since)->sum('amount_usd'));
         $month = (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', today()->startOfMonth()->toDateString())->sum('amount_usd');
         $last7 = (float) DB::table('platform_fin_ai_usage')->where('provider', self::PROVIDER)->where('usage_date', '>=', today()->subDays(7)->toDateString())->where('usage_date', '<', today()->toDateString())->sum('amount_usd');
         $balance = $since ? round($added - $used, 2) : null;
@@ -149,7 +154,7 @@ class OpenAiBilling
             'low_threshold_usd' => (float) config('yoka_finance.openai_low_balance_usd', 5),
             'low' => $balance !== null && $balance < (float) config('yoka_finance.openai_low_balance_usd', 5),
             'rate_idr_per_usd' => $this->rate(),
-            'note' => $since ? 'Biaya persis dari Costs API OpenAI (bisa tertunda sampai sehari). Saldo = semua kredit yang dicatat dikurangi biaya sejak saldo awal.' : 'Catat saldo awal kredit OpenAI dulu agar saldo bisa dihitung.',
+            'note' => $since ? 'Biaya persis dari Costs API OpenAI (bisa tertunda sampai sehari). Saldo = semua kredit yang dicatat dikurangi biaya setelah tanggal saldo awal.' : 'Catat saldo awal kredit OpenAI dulu agar saldo bisa dihitung.',
         ];
     }
 
