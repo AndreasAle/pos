@@ -42,6 +42,10 @@ class ProspectDesk
     public function check(PlatformAiProspect $p): PlatformAiProspect
     {
         $issues = [];
+        foreach (['business_name', 'contact_name', 'phone', 'business_type', 'city', 'source', 'notes'] as $f) {
+            $p->{$f} = (string) ($p->{$f} ?? ''); // baris baru dari "Tambah baris" masih kosong
+        }
+        $p->status ??= 'baru';
         $p->business_name = Str::of($p->business_name)->squish()->limit(150, '')->toString();
         $p->contact_name = Str::of($p->contact_name)->squish()->title()->limit(100, '')->toString();
         $p->city = Str::of($p->city)->squish()->title()->limit(80, '')->toString();

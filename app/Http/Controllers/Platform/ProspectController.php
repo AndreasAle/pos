@@ -53,7 +53,7 @@ class ProspectController extends Controller
         $this->guard();
         $data = array_map(fn ($v) => $v ?? '', $request->validate($this->rules()));
         $p = new PlatformAiProspect(array_filter($data, fn ($v) => $v !== '') + ['created_by' => auth('platform')->id(), 'status' => 'baru']);
-        $p->outlet_count = $data['outlet_count'] === '' ? null : (int) $data['outlet_count'];
+        $p->outlet_count = ($data['outlet_count'] ?? '') === '' ? null : (int) $data['outlet_count'];
         $desk->check($p);
 
         return response()->json($this->row($p->fresh()), 201);

@@ -140,6 +140,11 @@ class ProspectDeskTest extends TestCase
     {
         $this->as()->get(route('platform.prospects.index'))->assertOk()->assertSee('Prospek Adit')->assertSee('Tempel dari spreadsheet');
 
+        // "Tambah baris" mengirim baris kosong: harus jadi baris baru berstatus perlu dicek, bukan error.
+        $blank = $this->as()->postJson(route('platform.prospects.store'), [])->assertCreated()->json();
+        $this->assertSame('perlu_dicek', $blank['status']);
+        $this->as()->deleteJson(url('platform/prospects/'.$blank['id']))->assertOk();
+
         $text = "Nama bisnis\tKontak\tNo WA\tJenis\tKota\tOutlet\tSumber\tCatatan\nBakso Pak Kumis\tKumis\t081311112222\twarung bakso\tdepok\t2\tTetangga\tramai malam\nToko Maju\t\t0813\tretail\tbogor\t\t\t";
         $rows = $this->as()->postJson(route('platform.prospects.paste'), ['text' => $text])->assertOk()->json('rows');
         $this->assertCount(2, $rows);
