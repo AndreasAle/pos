@@ -33,64 +33,71 @@
         @endforeach
     </div>
 
-    <section class="rounded-xl border border-slate-200 bg-white">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-            <div class="flex gap-2">
-                <button type="button" @click="addRow()" class="rounded-lg bg-[#16A34A] px-3 py-2 text-sm font-bold text-white">+ Tambah baris</button>
-                <button type="button" @click="pasteOpen = !pasteOpen" class="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold">Tempel dari spreadsheet</button>
+    <section class="overflow-hidden rounded-xl border border-slate-300 bg-white">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[#F8FAFD] px-3 py-2">
+            <div class="flex items-center gap-3 text-sm">
+                <button type="button" @click="addRow()" class="rounded-md bg-[#16A34A] px-3 py-1.5 text-sm font-bold text-white">+ Tambah baris</button>
+                <span class="text-xs text-slate-500">Ketik langsung di baris kosong, atau salin dari Google Sheets lalu tempel (Ctrl+V) di sel mana saja.</span>
             </div>
             <div class="flex items-center gap-2 text-sm">
-                <input x-model="q" placeholder="Cari nama, nomor, kota..." class="w-56 rounded-lg border border-slate-300 px-3 py-2">
-                <select x-model="filter" class="rounded-lg border border-slate-300 px-3 py-2">
+                <input x-model="q" placeholder="Cari nama, nomor, kota..." class="w-56 rounded-md border border-slate-300 px-3 py-1.5">
+                <select x-model="filter" class="rounded-md border border-slate-300 px-3 py-1.5">
                     <option value="">Semua status</option>
                     @foreach($statuses as $k => $l)<option value="{{ $k }}">{{ $l }}</option>@endforeach
                 </select>
             </div>
         </div>
-        <div x-show="pasteOpen" x-cloak class="border-b border-slate-100 bg-slate-50 px-4 py-3">
-            <p class="text-xs text-slate-500">Urutan kolom: Nama bisnis, Nama kontak, No. WhatsApp, Jenis usaha, Kota, Jumlah outlet, Sumber nomor, Catatan. Salin dari Google Sheets lalu tempel di sini (baris judul boleh ikut). Maks 500 baris.</p>
-            <textarea x-model="pasteText" rows="5" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs"></textarea>
-            <button type="button" @click="paste()" :disabled="busy" class="mt-2 rounded-lg bg-[#0B1B3F] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Tambahkan</button>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-[1500px] w-full border-collapse text-sm">
-                <thead class="bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                    <tr>
-                        <th class="w-10 border-b border-r border-slate-200 px-2 py-2 text-center">#</th>
-                        @foreach($cols as [$k, $label, $w])<th class="{{ $w }} border-b border-r border-slate-200 px-2 py-2">{{ $label }}</th>@endforeach
-                        <th class="w-40 border-b border-r border-slate-200 px-2 py-2">Status</th>
-                        <th class="w-72 border-b border-slate-200 px-2 py-2">Cek Adit</th>
-                        <th class="w-28 border-b border-slate-200 px-2 py-2"></th>
+        <div class="max-h-[70vh] overflow-auto">
+            <table class="w-full min-w-[1600px] border-collapse text-[13px]" style="font-family: Arial, sans-serif">
+                <thead class="sticky top-0 z-10">
+                    <tr class="bg-[#F1F3F4] text-center text-[11px] text-slate-500">
+                        <th class="w-10 border border-slate-300"></th>
+                        @foreach(range(0, count($cols) + 2) as $i)<th class="border border-slate-300 py-0.5 font-normal">{{ chr(65 + $i) }}</th>@endforeach
+                    </tr>
+                    <tr class="bg-[#274E3D] text-center text-xs font-bold text-white">
+                        <th class="border border-slate-300 bg-[#F1F3F4] text-[11px] font-normal text-slate-500">1</th>
+                        @foreach($cols as [$k, $label, $w])<th class="{{ $w }} border border-slate-400 px-2 py-2">{{ $label }}</th>@endforeach
+                        <th class="w-40 border border-slate-400 px-2 py-2">Status</th>
+                        <th class="w-80 border border-slate-400 px-2 py-2">Cek Adit</th>
+                        <th class="w-28 border border-slate-400 px-2 py-2">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     <template x-for="(r, i) in visible()" :key="r.id">
-                        <tr class="align-top hover:bg-slate-50/60">
-                            <td class="border-b border-r border-slate-100 px-2 py-1.5 text-center text-xs text-slate-400" x-text="r.id"></td>
+                        <tr class="align-middle">
+                            <td class="border border-slate-300 bg-[#F1F3F4] text-center text-[11px] text-slate-500" x-text="i + 2"></td>
                             @foreach($cols as [$k, $label, $w])
-                            <td class="border-b border-r border-slate-100 p-0">
-                                <input :value="r.{{ $k }} ?? ''" @change="save(r, '{{ $k }}', $event.target.value)" @keydown.enter.prevent="$event.target.blur()"
+                            <td class="border border-slate-300 p-0">
+                                <input :value="r.{{ $k }} ?? ''" @change="save(r, '{{ $k }}', $event.target.value)" @keydown.enter.prevent="$event.target.blur()" @paste="onPaste($event)"
                                        :readonly="'{{ $k }}' === 'phone' && r.locked" @if($k === 'outlet_count') type="number" min="1" @endif
-                                       class="block w-full bg-transparent px-2 py-2 outline-none focus:bg-emerald-50 focus:ring-2 focus:ring-inset focus:ring-emerald-500">
+                                       class="block w-full bg-transparent px-2 py-1.5 outline-none focus:ring-2 focus:ring-inset focus:ring-[#1A73E8] {{ $k === 'outlet_count' ? 'text-center' : '' }}">
                             </td>
                             @endforeach
-                            <td class="border-b border-r border-slate-100 px-2 py-1.5">
-                                <span class="inline-block rounded-full px-2 py-0.5 text-xs font-bold" :class="tone[r.status] || tone.baru" x-text="r.status_label"></span>
-                                <p class="mt-1 text-[11px] text-slate-500" x-show="r.contact_count > 0" x-text="'Dihubungi ' + r.contact_count + 'x' + (r.last_contacted ? ', ' + r.last_contacted : '') + (r.last_reply ? ' · balas ' + r.last_reply : '')"></p>
+                            <td class="border border-slate-300 px-2 py-1 text-center">
+                                <span class="inline-block rounded px-2 py-0.5 text-xs font-bold" :class="tone[r.status] || tone.baru" x-text="r.status_label"></span>
+                                <p class="text-[10px] text-slate-500" x-show="r.contact_count > 0" x-text="'Dihubungi ' + r.contact_count + 'x' + (r.last_reply ? ' · balas ' + r.last_reply : '')"></p>
                             </td>
-                            <td class="border-b border-r border-slate-100 px-2 py-1.5 text-xs">
+                            <td class="border border-slate-300 px-2 py-1 text-xs">
                                 <template x-for="it in r.issues"><p :class="it.level === 'blok' ? 'text-red-600' : (it.level === 'saran' ? 'text-amber-700' : 'text-slate-500')" x-text="it.text"></p></template>
                                 <p x-show="!r.issues.length" class="text-emerald-700">Data lengkap, aman dihubungi.</p>
                             </td>
-                            <td class="border-b border-slate-100 px-2 py-1.5 text-xs">
-                                <select @change="setStatus(r, $event.target.value); $event.target.value = ''" class="w-full rounded border border-slate-200 px-1 py-1" x-show="r.contact_count > 0">
+                            <td class="border border-slate-300 px-2 py-1 text-center text-xs">
+                                <select @change="setStatus(r, $event.target.value); $event.target.value = ''" class="w-full rounded border border-slate-200 px-1 py-0.5" x-show="r.contact_count > 0">
                                     <option value="">Tandai...</option><option value="tertarik">Tertarik</option><option value="tidak_minat">Tidak minat</option><option value="berhenti">Minta berhenti</option>
                                 </select>
                                 <button type="button" x-show="!r.locked" @click="remove(r)" class="text-red-600 hover:underline">Hapus</button>
                             </td>
                         </tr>
                     </template>
-                    <tr x-show="!rows.length"><td colspan="12" class="px-4 py-10 text-center text-slate-500">Belum ada prospek. Klik Tambah baris atau tempel dari spreadsheet.</td></tr>
+                    <template x-for="n in blanks()" :key="'b' + n">
+                        <tr>
+                            <td class="border border-slate-300 bg-[#F1F3F4] text-center text-[11px] text-slate-500" x-text="visible().length + n + 1"></td>
+                            @foreach($cols as [$k, $label, $w])
+                            <td class="border border-slate-300 p-0"><input @change="createFrom('{{ $k }}', $event.target)" @keydown.enter.prevent="$event.target.blur()" @paste="onPaste($event)" @if($k === 'outlet_count') type="number" min="1" @endif class="block w-full bg-transparent px-2 py-1.5 outline-none focus:ring-2 focus:ring-inset focus:ring-[#1A73E8]"></td>
+                            @endforeach
+                            <td class="border border-slate-300"></td><td class="border border-slate-300"></td><td class="border border-slate-300"></td>
+                        </tr>
+                    </template>
                 </tbody>
             </table>
         </div>
@@ -114,9 +121,19 @@ function prospectSheet(rows, tone) {
             return this.rows.filter(r => (!this.filter || r.status === this.filter)
                 && (!q || [r.business_name, r.contact_name, r.phone, r.city, r.business_type].join(' ').toLowerCase().includes(q)));
         },
+        blanks() { return Math.max(25 - this.visible().length, 8); },
+        async createFrom(field, el) {
+            const v = el.value.trim(); if (!v) return;
+            try { this.error = ''; this.rows.push(await call('POST', @js(route('platform.prospects.store')), { [field]: v })); el.value = ''; } catch (e) { this.error = e.message; }
+        },
+        onPaste(e) {
+            const t = (e.clipboardData || window.clipboardData).getData('text');
+            if (!/[\t\n]/.test(t.trim())) return;
+            e.preventDefault(); this.pasteText = t; this.paste();
+        },
         replace(row) { const i = this.rows.findIndex(r => r.id === row.id); if (i >= 0) this.rows.splice(i, 1, row); },
         async addRow() {
-            try { this.error = ''; this.rows.unshift(await call('POST', @js(route('platform.prospects.store')), {})); } catch (e) { this.error = e.message; }
+            try { this.error = ''; this.rows.push(await call('POST', @js(route('platform.prospects.store')), {})); } catch (e) { this.error = e.message; }
         },
         async save(r, field, value) {
             if ((r[field] ?? '') == value) return;
@@ -133,7 +150,7 @@ function prospectSheet(rows, tone) {
         async paste() {
             if (!this.pasteText.trim()) return;
             this.busy = true;
-            try { const d = await call('POST', @js(route('platform.prospects.paste')), { text: this.pasteText }); this.rows = [...d.rows.reverse(), ...this.rows]; this.pasteText = ''; this.pasteOpen = false; this.error = ''; }
+            try { const d = await call('POST', @js(route('platform.prospects.paste')), { text: this.pasteText }); this.rows = [...this.rows, ...d.rows]; this.pasteText = ''; this.pasteOpen = false; this.error = ''; }
             catch (e) { this.error = e.message; } finally { this.busy = false; }
         },
     };

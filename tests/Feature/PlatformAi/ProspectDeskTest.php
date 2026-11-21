@@ -138,7 +138,7 @@ class ProspectDeskTest extends TestCase
 
     public function test_spreadsheet_page_paste_edit_and_delete(): void
     {
-        $this->as()->get(route('platform.prospects.index'))->assertOk()->assertSee('Prospek Adit')->assertSee('Tempel dari spreadsheet');
+        $this->as()->get(route('platform.prospects.index'))->assertOk()->assertSee('Prospek Adit')->assertSee('Ketik langsung di baris kosong');
 
         // "Tambah baris" mengirim baris kosong: harus jadi baris baru berstatus perlu dicek, bukan error.
         $blank = $this->as()->postJson(route('platform.prospects.store'), [])->assertCreated()->json();

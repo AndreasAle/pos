@@ -42,7 +42,7 @@ class ProspectController extends Controller
         $this->guard();
 
         return view('platform.prospects', [
-            'rows' => PlatformAiProspect::orderByDesc('id')->limit(1000)->get()->map(fn ($p) => $this->row($p))->values(),
+            'rows' => PlatformAiProspect::orderBy('id')->limit(1000)->get()->map(fn ($p) => $this->row($p))->values(),
             'stats' => $desk->stats(),
             'statuses' => PlatformAiProspect::STATUSES,
         ]);
