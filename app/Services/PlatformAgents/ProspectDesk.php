@@ -147,6 +147,7 @@ class ProspectDesk
             'payload' => ['kind' => $kind, 'prospect_id' => $p->id, 'phone' => $p->phone_normalized, 'channel' => 'whatsapp'],
         ]);
         $p->update(['status' => 'dijadwalkan', 'last_task_id' => $task->id]);
+        $this->stage($p, 'outreach_pending_approval', 'adit', 'Draf '.$kind.' disusun.');
 
         return ['prospect' => $p->business_name, 'kind' => $kind];
     }
@@ -159,6 +160,7 @@ class ProspectDesk
             return;
         }
         $p->update(['status' => in_array($p->status, ['membalas', 'tertarik'], true) ? $p->status : 'dihubungi', 'contact_count' => $p->contact_count + 1, 'last_contacted_at' => now()]);
+        $this->stage($p, 'outreach_sent', 'admin:'.($task->approved_by ?? '?'), 'Disetujui & dikirim.', "sent:{$task->id}");
     }
 
     /** Draf ditolak: prospek kembali ke antrean (atau tetap 'dihubungi' bila sudah pernah dihubungi). */
@@ -167,6 +169,7 @@ class ProspectDesk
         $p = PlatformAiProspect::find(data_get($task->payload, 'prospect_id'));
         if ($p && $p->status === 'dijadwalkan') {
             $p->update(['status' => $p->contact_count > 0 ? 'dihubungi' : 'siap']);
+            $this->stage($p, $p->contact_count > 0 ? 'outreach_sent' : 'new_lead', 'admin', 'Draf ditolak.');
         }
     }
 
@@ -187,6 +190,9 @@ class ProspectDesk
             $changes['status'] = 'membalas';
         }
         $p->update($changes);
+        if ($p->opted_out_at) {
+            $this->stage($p, 'opted_out', 'prospek', 'Prospek minta berhenti dihubungi.');
+        }
 
         return $p;
     }
@@ -222,6 +228,7 @@ class ProspectDesk
             $status = $paid ? 'bayar' : 'trial';
             if ($p->status !== $status) {
                 $p->update(['status' => $status, 'matched_business_id' => $business->id]);
+                app(Sales\SalesOrchestrator::class)->syncTrial($p);
                 $n++;
             }
         }
@@ -269,6 +276,12 @@ class ProspectDesk
         return "{$hi}, Adit dari Yoka POS lagi. Mau pastikan pesan kemarin sampai. "
             .'Kalau sekarang belum butuh aplikasi kasir, tidak apa-apa kak, saya tidak akan mengganggu lagi. '
             .'Kalau penasaran, coba gratis 7 hari di yokapos.com/register.';
+    }
+
+    /** Tahap penjualan (Adit BD 2.0) ikut bergerak; transisi tidak sah diabaikan dan tercatat. */
+    private function stage(PlatformAiProspect $p, string $to, string $actor, string $reason, ?string $key = null): void
+    {
+        app(Sales\SalesStateMachine::class)->transition($p, $to, $actor, $reason, [], $key);
     }
 
     private function normalizeType(string $type, string $name): string

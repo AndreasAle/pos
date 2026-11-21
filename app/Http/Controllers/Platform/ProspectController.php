@@ -25,6 +25,10 @@ class ProspectController extends Controller
             'last_contacted' => $p->last_contacted_at?->timezone('Asia/Jakarta')->format('d/m H:i'),
             'last_reply' => $p->last_reply_at?->timezone('Asia/Jakarta')->format('d/m H:i'),
             'locked' => $p->contact_count > 0 || $p->status === 'dijadwalkan',
+            'stage_label' => \App\Services\PlatformAgents\Sales\SalesStateMachine::STAGES[$p->sales_stage ?? 'new_lead'] ?? $p->sales_stage,
+            'qualification' => data_get($p->intelligence, 'qualification.category'),
+            'next_action' => data_get($p->intelligence, 'qualification.next_action'),
+            'objections' => collect(data_get($p->intelligence, 'objections', []))->pluck('type')->unique()->values()->all(),
         ];
     }
 
@@ -44,6 +48,7 @@ class ProspectController extends Controller
         return view('platform.prospects', [
             'rows' => PlatformAiProspect::orderBy('id')->limit(1000)->get()->map(fn ($p) => $this->row($p))->values(),
             'stats' => $desk->stats(),
+            'bd' => app(\App\Services\PlatformAgents\Sales\SalesMetrics::class)->summary(),
             'statuses' => PlatformAiProspect::STATUSES,
         ]);
     }
@@ -122,6 +127,10 @@ class ProspectController extends Controller
         $this->guard();
         $status = $request->validate(['status' => 'required|in:tertarik,tidak_minat,berhenti,dihubungi'])['status'];
         $prospect->update(['status' => $status] + ($status === 'berhenti' ? ['opted_out_at' => now()] : []));
+        $to = ['berhenti' => 'opted_out', 'tidak_minat' => 'lost'][$status] ?? null;
+        if ($to) {
+            app(\App\Services\PlatformAgents\Sales\SalesStateMachine::class)->transition($prospect, $to, 'admin:'.auth('platform')->id(), "Ditandai {$status} oleh admin.");
+        }
         PlatformActivityLog::record('prospects.status', "Status prospek {$prospect->business_name} diubah ke {$status}.", $prospect);
 
         return response()->json($this->row($prospect->fresh()));

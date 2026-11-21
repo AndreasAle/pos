@@ -17,10 +17,10 @@ class PlatformAiProspect extends Model
     public const EDITABLE = ['business_name', 'contact_name', 'phone', 'business_type', 'city', 'outlet_count', 'source', 'notes'];
 
     protected $fillable = ['business_name', 'contact_name', 'phone', 'phone_normalized', 'business_type', 'city', 'outlet_count', 'source', 'notes',
-        'status', 'check_issues', 'checked_at', 'contact_count', 'last_contacted_at', 'last_reply_at', 'matched_business_id', 'last_task_id', 'opted_out_at', 'created_by'];
+        'status', 'check_issues', 'checked_at', 'contact_count', 'last_contacted_at', 'last_reply_at', 'matched_business_id', 'last_task_id', 'opted_out_at', 'created_by', 'sales_stage', 'stage_version', 'intelligence', 'qualified_at'];
 
     protected function casts(): array
     {
-        return ['check_issues' => 'array', 'checked_at' => 'datetime', 'last_contacted_at' => 'datetime', 'last_reply_at' => 'datetime', 'opted_out_at' => 'datetime'];
+        return ['check_issues' => 'array', 'checked_at' => 'datetime', 'last_contacted_at' => 'datetime', 'last_reply_at' => 'datetime', 'opted_out_at' => 'datetime', 'intelligence' => 'array', 'qualified_at' => 'datetime'];
     }
 }

@@ -325,6 +325,15 @@ class AiTeamController extends Controller
         $decision = $data['decision'];
         abort_unless($task->status === 'proposed', 422);
 
+        // Harga khusus: diputuskan lewat CommercialApproval (cek hash isi, versi, aktor), tidak pernah dieksekusi agen.
+        if ($task->type === 'commercial_proposal') {
+            $proposal = \App\Models\PlatformAiCommercialProposal::find(data_get($task->payload, 'proposal_id'));
+            abort_unless($proposal, 422);
+            $result = app(\App\Services\PlatformAgents\Sales\CommercialApproval::class)->decide($proposal, auth('platform')->user(), $decision, $data['message'] ?? null, (string) data_get($task->payload, 'terms_hash'));
+
+            return back()->with($result['ok'] ? 'success' : 'error', $result['ok'] ? 'Keputusan harga khusus tersimpan. Sampaikan sendiri ke prospek bila disetujui.' : $result['reason']);
+        }
+
         if ($decision === 'reject') {
             $task->update(['status' => 'rejected']);
             if (data_get($task->payload, 'prospect_id')) {
@@ -467,6 +476,8 @@ class AiTeamController extends Controller
         $status = $request->validate(['status' => 'required|in:proposed,approved,completed,rejected'])['status'];
         // Pesan keluar hanya boleh lewat tombol Setujui & kirim, supaya tidak ada jalan pintas tanpa pengiriman tercatat.
         abort_if($task->type === 'whatsapp_draft' && in_array($status, ['approved', 'completed'], true), 422, 'Gunakan Setujui & kirim.');
+        // Harga khusus hanya diputuskan lewat tombol keputusan (cek hash & versi), tidak lewat geser kartu.
+        abort_if($task->type === 'commercial_proposal', 422, 'Putuskan harga khusus lewat tombol Setujui/Tolak.');
         $changes = ['status' => $status];
         if ($status === 'approved') {
             $changes += ['approved_by' => auth('platform')->id(), 'approved_at' => now(), 'idempotency_key' => (string) Str::uuid()];

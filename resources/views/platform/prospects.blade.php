@@ -33,6 +33,20 @@
         @endforeach
     </div>
 
+    <div class="rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Corong penjualan Adit (dari data tercatat)</p>
+        <div class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-slate-700">
+            <span>Membalas <b>{{ $bd['engaged'] }}</b>@if($bd['rates']['reply'] !== null) ({{ $bd['rates']['reply'] }}%)@endif</span>
+            <span>Terkualifikasi <b>{{ $bd['qualified'] }}</b></span>
+            <span>Trial <b>{{ $bd['trial'] }}</b></span>
+            <span>Berlangganan <b>{{ $bd['won'] }}</b>@if($bd['rates']['trial_to_paid'] !== null) ({{ $bd['rates']['trial_to_paid'] }}% dari trial)@endif</span>
+            <span>Minta berhenti <b>{{ $bd['opted_out'] }}</b></span>
+            <span>Harga khusus menunggu <b>{{ $bd['proposals']['pending_approval'] ?? 0 }}</b> · disetujui {{ $bd['proposals']['approved'] ?? 0 }} · ditolak {{ $bd['proposals']['rejected'] ?? 0 }}</span>
+            <span>Ditolak kebijakan <b>{{ $bd['policy_denials'] }}</b></span>
+        </div>
+        @if($bd['objections'])<p class="mt-1 text-xs text-slate-500">Keberatan terbanyak: @foreach($bd['objections'] as $t => $n){{ $t }} ({{ $n }})@if(! $loop->last), @endif @endforeach</p>@endif
+    </div>
+
     <section class="overflow-hidden rounded-xl border border-slate-300 bg-white">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[#F8FAFD] px-3 py-2">
             <div class="flex items-center gap-3 text-sm">
@@ -80,6 +94,9 @@
                             <td class="border border-slate-300 px-2 py-1 text-xs">
                                 <template x-for="it in r.issues"><p :class="it.level === 'blok' ? 'text-red-600' : (it.level === 'saran' ? 'text-amber-700' : 'text-slate-500')" x-text="it.text"></p></template>
                                 <p x-show="!r.issues.length" class="text-emerald-700">Data lengkap, aman dihubungi.</p>
+                                <p class="mt-1 text-slate-600" x-show="r.contact_count > 0 || r.qualification"><b>Tahap:</b> <span x-text="r.stage_label"></span><span x-show="r.qualification" x-text="' · ' + r.qualification"></span></p>
+                                <p class="text-slate-500" x-show="r.objections && r.objections.length" x-text="'Keberatan: ' + (r.objections || []).join(', ')"></p>
+                                <p class="text-slate-500" x-show="r.next_action && r.contact_count > 0" x-text="'Saran: ' + r.next_action"></p>
                             </td>
                             <td class="border border-slate-300 px-2 py-1 text-center text-xs">
                                 <select @change="setStatus(r, $event.target.value); $event.target.value = ''" class="w-full rounded border border-slate-200 px-1 py-0.5" x-show="r.contact_count > 0">

@@ -118,6 +118,13 @@ class DraftWhatsAppReply implements ShouldQueue
         // Prospek yang kita hubungi duluan: catat balasannya, hormati permintaan berhenti, beri Adit konteks penjualan.
         $prospect = $business ? null : app(\App\Services\PlatformAgents\ProspectDesk::class)->inbound($inbound->phone, $inbound->body);
         $this->prospectContext = $prospect ? app(\App\Services\PlatformAgents\ProspectDesk::class)->context($prospect) : null;
+        // Adit BD 2.0: fakta, kualifikasi, keberatan, dan kebijakan harga diputuskan kode sebelum model menulis.
+        $bd = $prospect ? app(\App\Services\PlatformAgents\Sales\SalesOrchestrator::class)->onInbound($prospect, $inbound->body, $inbound->id) : null;
+        if ($bd) {
+            $this->prospectContext .= "
+
+".$bd['context'];
+        }
         $sensitive = (bool) preg_match(self::SENSITIVE, $inbound->body);
 
         // Pesan beruntun sejak balasan terakhir dibaca sebagai satu maksud.
@@ -138,6 +145,7 @@ class DraftWhatsAppReply implements ShouldQueue
             in_array(CustomerSignals::PAYMENT_ISSUE, $signals, true) => 'Masalah pembayaran/aktivasi perlu dicek manual.',
             $complaintTurns >= self::COMPLAINT_ESCALATE_AFTER => "Keluhan belum selesai setelah {$complaintTurns} pesan.",
             in_array(CustomerSignals::CHURN, $signals, true) => 'Pelanggan ingin berhenti memakai Yoka.',
+            filled($bd['escalation'] ?? null) => $bd['escalation'],
             default => null,
         };
         $meta = ['signals' => $signals, 'complaint_turns' => $complaintTurns, 'escalation' => $escalation];
@@ -149,6 +157,11 @@ class DraftWhatsAppReply implements ShouldQueue
         $decision = $this->think($adit, $inbound, $business, $sensitive, $signals, $pending, $handedOff);
         $replied = false;
 
+        if ($decision && $prospect) {
+            // Penjaga harga: kalimat dengan harga selain harga resmi atau janji paket gratis/persetujuan dibuang.
+            $policy = app(\App\Services\PlatformAgents\Sales\CommercialPolicy::class);
+            $decision['bubbles'] = array_values(array_filter(array_map(fn ($b) => $policy->scrubReply($b)[0], $decision['bubbles']), fn ($b) => $b !== ''));
+        }
         if ($decision && $decision['relevant'] && $decision['bubbles'] !== [] && $this->withinLimits($inbound->phone)) {
             foreach ($decision['bubbles'] as $i => $bubble) {
                 $result = app(PlatformWhatsApp::class)->send($inbound->phone, $bubble, true, $i === 0 ? random_int(2, 5) : random_int(3, 7));
