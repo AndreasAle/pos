@@ -41,19 +41,25 @@ final class LeadIntelligence
                 break;
             }
         }
-        if (! isset($f['current_method']) && preg_match('/\b(buku|nota|manual|tulis tangan|kertas|excel|spreadsheet|kalkulator|catat sendiri)\b/u', $t, $m)) {
-            $f['current_method'] = $m[1];
+        if (! isset($f['current_method']) && preg_match('/\b(buku( tulis)?|nota|manual|tulis tangan|kerta(s)?|kertass|krts|excel|exel|spreadsheet|kalkulator|catat sendiri|dicatet|nyatet|catet)\b/u', $t, $m)) {
+            // Ejaan santai/typo ("kerta", "catet") dinormalkan supaya fakta tersimpan dan tidak ditanya ulang.
+            $f['current_method'] = match (true) {
+                (bool) preg_match('/^(kerta|kertas|kertass|krts)$/', $m[1]) => 'kertas',
+                (bool) preg_match('/^(exel|excel|spreadsheet)$/', $m[1]) => 'excel',
+                (bool) preg_match('/^(dicatet|nyatet|catet|catat sendiri)$/', $m[1]) => 'manual',
+                default => $m[1],
+            };
         }
         if (preg_match('/\b(\d{1,2})\s*(kasir|karyawan kasir|orang (yang )?jaga kasir)\b/u', $t, $m)) {
             $f['cashiers'] = (int) $m[1];
         }
-        if (preg_match('/\b(saya|aku|gue|gw)\s+(yang\s+)?(owner|pemilik|punya|yang punya)\b|\b(owner|pemilik)nya (saya|aku)\b/u', $t)) {
+        if (preg_match('/\b(saya|aku|gue|gw)\s+(yang\s+)?(owner|pemilik|punya|yang punya)(nya)?\b|\b(owner|pemilik)nya (saya|aku)\b/u', $t)) {
             $f['decision_role'] = 'pemilik';
         } elseif (preg_match('/\b(tanya|izin|diskusi|ngomong)\s+(dulu\s+)?(ke|sama|dengan)\s+(bos|owner|atasan|pemilik|suami|istri|partner)\b|\bbukan (saya|aku) yang (putus|tentu)/u', $t)) {
             $f['decision_role'] = 'bukan pengambil keputusan';
         }
         $pains = [];
-        foreach (['stok' => '/\bstok|stock|bahan\b/u', 'antrean kasir' => '/\b(antri|antre|ramai|rame|numpuk)\b/u', 'laporan' => '/\b(laporan|rekap|hitung manual|tutup buku)\b/u', 'selisih uang' => '/\b(selisih|kecurian|bocor|hilang uang)\b/u', 'pesanan dapur' => '/\b(dapur|pesanan (salah|terselip|ketuker))\b/u'] as $label => $re) {
+        foreach (['stok' => '/\bstok|stock|bahan\b/u', 'antrean kasir' => '/\b(antri|antre|ramai|rame|numpuk)\b/u', 'laporan' => '/\b(laporan|rekap|hitung manual|tutup buku)\b/u', 'margin' => '/\b(margin|untung|laba|profit|modal)\b/u', 'selisih uang' => '/\b(selisih|kecurian|bocor|hilang uang)\b/u', 'pesanan dapur' => '/\b(dapur|pesanan (salah|terselip|ketuker))\b/u'] as $label => $re) {
             if (preg_match($re, $t)) {
                 $pains[] = $label;
             }

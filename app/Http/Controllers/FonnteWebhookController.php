@@ -49,7 +49,15 @@ class FonnteWebhookController extends Controller
             return response()->json(['ok' => true, 'duplicate' => true]);
         }
 
-        DraftWhatsAppReply::dispatchAfterResponse($message->id);
+        // Gabung pesan beruntun (opsional): job ditunda lewat queue; pesan berhenti/minta orang tetap diproses segera.
+        $window = min(15, max(0, (int) config('yoka_sales.bd21.coalesce_seconds', 0)));
+        $urgent = (bool) preg_match(\App\Services\PlatformAgents\ProspectDesk::STOP_PATTERN, $text)
+            || in_array(\App\Services\PlatformAgents\CustomerService\CustomerSignals::HUMAN, \App\Services\PlatformAgents\CustomerService\CustomerSignals::detect($text), true);
+        if ($window > 0 && ! $urgent) {
+            DraftWhatsAppReply::dispatch($message->id)->delay(now()->addSeconds($window));
+        } else {
+            DraftWhatsAppReply::dispatchAfterResponse($message->id);
+        }
 
         return response()->json(['ok' => true]);
     }

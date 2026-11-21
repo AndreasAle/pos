@@ -43,6 +43,8 @@
             <span>Minta berhenti <b>{{ $bd['opted_out'] }}</b></span>
             <span>Harga khusus menunggu <b>{{ $bd['proposals']['pending_approval'] ?? 0 }}</b> · disetujui {{ $bd['proposals']['approved'] ?? 0 }} · ditolak {{ $bd['proposals']['rejected'] ?? 0 }}</span>
             <span>Ditolak kebijakan <b>{{ $bd['policy_denials'] }}</b></span>
+            <span>Minat printer <b>{{ $bd['hardware_interest'] }}</b></span>
+            <span>Balasan dicek <b>{{ $bd['quality']['replies_checked'] }}</b>@if($bd['quality']['issues']) · dirapikan: @foreach($bd['quality']['issues'] as $t => $n){{ $t }} {{ $n }}@if(! $loop->last), @endif @endforeach @endif</span>
         </div>
         @if($bd['objections'])<p class="mt-1 text-xs text-slate-500">Keberatan terbanyak: @foreach($bd['objections'] as $t => $n){{ $t }} ({{ $n }})@if(! $loop->last), @endif @endforeach</p>@endif
     </div>

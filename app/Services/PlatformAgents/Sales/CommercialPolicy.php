@@ -22,7 +22,7 @@ final class CommercialPolicy
 
     public const REJECTED_BY_POLICY = 'REJECTED_BY_POLICY';
 
-    private const COMMERCIAL = '/\b(diskon|discount|potongan|promo|voucher|nego|kurangin|murahin|harga khusus|harga spesial|paket (custom|khusus)|custom paket|budget|bujet|cuma (ada )?(rp|\d)|segini|mahal|gratis(in)? (aja|selamanya|terus)|free (plan|selamanya)|aktifkan gratis)\b/iu';
+    private const COMMERCIAL = '/\b(diskon|discount|potongan|promo|voucher|nego|kurangin|murahin|harga khusus|harga spesial|paket (custom|khusus)|custom paket|budget|bujet|cuma (ada )?(rp|\d)|segini|mahal|gratis(in)? (aja|selamanya|terus)|free (plan|selamanya)|aktifkan gratis)\b|\b(kalau|kalo|klo)\s+(rp\.?\s?)?\d{2,3}(\.\d{3})?\s*(rb|ribu|k)?\b.{0,15}\b(bisa|boleh|gimana)\b|\brp\.?\s?\d{2,3}\s*(rb|ribu|k)\b.{0,10}\b(bisa|boleh)\b/iu';
 
     private const FREE_DEMAND = '/\b(gratis(in)? (aja|selamanya|terus)|free (plan|selamanya|forever)|aktifkan gratis|tanpa bayar selamanya)\b/iu';
 
@@ -36,7 +36,7 @@ final class CommercialPolicy
 
     public function isCommercialRequest(string $text): bool
     {
-        return (bool) preg_match(self::COMMERCIAL, $text);
+        return (bool) preg_match(self::COMMERCIAL, $text) || (bool) preg_match(ConversationStrategy::BUNDLE, $text);
     }
 
     /** Harga yang diminta prospek, mis. "Rp50 ribu", "50rb", "50.000", "50k". null bila tidak ada angka harga yang jelas. */
@@ -73,6 +73,23 @@ final class CommercialPolicy
             return $base + ['state' => self::REJECTED_BY_POLICY, 'needs_approval' => false,
                 'analysis' => ['reason' => 'Permintaan paket gratis permanen tidak ada di kebijakan.'],
                 'customer_guidance' => 'Paket gratis permanen tidak ada. Satu-satunya yang gratis adalah trial 7 hari. Tawarkan trial tanpa menjanjikan apa pun lagi.'];
+        }
+        // Paket aplikasi + perangkat: belum ada katalog/bundel resmi, jadi selalu diputuskan manusia.
+        if (preg_match(ConversationStrategy::BUNDLE, $text)) {
+            $first = $plans->first();
+            if ($bundle = app(HardwareCatalog::class)->approvedBundle()) {
+                return array_merge($base, ['official_plan' => $bundle['name'], 'official_price' => (float) $bundle['initial_price']])
+                    + ['state' => self::STANDARD_OFFER, 'needs_approval' => false, 'analysis' => ['reason' => 'Bundel resmi tersedia.'],
+                        'customer_guidance' => 'Sebut bundel resmi '.$bundle['name'].' dengan harganya persis; pembayaran tetap lewat checkout resmi.'];
+            }
+            $candidate = collect((array) config('yoka_hardware.items'))->first();
+
+            return array_merge($base, ['official_plan' => $first?->name, 'official_price' => $first ? (float) $first->price : null, 'items' => ['printer/perangkat']])
+                + ['state' => self::NEEDS_HUMAN_APPROVAL, 'needs_approval' => true,
+                    'analysis' => ['reason' => 'Permintaan penawaran aplikasi + perangkat; belum ada bundel resmi yang disetujui.', 'cost_status' => self::INSUFFICIENT_DATA,
+                        'kind' => 'hardware_quotation', 'candidate_item' => $candidate ? ($candidate['model'].' (kompatibilitas: '.$candidate['compatibility'].', harga beli referensi: '.($candidate['purchase_cost'] ?? '-').')') : null,
+                        'draft_bundle' => config('yoka_hardware.bundles.starter-kit.initial_price'), 'missing_terms' => array_keys(array_filter((array) config('yoka_hardware.bundles.starter-kit.terms'), fn ($v) => $v === null))],
+                    'customer_guidance' => 'Langganan tidak termasuk perangkat dan belum ada paket bundel resmi. Bilang kamu tanyakan ke tim; jangan sebut harga perangkat, jangan janji printer gratis.'];
         }
         if ($plans->isEmpty()) {
             return $base + ['state' => self::INSUFFICIENT_DATA, 'needs_approval' => true,
@@ -140,7 +157,7 @@ final class CommercialPolicy
      */
     public function scrubReply(string $reply): array
     {
-        $allowed = $this->officialPlans()->map(fn ($p) => (int) round((float) $p->price))->all();
+        $allowed = array_merge($this->officialPlans()->map(fn ($p) => (int) round((float) $p->price))->all(), app(HardwareCatalog::class)->officialPrices());
         $removed = [];
         $sentences = preg_split('/(?<=[.!?])\s+|\n/u', $reply) ?: [];
         $kept = [];

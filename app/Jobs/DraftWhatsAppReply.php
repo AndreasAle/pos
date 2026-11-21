@@ -113,6 +113,31 @@ class DraftWhatsAppReply implements ShouldQueue
             return;
         }
 
+        // Satu balasan pada satu waktu per nomor: job yang tumpang tindih menunggu, lalu cek ulang pesan terbaru.
+        $lock = Cache::lock('adit-reply:'.$inbound->phone, 150);
+        try {
+            $lock->block(max(1, (int) config('yoka_sales.bd21.reply_lock_wait', 45)));
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
+            Log::warning('Adit reply lock timeout', ['message' => $inbound->id]);
+            Cache::forget('platform-wa-processed:'.$inbound->id); // boleh dicoba lagi
+            if ($this->job) {
+                $this->release(15); // di queue: coba lagi sebentar lagi, pesan tidak hilang
+            }
+
+            return;
+        }
+        try {
+            $this->process($inbound, $adit);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function process(PlatformAiWhatsAppMessage $inbound, PlatformAiAgent $adit): void
+    {
+        if (PlatformAiWhatsAppMessage::where('phone', $inbound->phone)->where('direction', 'inbound')->where('id', '>', $inbound->id)->exists()) {
+            return;
+        }
         $business = $this->business($inbound->phone);
         // Nomor uji internal yang ada di Prospek Adit diperlakukan sebagai prospek (untuk tes alur penjualan).
         if ($business && \App\Services\PlatformAgents\ProspectDesk::isTestNumber($inbound->phone) && \App\Models\PlatformAiProspect::where('phone_normalized', $inbound->phone)->exists()) {
@@ -165,8 +190,26 @@ class DraftWhatsAppReply implements ShouldQueue
             // Penjaga harga: kalimat dengan harga selain harga resmi atau janji paket gratis/persetujuan dibuang.
             $policy = app(\App\Services\PlatformAgents\Sales\CommercialPolicy::class);
             $decision['bubbles'] = array_values(array_filter(array_map(fn ($b) => $policy->scrubReply($b)[0], $decision['bubbles']), fn ($b) => $b !== ''));
+            // Adit BD 2.1: satu pesan utuh per giliran, lalu diperiksa kualitas dan klaimnya.
+            if (config('yoka_sales.bd21.one_message') && count($decision['bubbles']) > 1) {
+                $decision['bubbles'] = [implode("\n\n", $decision['bubbles'])];
+            }
+            if (config('yoka_sales.bd21.quality') && ! empty($bd['strategy'])) {
+                $issues = [];
+                $previous = PlatformAiWhatsAppMessage::where('phone', $inbound->phone)->where('direction', 'outbound')->latest('id')->limit(6)->pluck('body')->all();
+                $decision['bubbles'] = array_values(array_filter(array_map(function ($b) use ($prospect, $bd, &$issues, $previous) {
+                    $r = app(\App\Services\PlatformAgents\Sales\ResponseQuality::class)->review($b, $prospect, $bd['strategy'], $previous);
+                    $issues = array_merge($issues, $r['issues']);
+
+                    return $r['text'];
+                }, $decision['bubbles']), fn ($b) => $b !== ''));
+                \App\Models\PlatformAiProspectEvent::create(['platform_ai_prospect_id' => $prospect->id, 'type' => 'quality', 'actor' => 'quality',
+                    'reason' => $issues ? implode(', ', array_unique($issues)) : 'ok', 'data' => ['issues' => array_values(array_unique($issues)), 'objective' => $bd['strategy']['objective'], 'message_id' => $inbound->id]]);
+            }
         }
-        if ($decision && $decision['relevant'] && $decision['bubbles'] !== [] && $this->withinLimits($inbound->phone)) {
+        // Validasi ulang tepat sebelum kirim: pesan lebih baru masuk selama model berpikir -> biar job pesan itu yang menjawab.
+        $superseded = PlatformAiWhatsAppMessage::where('phone', $inbound->phone)->where('direction', 'inbound')->where('id', '>', $inbound->id)->exists();
+        if ($decision && $decision['relevant'] && $decision['bubbles'] !== [] && ! $superseded && $this->withinLimits($inbound->phone)) {
             foreach ($decision['bubbles'] as $i => $bubble) {
                 $result = app(PlatformWhatsApp::class)->send($inbound->phone, $bubble, true, $i === 0 ? random_int(2, 5) : random_int(3, 7));
                 if (! $result['ok']) {
@@ -210,6 +253,9 @@ class DraftWhatsAppReply implements ShouldQueue
         $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'max_outlets', 'max_users'])
             ->map(fn ($p) => "{$p->name}: Rp ".number_format((float) $p->price, 0, ',', '.')."/bulan, {$p->max_outlets} outlet, {$p->max_users} user")->implode('; ');
         $trialDays = self::TRIAL_DAYS;
+        $bubbleRule = ($this->prospectContext !== null && config('yoka_sales.bd21.one_message'))
+            ? '- Tulis SATU pesan WhatsApp utuh dan ringkas (boleh 2 paragraf pendek, dipisah baris kosong). Info utama di kalimat pertama.'
+            : '- Pecah jadi 1-3 bubble pendek (pisahkan dengan baris kosong). Paling sering 1-2 bubble. Info utama di bubble pertama.';
         $style = self::STYLES[crc32($inbound->phone.today()->toDateString()) % count(self::STYLES)];
         $facts = json_encode(AgentBrain::productFacts(), JSON_UNESCAPED_UNICODE);
         $sensitiveRule = $sensitive
@@ -237,7 +283,7 @@ CARA NGOBROL (ini yang paling penting):
 - JANGAN PERNAH menutup pesan dengan basa-basi CS: "siap bantu", "jangan ragu tanya", "kalau ada yang mau ditanyakan lagi", "silakan informasikan kebutuhan", "semoga membantu". Orang beneran tidak ngomong begitu tiap pesan. Selesai jawab, ya sudah.
 - Sapaan "Halo/P" saja: balas sapaan pendek yang natural, misalnya "halo kak, iya ada apa?" atau "halo kak, lagi cari aplikasi kasir ya?". Jangan kalimat formal.
 - Jangan mengulang kalimat atau info yang sudah kamu kirim di percakapan ini (misalnya link yokapos.com yang sudah disebut).
-- Pecah jadi 1-3 bubble pendek (pisahkan dengan baris kosong). Paling sering 1-2 bubble. Info utama di bubble pertama.
+{$bubbleRule}
 - Jawab pertanyaannya langsung dan konkret. Kalau tanya harga: sebut dari PAKET AKTIF (bila kosong, bilang harganya ada di halaman Langganan setelah daftar).
 - Pelanggan mau langganan/beli = peluang closing: jawab dengan antusias tapi wajar, sebut paket + harga yang cocok, jelaskan langkah singkatnya, lalu SATU pertanyaan kualifikasi (misalnya jumlah outlet atau jenis usahanya) supaya bisa merekomendasikan paket.
 - Pertanyaan di luar layanan Yoka (pinjaman, jual barang lain, dll.): kalau masih nyambung ke Yoka, jawab satu kalimat jujur bahwa Yoka tidak menyediakan itu. Kalau sama sekali tidak nyambung, tandai tidak relevan.

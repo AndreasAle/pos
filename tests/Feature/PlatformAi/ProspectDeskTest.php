@@ -95,8 +95,9 @@ class ProspectDeskTest extends TestCase
         $this->assertSame(3, PlatformAiTask::where('type', 'whatsapp_draft')->where('status', 'proposed')->count());
         $this->assertSame(3, PlatformAiProspect::where('status', 'dijadwalkan')->count());
         $task = PlatformAiTask::where('type', 'whatsapp_draft')->first();
-        $this->assertStringContainsString('Kopi', $task->summary);
-        $this->assertStringContainsString('yokapos.com/register', $task->summary);
+        $this->assertStringContainsString('izin kenalan', $task->summary);
+        $this->assertStringContainsString('asisten AI', $task->summary);
+        $this->assertStringNotContainsString('yokapos.com/register', $task->summary, 'Pembuka tidak langsung menyodorkan trial.');
         $this->assertSame('prospect_opening', $task->payload['kind']);
     }
 

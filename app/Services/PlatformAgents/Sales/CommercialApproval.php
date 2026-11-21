@@ -25,7 +25,7 @@ final class CommercialApproval
             $p = PlatformAiProspect::whereKey($prospect->id)->lockForUpdate()->firstOrFail();
             $terms = [
                 'requested_price' => $evaluation['requested_price'], 'official_plan' => $evaluation['official_plan'],
-                'official_price' => $evaluation['official_price'], 'discount_pct' => $evaluation['discount_pct'], 'period' => 'per bulan',
+                'official_price' => $evaluation['official_price'], 'discount_pct' => $evaluation['discount_pct'], 'period' => 'per bulan', 'items' => $evaluation['items'] ?? [],
             ];
             $hash = hash('sha256', json_encode($terms));
             $pending = PlatformAiCommercialProposal::where('platform_ai_prospect_id', $p->id)->where('status', 'pending_approval')->get();

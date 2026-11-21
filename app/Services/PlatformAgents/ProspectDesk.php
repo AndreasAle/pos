@@ -144,7 +144,10 @@ class ProspectDesk
 
     private function createDraft(PlatformAiAgent $adit, PlatformAiProspect $p, string $kind): array
     {
-        $message = $kind === 'prospect_followup' ? $this->followupMessage($p) : $this->openingMessage($p);
+        $opening = app(Sales\OpeningStrategy::class);
+        $message = config('yoka_sales.bd21.opening')
+            ? ($kind === 'prospect_followup' ? $opening->followup($p) : $opening->opening($p)['message'])
+            : ($kind === 'prospect_followup' ? $this->followupMessage($p) : $this->openingMessage($p));
         $task = $adit->tasks()->create([
             'type' => 'whatsapp_draft',
             'title' => ($kind === 'prospect_followup' ? 'Follow-up prospek · ' : 'Prospek baru · ').$p->business_name,
@@ -211,7 +214,7 @@ class ProspectDesk
             $p->business_name ? "bisnis \"{$p->business_name}\"" : null,
             $p->business_type ?: null, $p->city ?: null,
             $p->outlet_count ? "{$p->outlet_count} outlet" : null,
-            $p->contact_name ? "nama kontak {$p->contact_name}" : null,
+            ($who = Sales\OpeningStrategy::personName($p)) ? "nama kontak {$who}" : 'nama orangnya belum diketahui (JANGAN sapa dengan nama bisnis; cukup "kak" atau "Pak/Bu")',
             $p->notes ? "catatan tim: {$p->notes}" : null,
         ])->filter()->implode(', ');
 
