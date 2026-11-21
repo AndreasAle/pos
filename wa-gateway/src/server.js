@@ -58,7 +58,21 @@ function rememberSent(res) {
   while (sentCache.size > 500) sentCache.delete(sentCache.keys().next().value);
 }
 
+// Reconnect dengan jeda bertahap dan TIDAK berhenti mencoba (dulu: satu kegagalan = diam selamanya).
+let retryMs = 3000;
+async function reconnect(reason) {
+  for (;;) {
+    await sleep(retryMs);
+    try { await connect(); retryMs = 3000; return; } catch (e) {
+      log.error({ err: e?.message, reason }, `gagal menyambung, coba lagi dalam ${Math.round(retryMs / 1000)} dtk`);
+      retryMs = Math.min(retryMs * 2, 120000);
+    }
+  }
+}
+
 async function connect() {
+  // Bereskan socket lama agar listener dan memori tidak menumpuk tiap reconnect.
+  if (sock) { try { sock.ev.removeAllListeners(); sock.end(undefined); } catch {} sock = null; }
   const { state, saveCreds } = await useMultiFileAuthState(path.join(DATA_DIR, 'auth'));
   const { version } = await fetchLatestBaileysVersion().catch(() => ({ version: undefined }));
   sock = makeWASocket({
@@ -87,6 +101,7 @@ async function connect() {
       lastQr = null;
       fs.rmSync(path.join(DATA_DIR, 'qr.txt'), { force: true });
       me = (sock.user?.id || '').split(':')[0].split('@')[0];
+      retryMs = 3000;
       log.info({ me }, 'WhatsApp terhubung');
     }
     if (connection === 'close') {
@@ -99,8 +114,7 @@ async function connect() {
         status = 'reconnecting';
         log.warn({ code }, 'Koneksi putus, menyambung ulang');
       }
-      await sleep(3000);
-      connect().catch((e) => log.error(e, 'gagal menyambung'));
+      reconnect(code);
     }
   });
 
@@ -247,4 +261,14 @@ if (SOCKET) {
   server.listen(PORT, HOST, () => log.info(`Gateway jalan di http://${HOST}:${PORT}`));
 }
 
-connect().catch((e) => { log.error(e, 'gagal start'); process.exit(1); });
+// Error tak tertangkap dari library tidak boleh mematikan gateway: catat lalu sambung ulang.
+process.on('unhandledRejection', (e) => log.error({ err: e?.stack || String(e) }, 'unhandledRejection (gateway tetap jalan)'));
+process.on('uncaughtException', (e) => { log.error({ err: e?.stack || String(e) }, 'uncaughtException (gateway tetap jalan)'); if (status !== 'connected') reconnect('uncaught'); });
+// Jejak saat proses berhenti. Bila gateway.log tidak punya baris ini, proses dibunuh dari luar (SIGKILL / batas hosting).
+process.on('SIGHUP', () => log.warn('SIGHUP diabaikan (sesi SSH ditutup)'));
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { log.warn({ sig, rssMb: Math.round(process.memoryUsage().rss / 1048576) }, 'gateway dihentikan oleh sinyal'); process.exit(0); });
+process.on('exit', (c) => log.warn({ code: c }, 'gateway keluar'));
+// Denyut tiap 10 menit: memori dan status, untuk melihat apakah mati karena memori.
+setInterval(() => log.info({ status, rssMb: Math.round(process.memoryUsage().rss / 1048576), upMin: Math.round(process.uptime() / 60) }, 'denyut'), 600000).unref();
+
+connect().catch((e) => { log.error(e, 'gagal start'); reconnect('start'); });
