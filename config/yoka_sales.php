@@ -20,4 +20,7 @@ return [
     // Harga minimum yang boleh diusulkan ke reviewer (bukan ke prospek). null = tidak ada batas bawah otomatis.
     'floor_price' => env('ADIT_BD_FLOOR_PRICE') !== null ? (float) env('ADIT_BD_FLOOR_PRICE') : null,
     'trial_ending_days' => 2,
+    // Nomor uji internal (pisahkan koma, format 62...). Boleh jadi prospek walau terdaftar sebagai toko, untuk tes alur Adit.
+    // Diisi hanya di .env server; jangan taruh nomor di repo publik.
+    'test_numbers' => array_values(array_filter(array_map(fn ($n) => preg_replace('/\D/', '', $n), explode(',', (string) env('ADIT_TEST_NUMBERS', ''))))),
 ];

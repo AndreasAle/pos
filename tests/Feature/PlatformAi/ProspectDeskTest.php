@@ -75,6 +75,16 @@ class ProspectDeskTest extends TestCase
         $this->assertSame($biz->id, $customer->matched_business_id);
     }
 
+    public function test_internal_test_number_may_be_a_prospect_even_if_registered(): void
+    {
+        Business::factory()->create(['phone' => '081255554444']);
+        $this->assertSame('perlu_dicek', $this->prospect(['phone' => '081255554444', 'business_name' => 'A'])->status);
+        config(['yoka_sales.test_numbers' => ['6281255554444']]);
+        $p = $this->desk()->check(PlatformAiProspect::where('phone_normalized', '6281255554444')->first());
+        $this->assertSame('siap', $p->status);
+        $this->assertStringContainsString('Nomor uji', $p->check_issues[0]['text']);
+    }
+
     public function test_at_most_three_drafts_per_day_and_nothing_is_sent(): void
     {
         foreach (range(1, 5) as $i) {

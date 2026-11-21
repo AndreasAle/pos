@@ -114,6 +114,10 @@ class DraftWhatsAppReply implements ShouldQueue
         }
 
         $business = $this->business($inbound->phone);
+        // Nomor uji internal yang ada di Prospek Adit diperlakukan sebagai prospek (untuk tes alur penjualan).
+        if ($business && \App\Services\PlatformAgents\ProspectDesk::isTestNumber($inbound->phone) && \App\Models\PlatformAiProspect::where('phone_normalized', $inbound->phone)->exists()) {
+            $business = null;
+        }
         $inbound->update(['business_id' => $business?->id]);
         // Prospek yang kita hubungi duluan: catat balasannya, hormati permintaan berhenti, beri Adit konteks penjualan.
         $prospect = $business ? null : app(\App\Services\PlatformAgents\ProspectDesk::class)->inbound($inbound->phone, $inbound->body);

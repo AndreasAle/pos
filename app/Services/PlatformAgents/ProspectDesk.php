@@ -38,6 +38,11 @@ class ProspectDesk
         'Jasa' => ['laundry', 'salon', 'barbershop', 'barber', 'spa', 'bengkel', 'cuci', 'studio', 'klinik'],
     ];
 
+    public static function isTestNumber(?string $phone): bool
+    {
+        return $phone !== null && $phone !== '' && in_array($phone, (array) config('yoka_sales.test_numbers', []), true);
+    }
+
     /** Rapikan isian dan periksa apakah prospek aman dihubungi. Tidak mengirim apa pun. */
     public function check(PlatformAiProspect $p): PlatformAiProspect
     {
@@ -60,7 +65,9 @@ class ProspectDesk
             if ($dup) {
                 $issues[] = ['level' => 'blok', 'text' => "Nomor sama dengan prospek #{$dup->id} ({$dup->business_name})."];
             }
-            if ($business = $this->businessFor($p->phone_normalized)) {
+            if (self::isTestNumber($p->phone_normalized)) {
+                $issues[] = ['level' => 'info', 'text' => 'Nomor uji internal: boleh dihubungi walau terdaftar sebagai toko.'];
+            } elseif ($business = $this->businessFor($p->phone_normalized)) {
                 $p->matched_business_id = $business->id;
                 $issues[] = ['level' => 'blok', 'text' => "Sudah terdaftar di Yoka sebagai \"{$business->name}\". Bukan prospek baru."];
             }
