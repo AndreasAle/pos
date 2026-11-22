@@ -21,7 +21,7 @@ final class ConversationStrategy
     /** Niat membeli/berlangganan sekarang: beri langkah daftar & bayar yang resmi, jangan "ditanyakan ke tim". */
     public const BUY = '/\b(mau|pengen|ingin|siap|udah mau|sudah mau)\s+(langsung\s+)?(langganan|berlangganan|beli|bayar|daftar|pakai|pake|order)\b|\b(cara|gimana|bagaimana)\s+(daftar|langganan|berlangganan|bayar|beli|upgrade)(nya)?\b|\bdaftar(nya)?\s+(di ?mana|dimana|kemana|lewat mana|ke website)\b|\blink (daftar|langganan|pembayaran)\b|\blangsung (aja )?(daftar|langganan|bayar)\b|\b(website|web|situs)\b.{0,20}\bdaftar|\bdaftar\b.{0,20}\b(website|web|situs)\b/iu';
 
-    public const BUY_STEPS = 'Daftar di yokapos.com/register (gratis, langsung masuk trial 7 hari). Setelah login, buka menu Langganan, pilih paket, lalu bayar online lewat Midtrans; paket aktif setelah pembayaran berhasil.';
+    public const BUY_STEPS = 'caranya gampang kak: daftar dulu di yokapos.com/register, gratis 7 hari. habis login masuk menu Langganan, pilih paketnya, terus bayar lewat Midtrans. begitu lunas langsung aktif.';
 
     public const TRIAL_REQUEST = '/\b(mau|pengen|ingin|boleh|bisa|gimana|cara) (coba|nyoba|trial|daftar)\b|\bcoba gratis\b|\blink (daftar|trial)\b/iu';
 
@@ -75,7 +75,7 @@ final class ConversationStrategy
             },
             'ARRANGE_FIELD_VISIT' => ['Dia setuju didatangi/minta demo langsung. Terima kasih, bilang sudah kamu teruskan ke tim Yoka untuk mengatur waktunya. JANGAN menyebut jam, tanggal, atau siapa yang datang.'],
             'BUILD_TRUST' => ['Dia punya pengalaman buruk/ragu. JANGAN langsung menyebut fitur atau klaim layanan. Akui kekhawatirannya secara spesifik (bukan "paham banget"), lalu tanyakan apa persisnya masalah waktu itu (aplikasinya error, data hilang, atau bantuannya sulit dihubungi). Jangan menjanjikan layanan support 24 jam, respon cepat, atau tim tertentu.'],
-            'READY_TO_BUY' => ['Dia mau langsung daftar/berlangganan. Ini peluang closing: JANGAN bilang "tanyakan ke tim" atau "teruskan ke tim". Beri langkah resminya dengan jelas: '.self::BUY_STEPS.' Boleh sebut paket yang cocok dari PAKET AKTIF dan harganya. Tanpa pertanyaan discovery.'],
+            'READY_TO_BUY' => ['Dia mau langsung daftar/berlangganan. Ini peluang closing: JANGAN bilang "tanyakan ke tim" atau "teruskan ke tim". Kasih tahu caranya dengan kata-katamu sendiri, santai dan singkat seperti chat WA (BUKAN daftar langkah formal). Fakta yang wajib benar: daftar di yokapos.com/register (gratis trial 7 hari), setelah login buka menu Langganan, pilih paket, bayar lewat Midtrans, aktif setelah lunas. Boleh sebut satu paket yang cocok dari PAKET AKTIF. Tanpa pertanyaan discovery.'],
             'OFFER_TRIAL' => ['Dia minta coba. Langsung beri langkahnya: daftar di yokapos.com/register, trial gratis 7 hari. Tanpa pertanyaan tambahan yang menghambat.'],
             'IDENTIFY_HARDWARE_INTEREST' => array_values(array_filter([
                 'Jawab langsung: langganan Yoka POS tidak termasuk printer atau perangkat. '.app(HardwareCatalog::class)->promptFacts(),

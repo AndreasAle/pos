@@ -191,7 +191,8 @@ class DraftWhatsAppReply implements ShouldQueue
             $policy = app(\App\Services\PlatformAgents\Sales\CommercialPolicy::class);
             $decision['bubbles'] = array_values(array_filter(array_map(fn ($b) => $policy->scrubReply($b)[0], $decision['bubbles']), fn ($b) => $b !== ''));
             // Adit BD 2.1: satu pesan utuh per giliran, lalu diperiksa kualitas dan klaimnya.
-            if (config('yoka_sales.bd21.one_message') && count($decision['bubbles']) > 1) {
+            // Diperiksa sebagai SATU giliran utuh (maks satu pertanyaan, dst.), baru dipecah lagi jadi maks N bubble berjeda.
+            if (count($decision['bubbles']) > 1) {
                 $decision['bubbles'] = [implode("\n\n", $decision['bubbles'])];
             }
             if (config('yoka_sales.bd21.quality') && ! empty($bd['strategy'])) {
@@ -203,6 +204,11 @@ class DraftWhatsAppReply implements ShouldQueue
 
                     return $r['text'];
                 }, $decision['bubbles']), fn ($b) => $b !== ''));
+                $max = self::maxProspectBubbles();
+                if ($max > 1 && $decision['bubbles'] !== []) {
+                    $parts = array_values(array_filter(array_map('trim', preg_split("/\n\s*\n/", $decision['bubbles'][0]))));
+                    $decision['bubbles'] = count($parts) > $max ? [...array_slice($parts, 0, $max - 1), implode(' ', array_slice($parts, $max - 1))] : $parts;
+                }
                 \App\Models\PlatformAiProspectEvent::create(['platform_ai_prospect_id' => $prospect->id, 'type' => 'quality', 'actor' => 'quality',
                     'reason' => $issues ? implode(', ', array_unique($issues)) : 'ok', 'data' => ['issues' => array_values(array_unique($issues)), 'objective' => $bd['strategy']['objective'], 'message_id' => $inbound->id]]);
             }
@@ -253,9 +259,11 @@ class DraftWhatsAppReply implements ShouldQueue
         $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'max_outlets', 'max_users'])
             ->map(fn ($p) => "{$p->name}: Rp ".number_format((float) $p->price, 0, ',', '.')."/bulan, {$p->max_outlets} outlet, {$p->max_users} user")->implode('; ');
         $trialDays = self::TRIAL_DAYS;
-        $bubbleRule = ($this->prospectContext !== null && config('yoka_sales.bd21.one_message'))
-            ? '- Tulis SATU pesan WhatsApp utuh dan ringkas (boleh 2 paragraf pendek, dipisah baris kosong). Info utama di kalimat pertama.'
-            : '- Pecah jadi 1-3 bubble pendek (pisahkan dengan baris kosong). Paling sering 1-2 bubble. Info utama di bubble pertama.';
+        $bubbleRule = match (true) {
+            $this->prospectContext !== null && self::maxProspectBubbles() === 1 => '- Tulis SATU pesan WhatsApp utuh dan ringkas (boleh 2 paragraf pendek, dipisah baris kosong). Info utama di kalimat pertama.',
+            $this->prospectContext !== null => '- Tulis seperti orang chat WA: 1-'.self::maxProspectBubbles().' bubble pendek (pisahkan baris kosong), tiap bubble 1-2 kalimat santai. Jangan menulis seperti template atau daftar langkah formal; pakai kata-katamu sendiri.',
+            default => '- Pecah jadi 1-3 bubble pendek (pisahkan dengan baris kosong). Paling sering 1-2 bubble. Info utama di bubble pertama.',
+        };
         $style = self::STYLES[crc32($inbound->phone.today()->toDateString()) % count(self::STYLES)];
         $facts = json_encode(AgentBrain::productFacts(), JSON_UNESCAPED_UNICODE);
         $sensitiveRule = $sensitive
@@ -367,6 +375,12 @@ PROMPT;
         }
 
         return array_slice($out, 0, $sensitive ? 1 : 3);
+    }
+
+    /** Bubble per giliran untuk prospek: 1 bila one_message, selain itu max_bubbles (1-3). */
+    private static function maxProspectBubbles(): int
+    {
+        return config('yoka_sales.bd21.one_message') ? 1 : max(1, min(3, (int) config('yoka_sales.bd21.max_bubbles', 2)));
     }
 
     private function withinLimits(string $phone): bool

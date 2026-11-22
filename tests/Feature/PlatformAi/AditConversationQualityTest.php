@@ -208,12 +208,14 @@ class AditConversationQualityTest extends TestCase
             (new \App\Jobs\DraftWhatsAppReply($id))->handle();
         }
         $sent = collect(Http::recorded())->map(fn ($x) => $x[0])->filter(fn ($r) => str_contains($r->url(), 'fonnte'))->values();
-        $this->assertCount(1, $sent, 'Satu pesan untuk satu giliran.');
-        $this->assertStringContainsString('Rp99.000', $sent[0]['message']);
-        $this->assertSame(1, substr_count($sent[0]['message'], '?'), 'Maksimal satu pertanyaan.');
-        $prompt = collect(collect(Http::recorded())->map(fn ($x) => $x[0])->filter(fn ($r) => str_contains($r->url(), 'ai.test'))->last()->data()['messages'])->pluck('content')->implode("\n");
+        $this->assertLessThanOrEqual(2, $sent->count(), 'Maksimal 2 bubble berjeda untuk satu giliran.');
+        $all = $sent->map(fn ($r) => $r['message'])->implode(' ');
+        $this->assertStringContainsString('Rp99.000', $all);
+        $this->assertSame(1, substr_count($all, '?'), 'Maksimal satu pertanyaan per giliran, walau dipecah bubble.');
+        $prompt = collect(collect(Http::recorded())->map(fn ($x) => $x[0])->filter(fn ($r) => str_contains($r->url(), 'ai.test'))->last()->data()['messages'])->pluck('content')->implode("
+");
         $this->assertStringContainsString('berapa harganya?', $prompt);
-        $this->assertStringContainsString('Tulis SATU pesan WhatsApp utuh', $prompt);
+        $this->assertStringContainsString('bubble pendek', $prompt);
         $this->assertTrue(PlatformAiProspectEvent::where('type', 'quality')->exists());
     }
 

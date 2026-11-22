@@ -26,7 +26,8 @@ return [
         'opening' => (bool) env('ADIT_OPENING_STRATEGY_ENABLED', true),          // pembuka pendek tanpa link trial, nama bisnis bukan nama orang
         'strategy' => (bool) env('ADIT_CONVERSATION_STRATEGY_ENABLED', true),    // tujuan balasan, aturan bertanya, waktu link trial, closing
         'quality' => (bool) env('ADIT_RESPONSE_QUALITY_ENABLED', true),          // saring klaim/URL tak terverifikasi, pertanyaan berlebih
-        'one_message' => (bool) env('ADIT_ONE_MESSAGE_PER_TURN', true),          // satu pesan WA per giliran prospek
+        'one_message' => (bool) env('ADIT_ONE_MESSAGE_PER_TURN', false),         // true = paksa satu pesan per giliran
+        'max_bubbles' => (int) env('ADIT_MAX_BUBBLES', 2),                        // bila one_message=false: maks bubble berjeda per giliran (1-3)
         'playbook' => (bool) env('ADIT_INDUSTRY_PLAYBOOK_ENABLED', true),
         'hardware' => (bool) env('ADIT_HARDWARE_OPPORTUNITY_ENABLED', true),     // catat minat printer; bundel -> approval
         'coalesce_seconds' => (int) env('ADIT_INBOUND_COALESCE_SECONDS', 0),     // 0 = mati; 8 disarankan; maks 15 detik (lewat queue)
