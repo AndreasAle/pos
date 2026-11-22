@@ -13,7 +13,7 @@ use App\Models\PlatformAiProspect;
  */
 final class ResponseQuality
 {
-    private const SUPPORT_CLAIM = '/\b(24 ?jam|24\/7|nonstop|setiap saat|kapan (saja|pun) (dibantu|ada)|tim (support |cs )?(indonesia|lokal) (langsung|siap)|langsung dari (kami|tim)|respon(s)? (cepat|instan|kilat)|fast respon|pasti (dibantu|dibalas|beres|aman)|dijamin|garansi|tidak akan (error|hilang)|nggak (bakal|akan) (error|hilang)|100 ?%)\b/iu';
+    private const SUPPORT_CLAIM = '/\b(24 ?jam|24\/7|nonstop|setiap saat|kapan (saja|pun) (dibantu|ada)|tim (support |cs )?(indonesia|lokal) (langsung|siap)|langsung dari (kami|tim)|respon(s)? (cepat|instan|kilat)|fast respon|pasti (dibantu|dibalas|beres|aman)|dijamin|garansi|tidak akan (error|hilang)|nggak (bakal|akan) (error|hilang)|100 ?%|tanpa biaya tambahan|gratis (update|perbaikan)|update (gratis|berkala)|perbaikan bug berkala)\b/iu';
 
     private const FILLER = ['/\bpaham banget( sih)?,?\s*/iu', '/\btenang aja,?\s*/iu', '/\bpastinya,?\s*/iu', '/^wah,?\s*/iu'];
 
@@ -64,6 +64,7 @@ final class ResponseQuality
             'IDENTIFY_HARDWARE_INTEREST' => 'Langganan Yoka POS belum termasuk printer. Struk bisa dicetak lewat print browser atau printer Bluetooth dengan aplikasi RawBT di Android; sebaiknya cek dulu tipe printernya.',
             'CLOSE_CONVERSATION' => ($strategy['closing'] ?? null) === 'OPTED_OUT' ? 'Baik, kami tidak akan menghubungi lagi. Terima kasih.' : 'Terima kasih. Kalau nanti mau lanjut, tinggal balas pesan ini ya.',
             'BUILD_TRUST' => 'Boleh diceritakan, kendala waktu itu lebih ke aplikasinya error, data hilang, atau bantuannya sulit dihubungi?',
+            'READY_TO_BUY' => ConversationStrategy::BUY_STEPS,
             'OFFER_TRIAL' => 'Bisa, daftar di yokapos.com/register untuk trial gratis 7 hari.',
             'REQUEST_HUMAN_APPROVAL', 'ARRANGE_FIELD_VISIT' => 'Baik, saya teruskan ke tim Yoka dulu ya.',
             default => null,
@@ -132,6 +133,11 @@ final class ResponseQuality
                         continue;
                     }
                 }
+                if (($strategy['objective'] ?? null) === 'READY_TO_BUY' && preg_match('/\b(tanya|tanyakan|teruskan|terusin|sampaikan|infokan)\b.{0,25}\btim\b/iu', $s)) {
+                    $issues[] = 'handoff_on_buy';
+
+                    continue;
+                }
                 if (str_contains($s, '?')) {
                     if ($this->alreadyAsked($s, $previous)) {
                         $issues[] = 'repeated_question';
@@ -152,6 +158,10 @@ final class ResponseQuality
             }
         }
         $text = $this->coherent(trim(implode("\n\n", $out)));
+        if (($strategy['objective'] ?? null) === 'READY_TO_BUY' && ! str_contains($text, 'yokapos.com/register')) {
+            $text = trim($text."\n\n".ConversationStrategy::BUY_STEPS);
+            $issues[] = 'buy_steps_added';
+        }
         // Pertanyaan harga harus tetap terjawab; balasan kosong/rusak diganti fallback terverifikasi.
         $priceLost = ($strategy['objective'] ?? null) === 'ANSWER_DIRECT_QUESTION' && preg_match('/rp\.?\s?\d/iu', $original) && ! preg_match('/rp\.?\s?\d/iu', $text);
         if ($text === '' || $priceLost) {

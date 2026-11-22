@@ -284,6 +284,23 @@ class AditConversationQualityTest extends TestCase
         $this->assertNotContains($this->p->fresh()->intelligence['next_question']['key'] ?? null, ['current_method', 'decision_role', 'outlet_count', 'business_type']);
     }
 
+    public function test_buying_intent_gets_signup_steps_not_handoff(): void
+    {
+        foreach (['saya mau langsung langganan kalo gitu pak', 'ini saya langsung aja kah update nya ke website daftar nya?', 'gimana cara bayarnya?'] as $i => $msg) {
+            $r = $this->turn($msg, 40 + $i);
+            $this->assertSame('READY_TO_BUY', $r['strategy']['objective'], $msg);
+            $this->assertFalse($r['strategy']['allow_question']);
+        }
+        $q = $this->review('Kalau mau langsung langganan, boleh kak. Saya tanyakan dulu ke tim ya supaya bisa bantu prosesnya. Sekarang catat penjualannya pakai apa kak?', $r['strategy']);
+        $this->assertStringNotContainsString('tanyakan dulu ke tim', $q['text']);
+        $this->assertStringNotContainsString('?', $q['text']);
+        $this->assertStringContainsString('yokapos.com/register', $q['text']);
+        $this->assertStringContainsString('menu Langganan', $q['text']);
+        $this->assertSame(0, PlatformAiCommercialProposal::count());
+        $claim = $this->review('Update aplikasi dan perbaikan bug berkala tanpa biaya tambahan. Daftar di yokapos.com/register ya.', $r['strategy']);
+        $this->assertStringNotContainsString('tanpa biaya tambahan', $claim['text']);
+    }
+
     public function test_flags_restore_old_behavior(): void
     {
         config(['yoka_sales.bd21.opening' => false]);

@@ -18,6 +18,11 @@ final class ConversationStrategy
     /** Minta paket aplikasi + perangkat atau perangkat gratis (bukan sekadar tanya "dapat printer?"). */
     public const BUNDLE = '/\b(printer|tablet|perangkat|mesin kasir)\b.{0,30}\b(sekalian|bundling|bundel)\b|\b(sekalian|sama|plus|dengan)\b.{0,15}\b(printer|tablet|perangkat)\b.{0,30}\b(berapa|harga(nya)?)\b|\bpaket (printer|hardware|lengkap)\b|\b(printer|tablet)(nya)? gratis\b|\bgratis(in)? (printer|tablet)\b/iu';
 
+    /** Niat membeli/berlangganan sekarang: beri langkah daftar & bayar yang resmi, jangan "ditanyakan ke tim". */
+    public const BUY = '/\b(mau|pengen|ingin|siap|udah mau|sudah mau)\s+(langsung\s+)?(langganan|berlangganan|beli|bayar|daftar|pakai|pake|order)\b|\b(cara|gimana|bagaimana)\s+(daftar|langganan|berlangganan|bayar|beli|upgrade)(nya)?\b|\bdaftar(nya)?\s+(di ?mana|dimana|kemana|lewat mana|ke website)\b|\blink (daftar|langganan|pembayaran)\b|\blangsung (aja )?(daftar|langganan|bayar)\b|\b(website|web|situs)\b.{0,20}\bdaftar|\bdaftar\b.{0,20}\b(website|web|situs)\b/iu';
+
+    public const BUY_STEPS = 'Daftar di yokapos.com/register (gratis, langsung masuk trial 7 hari). Setelah login, buka menu Langganan, pilih paket, lalu bayar online lewat Midtrans; paket aktif setelah pembayaran berhasil.';
+
     public const TRIAL_REQUEST = '/\b(mau|pengen|ingin|boleh|bisa|gimana|cara) (coba|nyoba|trial|daftar)\b|\bcoba gratis\b|\blink (daftar|trial)\b/iu';
 
     public const CLOSING = '/\b(nanti (aku|saya|gue|gw)?\s*(kabar(i|in)|hubungi|chat|kontak|info)|(pikir|pikir-pikir|diskusi(kan)?|rundingan) dulu|(makasih|terima ?kasih|thanks|thx)( (ya|kak|min|banyak))*\s*$|udah dulu|sudah dulu|cukup dulu|lain kali)\b/iu';
@@ -31,6 +36,7 @@ final class ConversationStrategy
     {
         $trialSent = $p->phone_normalized && PlatformAiWhatsAppMessage::where('phone', $p->phone_normalized)->where('direction', 'outbound')
             ->where('body', 'like', '%yokapos.com/register%')->exists();
+        $buying = (bool) preg_match(self::BUY, $text);
         $trialAsked = (bool) preg_match(self::TRIAL_REQUEST, $text);
         $hardware = (bool) preg_match(self::HARDWARE, $text);
         $bundle = (bool) preg_match(self::BUNDLE, $text);
@@ -48,6 +54,7 @@ final class ConversationStrategy
             $fieldVisit => 'ARRANGE_FIELD_VISIT',
             in_array('REQUEST_HUMAN', $objectionTypes, true) || ($commercial['needs_approval'] ?? false) => 'REQUEST_HUMAN_APPROVAL',
             (bool) array_intersect(self::TRUST, $objectionTypes) => 'BUILD_TRUST',
+            $buying => 'READY_TO_BUY',
             $trialAsked => 'OFFER_TRIAL',
             $hardware => 'IDENTIFY_HARDWARE_INTEREST',
             (bool) preg_match(self::PRICE, $text) => 'ANSWER_DIRECT_QUESTION',
@@ -56,9 +63,9 @@ final class ConversationStrategy
             default => 'DISCOVER_NEED',
         };
         $qualified = ($p->intelligence['qualification']['category'] ?? null) === 'qualified';
-        $allowTrial = $trialAsked || ($objective === 'ANSWER_DIRECT_QUESTION' && preg_match(self::PRICE, $text) && ! $trialSent)
+        $allowTrial = $buying || $trialAsked || ($objective === 'ANSWER_DIRECT_QUESTION' && preg_match(self::PRICE, $text) && ! $trialSent)
             || ($qualified && ! $trialSent && in_array($objective, ['DISCOVER_NEED', 'ANSWER_DIRECT_QUESTION'], true));
-        $allowQuestion = ! in_array($objective, ['CLOSE_CONVERSATION', 'OFFER_TRIAL', 'REQUEST_HUMAN_APPROVAL', 'ARRANGE_FIELD_VISIT'], true);
+        $allowQuestion = ! in_array($objective, ['CLOSE_CONVERSATION', 'OFFER_TRIAL', 'READY_TO_BUY', 'REQUEST_HUMAN_APPROVAL', 'ARRANGE_FIELD_VISIT'], true);
 
         $rules = match ($objective) {
             'CLOSE_CONVERSATION' => match ($closing) {
@@ -68,6 +75,7 @@ final class ConversationStrategy
             },
             'ARRANGE_FIELD_VISIT' => ['Dia setuju didatangi/minta demo langsung. Terima kasih, bilang sudah kamu teruskan ke tim Yoka untuk mengatur waktunya. JANGAN menyebut jam, tanggal, atau siapa yang datang.'],
             'BUILD_TRUST' => ['Dia punya pengalaman buruk/ragu. JANGAN langsung menyebut fitur atau klaim layanan. Akui kekhawatirannya secara spesifik (bukan "paham banget"), lalu tanyakan apa persisnya masalah waktu itu (aplikasinya error, data hilang, atau bantuannya sulit dihubungi). Jangan menjanjikan layanan support 24 jam, respon cepat, atau tim tertentu.'],
+            'READY_TO_BUY' => ['Dia mau langsung daftar/berlangganan. Ini peluang closing: JANGAN bilang "tanyakan ke tim" atau "teruskan ke tim". Beri langkah resminya dengan jelas: '.self::BUY_STEPS.' Boleh sebut paket yang cocok dari PAKET AKTIF dan harganya. Tanpa pertanyaan discovery.'],
             'OFFER_TRIAL' => ['Dia minta coba. Langsung beri langkahnya: daftar di yokapos.com/register, trial gratis 7 hari. Tanpa pertanyaan tambahan yang menghambat.'],
             'IDENTIFY_HARDWARE_INTEREST' => array_values(array_filter([
                 'Jawab langsung: langganan Yoka POS tidak termasuk printer atau perangkat. '.app(HardwareCatalog::class)->promptFacts(),
