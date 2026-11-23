@@ -27,6 +27,7 @@ final class ProductKnowledge
         'void' => 'void', 'refund' => 'refund', 'batalkan' => 'void', 'batalin' => 'void', 'salah input' => 'void',
         'export' => 'ekspor', 'ekspor' => 'ekspor', 'excel' => 'ekspor', 'pdf' => 'ekspor', 'unduh' => 'ekspor', 'download' => 'ekspor',
         'qr' => 'qr', 'meja' => 'meja', 'self order' => 'qr',
+        'kredit' => 'kredit', 'tanya yoka' => 'kredit', 'yoka ai' => 'kredit', 'top up' => 'kredit', 'topup' => 'kredit', 'top-up' => 'kredit', 'saldo ai' => 'kredit', 'ai nya' => 'kredit', 'ai-nya' => 'kredit',
         'hutang' => 'hutang', 'utang' => 'hutang', 'piutang' => 'piutang', 'biaya' => 'biaya', 'pengeluaran' => 'biaya', 'supplier' => 'hutang', 'laba rugi' => 'biaya',
     ];
 

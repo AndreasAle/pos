@@ -166,7 +166,9 @@ final class CommercialPolicy
      */
     public function scrubReply(string $reply): array
     {
-        $allowed = array_merge($this->officialPlans()->flatMap(fn ($p) => array_values($p->periods()))->all(), app(HardwareCatalog::class)->officialPrices());
+        $allowed = array_merge($this->officialPlans()->flatMap(fn ($p) => array_values($p->periods()))->all(), app(HardwareCatalog::class)->officialPrices(),
+            // Harga paket kredit Yoka AI dan harga per kreditnya juga harga resmi.
+            collect((array) config('yoka_ai_credits.packs', []))->flatMap(fn ($p) => [(int) $p['price'], (int) round($p['price'] / $p['credits'])])->all());
         $removed = [];
         $sentences = preg_split('/(?<=[.!?])\s+|\n/u', $reply) ?: [];
         $kept = [];

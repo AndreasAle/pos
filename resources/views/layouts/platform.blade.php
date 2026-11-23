@@ -65,6 +65,11 @@
                 <span class="h-2 w-2 bg-emerald-600"></span> Keuangan Yoka
             </a>
             @endif
+            @if($platformAdmin->canViewFinancials())
+            <a href="{{ route('platform.ai-credits') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.ai-credits*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
+                <span class="h-2 w-2 bg-indigo-600"></span> Kredit AI
+            </a>
+            @endif
             <a href="{{ route('platform.activity') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.activity') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
                 <span class="h-2 w-2 bg-violet-600"></span> Aktivitas Tim
             </a>

@@ -39,12 +39,14 @@ class DashboardController extends Controller
             'gross_revenue' => $admin->canViewFinancials()
                 ? (float) Order::where('status', 'paid')->sum('grand_total')
                 : null,
+            // Nominal yang benar-benar dibayar (paket 3/6/12 bulan dibayar di muka), bukan harga bulanan paket.
             'subscription_revenue' => $admin->canViewFinancials()
                 ? (float) BusinessSubscription::query()
                     ->join('subscription_plans', 'subscription_plans.id', '=', 'business_subscriptions.subscription_plan_id')
                     ->whereBetween('business_subscriptions.paid_at', [now()->startOfMonth(), now()->endOfMonth()])
-                    ->sum('subscription_plans.price')
+                    ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(business_subscriptions.amount, subscription_plans.price)'))
                 : null,
+            'ai_credits' => $admin->canViewFinancials() ? app(\App\Services\AiCreditsReport::class)->platform() : null,
             'pending_withdrawals' => WithdrawalRequest::where('status', 'pending')->count(),
         ];
 

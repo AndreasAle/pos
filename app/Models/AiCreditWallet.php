@@ -13,6 +13,11 @@ class AiCreditWallet extends Model
         return ['free_balance' => 'integer', 'paid_balance' => 'integer', 'paid_expires_at' => 'date'];
     }
 
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
+    }
+
     public function total(): int
     {
         return $this->free_balance + $this->paid_balance;
