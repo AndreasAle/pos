@@ -165,4 +165,26 @@ class AiCreditsTest extends TestCase
             ->assertSee('Sisa kredit')->assertSee('Rp39.000')->assertSee('Jatah gratis bulanan');
         $this->actingAs($this->owner())->get(route('intelligence.index'))->assertOk()->assertSee(route('ai-credits.index'), false);
     }
+
+    public function test_yoka_ai_sidebar_groups_chats_and_has_an_account_menu(): void
+    {
+        $owner = $this->owner();
+        $today = AssistantConversation::create(['business_id' => $owner->business_id, 'user_id' => $owner->id, 'title' => 'Omzet hari ini']);
+        $old = AssistantConversation::create(['business_id' => $owner->business_id, 'user_id' => $owner->id, 'title' => 'Stok bulan lalu']);
+        $old->forceFill(['updated_at' => now()->subDays(40)])->saveQuietly();
+
+        $this->actingAs($owner)->get(route('intelligence.index'))->assertOk()
+            ->assertSeeInOrder(['Hari ini', 'Omzet hari ini', 'Lebih lama', 'Stok bulan lalu'])
+            ->assertSee('Kredit AI')->assertSee('Insight bisnis')->assertSee('Kembali ke Dashboard')->assertSee('YokaBasic')
+            ->assertDontSee('Insight aktif');
+
+        $this->actingAs($owner)->get(route('ai-credits.index'))->assertOk()
+            ->assertSee('Omzet hari ini')->assertSee('Kembali ke Tanya Yoka', false);
+    }
+
+    public function test_insight_link_prefills_the_question(): void
+    {
+        $this->actingAs($this->owner())->get(route('intelligence.index', ['ask' => 'Stok gula hampir habis']))->assertOk()
+            ->assertSee('Stok gula hampir habis');
+    }
 }

@@ -22,7 +22,11 @@
     }">
     @php $focus = $__env->hasSection('focus'); @endphp
     <x-page-loader/>
-    <x-yoka-enter :arrive="$focus"/>
+    @php
+        // Animasi masuk hanya saat datang dari luar Yoka AI, bukan saat pindah antar halaman Yoka AI.
+        $fromYokaAi = (bool) preg_match('#/(intelligence|ai-credits)(\?|/|$)#', (string) request()->headers->get('referer'));
+    @endphp
+    <x-yoka-enter :arrive="$focus && ! $fromYokaAi"/>
 
     @php
         $hasTopSubscriptionBar = $currentBusiness?->activeSubscription?->status === 'trial';
@@ -361,7 +365,7 @@
 
         {{-- Page content --}}
         <main class="flex-1 min-w-0 {{ $focus ? 'p-0' : 'px-4 sm:px-6 pb-8' }}">
-            @unless(request()->routeIs('dashboard', 'intelligence.index'))
+            @unless(request()->routeIs('dashboard', 'intelligence.index', 'ai-credits.index'))
             <h1 class="pt-5 pb-0.5 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
             @hasSection('page-subtitle')<p class="mb-3 text-sm text-[#64748B]">@yield('page-subtitle')</p>@endif
             @endunless
