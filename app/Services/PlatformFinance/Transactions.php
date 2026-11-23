@@ -2,6 +2,7 @@
 
 namespace App\Services\PlatformFinance;
 
+use App\Models\AiCreditTopup;
 use App\Models\BusinessSubscription;
 use App\Models\PlatformFinance\Entry;
 use InvalidArgumentException;
@@ -93,6 +94,21 @@ class Transactions
         $recognition->recognizeDue();
 
         return $entry;
+    }
+
+    /**
+     * Top-up kredit Tanya Yoka lunas via Midtrans. Diakui langsung sebagai pendapatan kredit AI:
+     * nilainya kecil dan kredit umumnya habis dalam hitungan minggu. Idempoten per top-up.
+     */
+    public function aiCreditsPaid(AiCreditTopup $topup): ?Entry
+    {
+        $amount = (float) $topup->amount;
+        if ($amount <= 0 || $topup->status !== 'paid' || ! $topup->paid_at) {
+            return null;
+        }
+
+        return $this->ledger->post($topup->paid_at, 'Top-up kredit AI '.$topup->credits.' kredit via Midtrans (top-up #'.$topup->id.')',
+            [['1200', $amount, 0], ['4200', 0, $amount]], 'midtrans', 'midtrans:ai-credits:'.$topup->id, $topup->payment_token);
     }
 
     /** Pencairan (settlement) dari Midtrans ke bank, dengan fee yang dipotong. */

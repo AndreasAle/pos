@@ -317,6 +317,10 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
         Route::patch('agents/{agent}/toggle', [IntelligenceController::class, 'toggleAgent'])->middleware('throttle:20,1')->name('agents.toggle');
         Route::delete('conversations/{conversation}', [IntelligenceController::class, 'destroyConversation'])->name('conversations.destroy');
     });
+    Route::get('ai-credits', [\App\Http\Controllers\AiCreditController::class, 'index'])
+        ->middleware('role:owner,admin')->name('ai-credits.index');
+    Route::post('ai-credits/checkout', [\App\Http\Controllers\AiCreditController::class, 'checkout'])
+        ->middleware(['role:owner,admin', 'throttle:10,1'])->name('ai-credits.checkout');
     Route::post('intelligence/refresh', [IntelligenceController::class, 'refresh'])
         ->middleware(['role:owner,admin', 'throttle:6,1'])->name('intelligence.refresh');
 

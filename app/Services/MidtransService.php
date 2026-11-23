@@ -65,7 +65,7 @@ class MidtransService
      * Create Snap payment token for subscription.
      * Returns ['token' => ..., 'redirect_url' => ...]
      */
-    public function createSnapToken(string $orderId, int $amount, string $customerName, string $customerEmail, string $itemName = 'Langganan Yoka POS 30 hari'): array
+    public function createSnapToken(string $orderId, int $amount, string $customerName, string $customerEmail, string $itemName = 'Langganan Yoka POS 30 hari', ?string $finishUrl = null): array
     {
         $params = [
             'transaction_details' => [
@@ -83,7 +83,7 @@ class MidtransService
                 'name' => mb_substr($itemName, 0, 50),
             ]],
             'callbacks' => [
-                'finish' => route('saas.plans'),
+                'finish' => $finishUrl ?? route('saas.plans'),
             ],
             'credit_card' => ['secure' => true],
         ];

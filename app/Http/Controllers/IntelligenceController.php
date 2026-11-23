@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssistantConversation;
+use App\Models\AssistantMessage;
 use App\Models\BusinessInsight;
 use App\Models\IntelligenceActionProposal;
 use App\Models\IntelligenceAgent;
+use App\Services\AiCredits;
 use App\Services\InsightService;
 use App\Services\Intelligence\ActionService;
 use App\Services\Intelligence\AgentService;
@@ -36,7 +38,9 @@ class IntelligenceController extends Controller
 
         $reportPrompt = $this->reportPrompt($request);
 
-        return view('intelligence.index', compact('conversations', 'activeConversation', 'businessInsights', 'intelligenceAgents', 'reportPrompt'));
+        $credits = app(AiCredits::class)->enabled() ? app(AiCredits::class)->balance($user->business) : null;
+
+        return view('intelligence.index', compact('conversations', 'activeConversation', 'businessInsights', 'intelligenceAgents', 'reportPrompt', 'credits'));
     }
 
     public function ask(Request $request, YokaAssistantService $assistant)
@@ -47,7 +51,12 @@ class IntelligenceController extends Controller
             'files' => 'nullable|array|max:'.AttachmentService::MAX_FILES, 'files.*' => 'file|max:5120',
         ]);
 
-        return response()->json(['success' => true] + $assistant->ask($request->user(), $data['question'], $data['conversation_id'] ?? null, $request->file('files', [])));
+        if ($blocked = $this->outOfCredits($request)) {
+            return $blocked;
+        }
+        $result = $assistant->ask($request->user(), $data['question'], $data['conversation_id'] ?? null, $request->file('files', []));
+
+        return response()->json(['success' => true] + $result + $this->chargeFor($request->user()->business, $result));
     }
 
     /** Same as ask(), but streams progress and answer tokens as Server-Sent Events; the final "done" event carries the full payload. */
@@ -58,6 +67,9 @@ class IntelligenceController extends Controller
             'question' => 'required|string|max:2000', 'conversation_id' => 'nullable|integer',
             'files' => 'nullable|array|max:'.AttachmentService::MAX_FILES, 'files.*' => 'file|max:5120',
         ]);
+        if ($blocked = $this->outOfCredits($request)) {
+            return $blocked;
+        }
         $user = $request->user();
         $files = $request->file('files', []);
 
@@ -75,7 +87,7 @@ class IntelligenceController extends Controller
                 $send('status', ['label' => 'Memahami pertanyaan…']);
                 $result = $assistant->ask($user, $data['question'], $data['conversation_id'] ?? null, $files,
                     fn (string $t) => $send('token', ['t' => $t]), fn (string $l) => $send('status', ['label' => $l]));
-                $send('done', ['success' => true] + $result);
+                $send('done', ['success' => true] + $result + $this->chargeFor($user->business, $result));
             } catch (\Illuminate\Validation\ValidationException $e) {
                 $send('fail', ['message' => collect($e->errors())->flatten()->first() ?? 'Permintaan tidak valid.']);
             } catch (\Throwable $e) {
@@ -83,6 +95,31 @@ class IntelligenceController extends Controller
                 $send('fail', ['message' => 'Yoka gagal membaca data. Coba lagi sebentar.']);
             }
         }, 200, ['Content-Type' => 'text/event-stream', 'Cache-Control' => 'no-cache, no-transform', 'X-Accel-Buffering' => 'no', 'Connection' => 'keep-alive']);
+    }
+
+    /** Kredit habis: tolak sebelum model dipanggil, dengan arah ke halaman top-up. */
+    private function outOfCredits(Request $request)
+    {
+        $credits = app(AiCredits::class);
+        if ($credits->canAsk($request->user()->business)) {
+            return null;
+        }
+
+        return response()->json(['success' => false, 'code' => 'no_credits', 'credits' => $credits->balance($request->user()->business),
+            'message' => 'Kredit Yoka AI kamu sudah habis. Top-up dulu untuk lanjut bertanya.', 'topup_url' => route('ai-credits.index')], 402);
+    }
+
+    /** Potong kredit sesuai token jawaban ini dan kembalikan sisa saldo untuk ditampilkan. */
+    private function chargeFor($business, array $result): array
+    {
+        $credits = app(AiCredits::class);
+        if (! $credits->enabled()) {
+            return [];
+        }
+        $usage = ! empty($result['message_id']) ? AssistantMessage::whereKey($result['message_id'])->value('token_usage') : null;
+        $used = $credits->charge($business, is_array($usage) ? $usage : json_decode((string) $usage, true), 'msg:'.($result['message_id'] ?? uniqid()));
+
+        return ['credits_used' => $used, 'credits' => $credits->balance($business)];
     }
 
     public function history(Request $request)
