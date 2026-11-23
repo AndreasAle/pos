@@ -20,6 +20,7 @@ class PricingController extends Controller
             'credits' => config('yoka_ai_credits.enabled') ? AiCreditsReport::facts() : null,
             'creditPacks' => (array) config('yoka_ai_credits.packs', []),
             'bundleFrom' => collect((array) config('yoka_store.bundles'))->min('price'),
+            'offline' => (bool) config('pos.features.pos_offline'),
             'waLink' => self::WA.rawurlencode('Halo, saya mau tanya paket langganan Yoka POS'),
         ]);
     }

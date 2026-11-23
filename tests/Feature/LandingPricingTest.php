@@ -28,7 +28,9 @@ class LandingPricingTest extends TestCase
         $this->get(route('pricing'))->assertOk()
             ->assertSee('YokaBasic')->assertSee('Business')->assertSee('Custom')
             ->assertSee('950000')->assertSee('1869000')->assertSee('Rp399.000')
-            ->assertSee('Coba gratis 7 hari')->assertSee('href="'.route('register').'"', false);
+            ->assertSee('Coba gratis 7 hari')->assertSee('href="'.route('register').'"', false)
+            ->assertSee('Bandingkan paket')->assertSee('Ekspor laporan ke Excel dan PDF')->assertSee('Tidak termasuk')
+            ->assertSee('href="'.route('pricing.bundles').'"', false);
     }
 
     public function test_pricing_page_follows_price_changes(): void

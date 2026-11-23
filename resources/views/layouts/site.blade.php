@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
 </head>
 <body class="bg-white text-slate-800 antialiased">
-    @include('partials.site-header', ['waLink' => $waLink, 'home' => route('landing')])
+    @include('partials.site-header', ['waLink' => $waLink, 'home' => route('landing'), 'solid' => $solidHeader ?? false])
 
     <main>
         @yield('content')
