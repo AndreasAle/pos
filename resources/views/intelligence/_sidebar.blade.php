@@ -143,7 +143,7 @@
         </div>
 
         <button type="button" @click="menu = !menu; view = 'menu'" class="flex h-12 w-full items-center gap-3 rounded-lg px-2.5 text-left transition hover:bg-white" :aria-expanded="menu">
-            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0B1B3F] text-[13px] font-bold text-white">{{ \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($me->name, 0, 1)) }}</span>
+            <x-avatar :user="$me" class="h-8 w-8" text="text-[13px]"/>
             <span class="min-w-0 flex-1 truncate text-[14px]"><span class="font-semibold text-[#0B1B3F]">{{ \Illuminate\Support\Str::of($me->name)->before(' ')->title() }}</span> <span class="text-slate-400">&middot; {{ $planLabel }}</span></span>
             @if($businessInsights->count())<span class="h-2 w-2 shrink-0 rounded-full bg-amber-400" title="Ada insight baru"></span>@endif
             <svg class="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4m0 6l-4 4-4-4"/></svg>

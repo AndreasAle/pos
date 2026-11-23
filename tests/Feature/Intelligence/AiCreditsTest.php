@@ -187,4 +187,13 @@ class AiCreditsTest extends TestCase
         $this->actingAs($this->owner())->get(route('intelligence.index', ['ask' => 'Stok gula hampir habis']))->assertOk()
             ->assertSee('Stok gula hampir habis');
     }
+
+    public function test_account_menu_uses_the_profile_photo_when_there_is_one(): void
+    {
+        $owner = $this->owner();
+        $owner->forceFill(['google_avatar' => 'https://lh3.googleusercontent.com/a/foto-yoka'])->save();
+
+        $this->actingAs($owner)->get(route('intelligence.index'))->assertOk()
+            ->assertSee('https://lh3.googleusercontent.com/a/foto-yoka', false);
+    }
 }
