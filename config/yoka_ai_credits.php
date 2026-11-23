@@ -27,6 +27,13 @@ return [
     // Kredit top-up berlaku 12 bulan sejak top-up terakhir.
     'paid_validity_months' => 12,
 
+    // Asumsi analisis untuk Luna (bukan harga jual). Ganti bila model/harga OpenAI berubah.
+    'economics' => [
+        'input_usd_per_million' => (float) env('AI_CREDIT_INPUT_USD_PER_M', 0.40), // gpt-4.1-mini input; output = 4x (sudah tercermin di token tertimbang)
+        'idr_per_usd_assumption' => (float) env('AI_CREDIT_IDR_PER_USD', 16500),   // dipakai bila kurs dari catatan top-up OpenAI belum ada
+        'payment_fee_pct' => (float) env('AI_CREDIT_PAYMENT_FEE_PCT', 0),          // fee Midtrans rata-rata; 0 = belum diisi
+    ],
+
     // Paket top-up resmi. Harga hanya dari sini; nominal pembayaran dicek sama persis.
     'packs' => [
         'ai-100' => ['name' => 'Starter', 'credits' => 100, 'price' => 15000],
