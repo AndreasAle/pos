@@ -68,7 +68,7 @@
                 @if($credits)
                     <a href="{{ route('ai-credits.index') }}" class="flex items-center gap-3 px-4 py-2 text-[#0B1B3F] hover:bg-[#F4FBF7]">
                         <svg class="h-[18px] w-[18px] text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" d="M12 8v8M9.5 10.5h5"/></svg>
-                        <span class="flex-1">Kredit AI</span>
+                        <span class="flex-1">Penggunaan</span>
                         <span class="text-[13px] font-semibold {{ $credits['total'] < 1 ? 'text-red-600' : 'text-slate-500' }}">{{ number_format($credits['total'], 0, ',', '.') }}</span>
                     </a>
                 @endif
@@ -86,12 +86,6 @@
                     </button>
                 @endif
                 <div class="my-1.5 border-t border-[#EEF0F2]"></div>
-                @if($me->role === 'owner')
-                    <a href="{{ route('saas.plans') }}" class="flex items-center gap-3 px-4 py-2 text-[#0B1B3F] hover:bg-[#F4FBF7]">
-                        <svg class="h-[18px] w-[18px] text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V8m-3.5 3.5L12 8l3.5 3.5"/></svg>
-                        Langganan & paket
-                    </a>
-                @endif
                 <a href="{{ $supportUrl }}" target="_blank" rel="noopener" class="flex items-center gap-3 px-4 py-2 text-[#0B1B3F] hover:bg-[#F4FBF7]">
                     <svg class="h-[18px] w-[18px] text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.8 9.8a2.3 2.3 0 114 1.6c-.8.5-1.8 1-1.8 2.1M12 16.5v.01"/></svg>
                     Bantuan

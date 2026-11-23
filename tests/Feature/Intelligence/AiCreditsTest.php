@@ -175,7 +175,7 @@ class AiCreditsTest extends TestCase
 
         $this->actingAs($owner)->get(route('intelligence.index'))->assertOk()
             ->assertSeeInOrder(['Hari ini', 'Omzet hari ini', 'Lebih lama', 'Stok bulan lalu'])
-            ->assertSee('Kredit AI')->assertSee('Insight bisnis')->assertSee('Kembali ke Dashboard')->assertSee('YokaBasic')
+            ->assertSee('Penggunaan')->assertSee('Insight bisnis')->assertDontSee('Langganan & paket')->assertDontSee('Ringkasan penjualan')->assertSee('Kembali ke Dashboard')->assertSee('YokaBasic')
             ->assertDontSee('Insight aktif');
 
         $this->actingAs($owner)->get(route('ai-credits.index'))->assertOk()
