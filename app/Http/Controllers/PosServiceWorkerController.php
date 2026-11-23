@@ -14,6 +14,7 @@ class PosServiceWorkerController extends Controller
     private const POS_ENTRIES = [
         'resources/css/app.css',
         'resources/js/app.js',
+        'resources/js/alpine.js',
         'resources/js/pos-offline/index.js',
     ];
 

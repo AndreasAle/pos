@@ -374,7 +374,7 @@
          class="hidden lg:block fixed z-50 pointer-events-none px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-medium shadow-lg whitespace-nowrap"
          :style="`left: 80px; top: ${tip.y}px; transform: translateY(-50%)`" x-text="tip.text"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    @vite('resources/js/alpine.js')
     @stack('scripts')
 </body>
 </html>

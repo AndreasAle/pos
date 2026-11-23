@@ -80,6 +80,6 @@
         </div>
     </section>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+@vite('resources/js/alpine.js')
 </body>
 </html>

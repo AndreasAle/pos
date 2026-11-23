@@ -7,7 +7,7 @@ use Tests\TestCase;
 /**
  * Standalone pages must ship whatever they depend on.
  *
- * Most views extend a layout that pulls Alpine from a CDN. A page that renders
+ * Most views extend a layout that loads Alpine (bundled, resources/js/alpine.js). A page that renders
  * its own <html> misses that, and Alpine directives silently do nothing — with
  * x-cloak in play the result is a blank screen rather than an error, which is
  * exactly what a cashier saw on the PIN pad.
@@ -32,7 +32,7 @@ class StandaloneViewDependencyTest extends TestCase
                 continue;
             }
 
-            if (!str_contains($contents, 'alpinejs')) {
+            if (!str_contains($contents, 'resources/js/alpine.js')) {
                 $offenders[] = $relative;
             }
         }
@@ -43,6 +43,19 @@ class StandaloneViewDependencyTest extends TestCase
             "Halaman berikut memakai Alpine tetapi tidak memuatnya — isinya tidak akan tampil:\n  - "
                 . implode("\n  - ", $offenders)
         );
+    }
+
+    public function test_alpine_is_never_loaded_from_a_cdn(): void
+    {
+        $offenders = [];
+
+        foreach ($this->bladeFiles() as $relative => $contents) {
+            if (str_contains($contents, 'cdn.jsdelivr.net/npm/alpinejs')) {
+                $offenders[] = $relative;
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Alpine harus dari bundel Vite (resources/js/alpine.js), bukan CDN.');
     }
 
     public function test_no_view_hides_content_with_x_cloak_without_alpine(): void
@@ -58,7 +71,7 @@ class StandaloneViewDependencyTest extends TestCase
                 continue;
             }
 
-            if (!str_contains($contents, 'alpinejs')) {
+            if (!str_contains($contents, 'resources/js/alpine.js')) {
                 $offenders[] = $relative;
             }
         }
