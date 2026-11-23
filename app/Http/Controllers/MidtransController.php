@@ -266,6 +266,27 @@ class MidtransController extends Controller
             return response()->json(['status' => 'ok']);
         }
 
+        // ── Top-up kredit Tanya Yoka ──────────────────────────────────────────
+        if (str_starts_with($orderId, 'AIC-')) {
+            $topup = \App\Models\AiCreditTopup::where('payment_token', $orderId)->first();
+            if (! $topup) {
+                return response()->json(['status' => 'topup not found'], 404);
+            }
+            if ((int) round((float) $topup->amount) !== (int) round((float) $grossAmount)) {
+                Log::warning('Midtrans AI credit amount mismatch', ['topup_id' => $topup->id, 'expected' => $topup->amount, 'received' => $grossAmount]);
+
+                return response()->json(['status' => 'amount mismatch'], 400);
+            }
+            $paid = $txStatus === 'settlement' || ($txStatus === 'capture' && ($data['fraud_status'] ?? '') === 'accept');
+            if ($paid) {
+                app(\App\Services\AiCredits::class)->completeTopup($topup);
+            } elseif (in_array($txStatus, ['deny', 'cancel', 'expire'], true) && $topup->status === 'pending') {
+                $topup->update(['status' => 'cancelled']);
+            }
+
+            return response()->json(['status' => 'ok']);
+        }
+
         // ── QRIS order payment ────────────────────────────────────────────────
         if (str_starts_with($orderId, 'QRIS-')) {
             $orderNumber = substr($orderId, 5); // remove 'QRIS-'

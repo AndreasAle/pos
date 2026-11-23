@@ -14,7 +14,7 @@
 @endphp
 
 <div class="flex h-[100dvh] flex-col overflow-hidden bg-white"
-     x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages), @js($reportPrompt ?? null))">
+     x-data="yokaChat(@js($activeConversation?->id), @js($initialMessages), @js($reportPrompt ?? null), @js($credits ?? null))">
     {{-- Bar mode fokus: keluar dari Yoka AI kembali ke dashboard --}}
     <header class="relative z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-3 sm:px-5">
         <a href="{{ route('dashboard') }}" data-yoka-exit aria-label="Kembali ke Dashboard" title="Kembali ke Dashboard" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#0B1B3F] transition hover:border-[#16A34A] hover:bg-[#F4FBF7]">
@@ -25,7 +25,15 @@
             <span class="text-[16px] font-extrabold text-[#0B1B3F]">Yoka AI</span>
             <span class="hidden max-w-[220px] truncate rounded-full bg-[#F1F5F9] px-2.5 py-1 text-[12px] font-bold text-slate-600 sm:inline">{{ $currentBusiness->name ?? '' }}</span>
         </div>
-        <div class="flex w-10 justify-end"><button type="button" @click="historyOpen = true" class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-slate-600 transition hover:bg-slate-50 lg:hidden" aria-label="Riwayat percakapan"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
+        <div class="flex items-center justify-end gap-2">
+            <template x-if="credits">
+                <a href="{{ route('ai-credits.index') }}" class="inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-[13px] font-bold transition"
+                   :class="credits.total < 1 ? 'border-red-200 bg-red-50 text-red-700' : (credits.total <= 5 ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-[#E5E7EB] bg-white text-[#0B1B3F] hover:border-[#16A34A]')"
+                   title="Saldo kredit Yoka AI. Klik untuk top-up.">
+                    <span x-text="credits.total"></span><span class="font-semibold text-slate-500">kredit</span>
+                </a>
+            </template>
+            <button type="button" @click="historyOpen = true" class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-slate-600 transition hover:bg-slate-50 lg:hidden" aria-label="Riwayat percakapan"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button></div>
     </header>
     <div class="relative min-h-0 flex-1">
     <div class="flex h-full min-w-0">
@@ -143,6 +151,13 @@
                     <h2 class="mt-5 text-[28px] font-extrabold leading-tight tracking-tight text-[#0B1B3F] sm:text-[34px]" x-text="greeting"></h2>
                     <p class="mt-2 text-[15px] font-semibold text-slate-500">Apa yang ingin kamu ketahui tentang bisnismu hari ini?</p>
                 </div>
+                <div x-show="credits && credits.total < 1" x-cloak class="mx-auto mb-3 flex w-full items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3" :class="messages.length === 0 ? 'max-w-3xl' : 'max-w-4xl'">
+                    <div class="text-left">
+                        <p class="text-[14px] font-bold text-amber-900">Kredit Yoka AI habis</p>
+                        <p class="text-[13px] text-amber-800">Top-up mulai Rp15.000 untuk lanjut bertanya. Jatah gratis bulanan terisi lagi tanggal 1.</p>
+                    </div>
+                    <a href="{{ route('ai-credits.index') }}" class="shrink-0 rounded-xl bg-[#16A34A] px-4 py-2.5 text-[13px] font-bold text-white hover:bg-[#15803D]">Top-up kredit</a>
+                </div>
                 <form @submit.prevent="ask" class="mx-auto w-full rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition" :class="messages.length === 0 ? 'max-w-3xl' : 'max-w-4xl'">
                     <div x-show="files.length" class="flex flex-wrap gap-1.5 px-2 pb-1 pt-0.5"><template x-for="(f,i) in files" :key="i"><span class="inline-flex items-center gap-1.5 rounded-lg bg-[#E8F7EF] px-2.5 py-1 text-[12px] font-semibold text-[#087A4E]"><span x-text="f.name"></span><button type="button" @click="files.splice(i,1)" class="text-[#087A4E]/60 hover:text-red-600" aria-label="Hapus lampiran">×</button></span></template></div>
                     <div class="flex items-end gap-2">
@@ -182,8 +197,9 @@
 
 @push('scripts')
 <script>
-function yokaChat(initialConversation, initialMessages, initialQuestion) {
+function yokaChat(initialConversation, initialMessages, initialQuestion, initialCredits) {
     return {
+        credits: initialCredits,
         historyOpen: false, search: '', searchOpen: false, listOpen: true, files: [], loading: false, streaming: false, status: 'Memahami pertanyaan…', actionLoading: false, question: initialQuestion || '', conversationId: initialConversation, messages: initialMessages || [],
         greeting: (() => { const h = new Date().getHours(), p = h < 11 ? 'pagi' : (h < 15 ? 'siang' : (h < 18 ? 'sore' : 'malam')); return 'Selamat ' + p + ', ' + @js(\Illuminate\Support\Str::of(auth()->user()->name)->before(' ')->title()->toString()) + '!' })(),
         chips: [
@@ -259,12 +275,14 @@ function yokaChat(initialConversation, initialMessages, initialQuestion) {
         },
         async ask(){
             const text=this.question.trim(); if(!text||this.loading)return;
+            if(this.credits&&this.credits.total<1)return;
             const sending=this.files.slice(); const form=new FormData(); form.append('question',text); if(this.conversationId)form.append('conversation_id',this.conversationId); sending.forEach(f=>form.append('files[]',f));
             this.messages.push({role:'user',content:text,attachments:sending.map(f=>f.name)}); this.question=''; this.files=[]; this.loading=true; this.scroll();
             this.status='Memahami pertanyaan…'; let live=null, raw='', done=null;
             const view=t=>t.replace(/```(?:yoka|(?:json)?\s*\{\s*"type")[\s\S]*?```/g,'').replace(/```(?:yoka|(?:json)?\s*\{\s*"type")[\s\S]*$/,'').replace(/\n\s*\**\s*SARAN\s*\**\s*:[\s\S]*$/i,'');
             try{
                 const response=await fetch('{{ route('intelligence.ask.stream') }}',{method:'POST',headers:{'Accept':'text/event-stream','X-CSRF-TOKEN':'{{ csrf_token() }}'},body:form});
+                if(response.status===402){const j=await response.json();this.credits=j.credits;this.messages.pop();this.question=text;return}
                 if(!response.ok||!response.body){let m='Yoka gagal membaca data.';try{const j=await response.json();m=j.message||(j.errors?Object.values(j.errors).flat()[0]:m)}catch{}throw new Error(m)}
                 const reader=response.body.getReader(), dec=new TextDecoder(); let buf='';
                 const handle=(ev,d)=>{
@@ -286,6 +304,7 @@ function yokaChat(initialConversation, initialMessages, initialQuestion) {
                     }
                 }
                 if(!done)throw new Error('Koneksi terputus sebelum jawaban selesai.');
+                if(done.credits)this.credits=done.credits;
                 const isNew=!this.conversationId; this.conversationId=done.conversation_id;
                 const final={role:'assistant',content:done.answer,hasData:!!done.tool,response:done.response};
                 if(live){Object.assign(live,final)}else{this.messages.push(final)}
