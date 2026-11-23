@@ -15,7 +15,7 @@ return [
             'platforms' => ['android (RawBT)', 'browser print'],
             'compatibility' => 'unverified', // unverified | verified | incompatible — ubah setelah dites dengan Yoka POS
             'purchase_cost' => 166000,       // referensi riset produk, belum harga beli pasti
-            'selling_price' => null,          // belum ditetapkan
+            'selling_price' => 349000,        // daftar harga v1.0 (2026-11-23); baru boleh disebut setelah status approved + verified
             'warranty' => null,
             'ownership' => 'milik pembeli',
             'stock' => null,
@@ -25,18 +25,52 @@ return [
         ],
     ],
 
+    // Daftar harga v1.0 (2026-11-23). Tetap 'draft' sampai printer lulus tes dan syarat (ongkir, garansi, retur) terisi.
+    // Harga bundel = harga paket + printer, dengan potongan perangkat untuk durasi lebih panjang.
     'bundles' => [
-        'starter-kit' => [
-            'name' => 'Yoka POS Starter Kit',
+        'basic-1-58' => [
+            'name' => 'YokaBasic 1 Bulan + Printer 58mm',
             'item' => 'mp-58n',
             'plan_slug' => 'starter',
-            'initial_price' => 349000,        // usulan, BELUM disetujui
+            'initial_price' => 498000,
             'includes_months' => 1,
-            'renewal' => 'Starter sesuai harga paket resmi per bulan',
-            // Pembagian pendapatan untuk pembukuan: perangkat vs langganan (tidak semuanya pendapatan SaaS).
+            'renewal' => 'perpanjangan YokaBasic sesuai harga paket resmi',
             'revenue_allocation' => ['hardware' => null, 'subscription' => null],
             'terms' => ['shipping' => null, 'installation' => null, 'warranty' => null, 'returns' => null, 'refunds' => null, 'taxes' => null],
-            'status' => 'draft',              // draft | approved | retired
+            'status' => 'draft',
+        ],
+        'basic-3-58' => [
+            'name' => 'YokaBasic 3 Bulan + Printer 58mm',
+            'item' => 'mp-58n',
+            'plan_slug' => 'starter',
+            'initial_price' => 699000,
+            'includes_months' => 3,
+            'renewal' => 'perpanjangan YokaBasic sesuai harga paket resmi',
+            'revenue_allocation' => ['hardware' => null, 'subscription' => null],
+            'terms' => ['shipping' => null, 'installation' => null, 'warranty' => null, 'returns' => null, 'refunds' => null, 'taxes' => null],
+            'status' => 'draft',
+        ],
+        'basic-6-58' => [
+            'name' => 'YokaBasic 6 Bulan + Printer 58mm',
+            'item' => 'mp-58n',
+            'plan_slug' => 'starter',
+            'initial_price' => 999000,
+            'includes_months' => 6,
+            'renewal' => 'perpanjangan YokaBasic sesuai harga paket resmi',
+            'revenue_allocation' => ['hardware' => null, 'subscription' => null],
+            'terms' => ['shipping' => null, 'installation' => null, 'warranty' => null, 'returns' => null, 'refunds' => null, 'taxes' => null],
+            'status' => 'draft',
+        ],
+        'basic-12-58' => [
+            'name' => 'YokaBasic 12 Bulan + Printer 58mm',
+            'item' => 'mp-58n',
+            'plan_slug' => 'starter',
+            'initial_price' => 1649000,
+            'includes_months' => 12,
+            'renewal' => 'perpanjangan YokaBasic sesuai harga paket resmi',
+            'revenue_allocation' => ['hardware' => null, 'subscription' => null],
+            'terms' => ['shipping' => null, 'installation' => null, 'warranty' => null, 'returns' => null, 'refunds' => null, 'taxes' => null],
+            'status' => 'draft',
         ],
     ],
 ];

@@ -17,9 +17,9 @@ class SubscriptionPlanSeederTest extends TestCase
 
         $this->assertDatabaseCount('subscription_plans', 4);
         $this->assertDatabaseHas('subscription_plans', [
-            'name' => 'Starter',
+            'name' => 'YokaBasic',
             'slug' => 'starter',
-            'price' => 99000,
+            'price' => 149000,
             'max_outlets' => 2,
             'max_users' => 10,
             'is_active' => true,

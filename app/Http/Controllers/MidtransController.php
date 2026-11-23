@@ -114,6 +114,7 @@ class MidtransController extends Controller
     {
         $validated = $request->validate([
             'plan_id' => ['required', 'integer', 'exists:subscription_plans,id'],
+            'months'  => ['nullable', 'integer', 'min:1', 'max:24'],
         ]);
 
         $plan = SubscriptionPlan::query()
@@ -131,7 +132,11 @@ class MidtransController extends Controller
 
         $business = auth()->user()->business;
         $orderId = 'SUB-'.$business->id.'-'.now()->format('YmdHis').'-'.Str::upper(Str::random(5));
-        $amount = (int) round((float) $plan->price);
+        $months = (int) ($validated['months'] ?? 1);
+        $amount = $plan->priceFor($months);
+        if ($amount === null) {
+            return redirect()->route('saas.plans')->with('error', 'Durasi paket tidak tersedia.');
+        }
         $current = $business->activeSubscription()->first();
         $periodBase = $current?->ends_at && $current->ends_at->isFuture()
             ? $current->ends_at->copy()
@@ -141,10 +146,12 @@ class MidtransController extends Controller
             'business_id'          => $business->id,
             'subscription_plan_id' => $plan->id,
             'starts_at'            => today(),
-            'ends_at'              => $periodBase->addDays(30),
+            // 1 bulan tetap 30 hari seperti sebelumnya; durasi lebih panjang mengikuti bulan kalender.
+            'ends_at'              => $months === 1 ? $periodBase->addDays(30) : $periodBase->addMonthsNoOverflow($months),
             'status'               => 'pending',
             'payment_token'        => $orderId,
             'amount'               => $amount,
+            'months'               => $months,
             'notes'                => 'Menunggu pembayaran Midtrans',
         ]);
 
@@ -153,7 +160,8 @@ class MidtransController extends Controller
                 $orderId,
                 $amount,
                 $business->name,
-                auth()->user()->email ?? 'owner@fnbpos.com'
+                auth()->user()->email ?? 'owner@fnbpos.com',
+                'Langganan '.$plan->name.' '.$months.' bulan'
             );
 
             if (empty($result['redirect_url'])) {

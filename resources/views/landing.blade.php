@@ -672,16 +672,18 @@
                 // Harga resmi dari tabel paket (sumber yang sama dengan checkout Midtrans); fallback bila DB belum siap.
                 try {
                     $planPrices = \App\Models\SubscriptionPlan::where('is_active', true)->pluck('price', 'slug')->map(fn ($p) => (float) $p)->all();
+                    $basicYear = \App\Models\SubscriptionPlan::where('slug', 'starter')->where('is_active', true)->first()?->priceFor(12);
                 } catch (\Throwable $e) {
                     $planPrices = [];
+                    $basicYear = null;
                 }
-                $planPrices += ['starter' => 99000, 'business' => 249000, 'enterprise' => 499000];
-                $priceOf = ['Starter' => 'starter', 'Business' => 'business', 'Custom' => 'enterprise'];
+                $planPrices += ['starter' => 149000, 'business' => 249000, 'enterprise' => 499000];
+                $priceOf = ['YokaBasic' => 'starter', 'Business' => 'business', 'Custom' => 'enterprise'];
             @endphp
             <div class="grid lg:grid-cols-3 gap-6">
                 @foreach ([
-                    ['Starter', 'Untuk UMKM kecil yang baru memulai digitalisasi kasir', ['POS transaksi', 'Manajemen produk & stok', 'QRIS static', 'Cetak struk', 'Laporan dasar'], false, 'Pilih Starter'],
-                    ['Business', 'Untuk cafe/resto yang ingin kontrol operasional lebih ketat', ['Semua fitur paket Starter', 'Shift kasir', 'Export Excel & PDF', 'Laporan profit & COGS', 'Audit log', 'Notifikasi stok menipis'], true, 'Pilih Business'],
+                    ['YokaBasic', 'Untuk warung dan UMKM kuliner yang baru memulai digitalisasi kasir', ['POS transaksi', 'Manajemen produk & stok', 'QRIS static', 'Cetak struk', 'Laporan dasar'], false, 'Pilih YokaBasic'],
+                    ['Business', 'Untuk cafe/resto yang ingin kontrol operasional lebih ketat', ['Semua fitur paket YokaBasic', 'Shift kasir', 'Export Excel & PDF', 'Laporan profit & COGS', 'Audit log', 'Notifikasi stok menipis'], true, 'Pilih Business'],
                     ['Custom', 'Untuk multi-outlet, resto besar, atau kebutuhan khusus', ['Multi-outlet & multi-user', 'Custom fitur sesuai kebutuhan', 'Training tim & staf', 'Support prioritas'], false, 'Konsultasi Sekarang'],
                 ] as [$name, $desc, $features, $highlight, $cta])
                     <div class="rounded-3xl bg-white p-8 {{ $highlight ? 'border-2 border-emerald-500 shadow-2xl shadow-emerald-100 lg:scale-[1.03]' : 'border border-slate-200' }}">
@@ -710,7 +712,7 @@
                     </div>
                 @endforeach
             </div>
-            <p class="text-center text-sm text-slate-500 mt-8">Harga dalam Rupiah (IDR) per bulan per bisnis. Coba gratis 7 hari, pembayaran langganan aman lewat Midtrans.</p>
+            <p class="text-center text-sm text-slate-500 mt-8">Harga dalam Rupiah (IDR) per bulan per bisnis. @if($basicYear)YokaBasic bayar 12 bulan Rp{{ number_format($basicYear, 0, ',', '.') }}, lebih hemat. @endif Coba gratis 7 hari, pembayaran langganan aman lewat Midtrans.</p>
         </div>
     </section>
 

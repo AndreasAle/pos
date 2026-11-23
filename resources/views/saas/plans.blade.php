@@ -8,6 +8,11 @@
         'id' => $plan->id,
         'name' => $plan->name,
         'price' => (int) $plan->price,
+        'periods' => collect($plan->periods())->map(fn ($amount, $months) => [
+            'months' => $months,
+            'amount' => $amount,
+            'save' => $months > 1 ? max(0, (int) round((1 - $amount / ($plan->price * $months)) * 100)) : 0,
+        ])->values(),
         'outlets' => $plan->max_outlets >= 999 ? 'Tanpa batas' : $plan->max_outlets.' outlet',
         'users' => $plan->max_users >= 999 ? 'Tanpa batas' : $plan->max_users.' pengguna',
     ])->values();
@@ -17,7 +22,9 @@
 <div class="page pb-8" x-data="{
     plans: @js($planData),
     selected: {{ $selectedPlan['id'] ?? 'null' }},
+    months: 1,
     get plan() { return this.plans.find(plan => plan.id === Number(this.selected)) || this.plans[0] },
+    get period() { return this.plan?.periods.find(p => p.months === Number(this.months)) || this.plan?.periods[0] },
     rupiah(value) { return 'Rp ' + new Intl.NumberFormat('id-ID').format(value || 0) }
 }">
     <div class="border-b border-slate-200 pb-5 pt-4">
@@ -111,13 +118,25 @@
             <form method="POST" action="{{ route('saas.checkout') }}" class="mt-3 border border-slate-200 bg-white">
                 @csrf
                 <div class="border-b border-slate-200 p-5">
-                    <label for="billing-plan" class="block text-sm font-bold text-[#0B1B3F]">Pilih paket bulanan</label>
+                    <label for="billing-plan" class="block text-sm font-bold text-[#0B1B3F]">Pilih paket</label>
                     @if($plans->isNotEmpty())
-                        <select id="billing-plan" name="plan_id" x-model.number="selected" class="mt-3 h-12 w-full border border-slate-300 bg-white px-3 text-sm font-semibold text-[#0B1B3F] focus:border-[#0B8F5B] focus:outline-none focus:ring-2 focus:ring-emerald-100">
+                        <select id="billing-plan" name="plan_id" x-model.number="selected" @change="months = 1" class="mt-3 h-12 w-full border border-slate-300 bg-white px-3 text-sm font-semibold text-[#0B1B3F] focus:border-[#0B8F5B] focus:outline-none focus:ring-2 focus:ring-emerald-100">
                             @foreach($plans as $plan)
                                 <option value="{{ $plan->id }}">{{ $plan->name }} — Rp {{ number_format($plan->price, 0, ',', '.') }}/bulan</option>
                             @endforeach
                         </select>
+                        <p class="mt-4 text-sm font-bold text-[#0B1B3F]">Durasi</p>
+                        <div class="mt-2 grid grid-cols-2 gap-2">
+                            <template x-for="p in plan.periods" :key="p.months">
+                                <button type="button" @click="months = p.months" class="rounded-xl border px-3 py-2 text-left text-xs"
+                                        :class="Number(months) === p.months ? 'border-[#16A34A] bg-emerald-50' : 'border-slate-300 bg-white'">
+                                    <span class="block font-bold text-[#0B1B3F]" x-text="p.months + ' bulan'"></span>
+                                    <span class="block text-slate-500" x-text="rupiah(p.amount)"></span>
+                                    <span class="block font-semibold text-[#16A34A]" x-show="p.save > 0" x-text="'Hemat ' + p.save + '%'"></span>
+                                </button>
+                            </template>
+                        </div>
+                        <input type="hidden" name="months" :value="period?.months || 1">
                     @else
                         <p class="mt-3 text-sm text-slate-500">Belum ada paket berbayar yang tersedia.</p>
                     @endif
@@ -126,14 +145,14 @@
                 <template x-if="plan">
                     <div>
                         <div class="border-b border-slate-200 px-5 py-4 text-sm">
-                            <div class="flex items-center justify-between gap-4 py-1.5"><span class="text-slate-500">Siklus tagihan</span><span class="font-semibold text-[#0B1B3F]">30 hari</span></div>
+                            <div class="flex items-center justify-between gap-4 py-1.5"><span class="text-slate-500">Siklus tagihan</span><span class="font-semibold text-[#0B1B3F]" x-text="period?.months === 1 ? '30 hari' : period?.months + ' bulan'"></span></div>
                             <div class="flex items-center justify-between gap-4 py-1.5"><span class="text-slate-500">Kapasitas outlet</span><span class="font-semibold text-[#0B1B3F]" x-text="plan.outlets"></span></div>
                             <div class="flex items-center justify-between gap-4 py-1.5"><span class="text-slate-500">Kapasitas pengguna</span><span class="font-semibold text-[#0B1B3F]" x-text="plan.users"></span></div>
                         </div>
                         <div class="p-5">
                             <div class="flex items-end justify-between gap-4">
-                                <div><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total pembayaran</p><p class="mt-1 text-xs text-slate-500">Termasuk akses paket selama 30 hari</p></div>
-                                <p class="text-2xl font-bold text-[#0B1B3F]" x-text="rupiah(plan.price)"></p>
+                                <div><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total pembayaran</p><p class="mt-1 text-xs text-slate-500" x-text="period?.months === 1 ? 'Termasuk akses paket selama 30 hari' : 'Dibayar di muka untuk ' + period?.months + ' bulan'"></p></div>
+                                <p class="text-2xl font-bold text-[#0B1B3F]" x-text="rupiah(period?.amount)"></p>
                             </div>
                             <button type="submit" @disabled(!$midtransConfigured || $plans->isEmpty()) class="mt-5 h-12 w-full bg-[#0B8F5B] px-5 text-sm font-bold text-white hover:bg-[#08794D] disabled:cursor-not-allowed disabled:bg-slate-300">Bayar dengan Midtrans</button>
                             <p class="mt-3 text-center text-xs text-slate-400">Anda akan diarahkan ke halaman pembayaran resmi Midtrans.</p>

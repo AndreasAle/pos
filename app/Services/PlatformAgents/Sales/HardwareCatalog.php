@@ -8,15 +8,22 @@ final class HardwareCatalog
     /** Bundel yang benar-benar bisa ditawarkan: bundel approved, item approved + verified, harga lengkap, syarat terisi. */
     public function approvedBundle(): ?array
     {
+        return $this->approvedBundles()[0] ?? null;
+    }
+
+    /** @return array<int,array> semua bundel yang boleh ditawarkan (mis. 1/3/6/12 bulan + printer). */
+    public function approvedBundles(): array
+    {
+        $out = [];
         foreach ((array) config('yoka_hardware.bundles', []) as $key => $b) {
             $item = config('yoka_hardware.items.'.($b['item'] ?? ''));
             if (($b['status'] ?? null) === 'approved' && $item && ($item['status'] ?? null) === 'approved' && ($item['compatibility'] ?? null) === 'verified'
                 && ! empty($b['initial_price']) && ! in_array(null, (array) ($b['terms'] ?? []), true)) {
-                return ['key' => $key, 'item' => $item] + $b;
+                $out[] = ['key' => $key, 'item' => $item] + $b;
             }
         }
 
-        return null;
+        return $out;
     }
 
     /** @return array<int,array> perangkat yang boleh disebut harganya. */
@@ -29,16 +36,16 @@ final class HardwareCatalog
     /** Teks aman untuk prompt (tanpa harga beli). */
     public function promptFacts(): string
     {
-        $bundle = $this->approvedBundle();
+        $bundles = $this->approvedBundles();
         $items = $this->approvedItems();
-        if (! $bundle && ! $items) {
+        if (! $bundles && ! $items) {
             return 'Belum ada perangkat atau bundel resmi yang dijual Yoka. Jangan sebut harga printer, jangan janji printer gratis atau stok.';
         }
         $out = [];
         foreach ($items as $i) {
             $out[] = "{$i['model']} ({$i['type']}): Rp ".number_format((float) $i['selling_price'], 0, ',', '.');
         }
-        if ($bundle) {
+        foreach ($bundles as $bundle) {
             $out[] = "{$bundle['name']}: Rp ".number_format((float) $bundle['initial_price'], 0, ',', '.')." di awal (termasuk {$bundle['item']['model']} dan {$bundle['includes_months']} bulan paket), lalu {$bundle['renewal']}.";
         }
 
@@ -49,7 +56,7 @@ final class HardwareCatalog
     public function officialPrices(): array
     {
         $p = array_map(fn ($i) => (int) $i['selling_price'], $this->approvedItems());
-        if ($b = $this->approvedBundle()) {
+        foreach ($this->approvedBundles() as $b) {
             $p[] = (int) $b['initial_price'];
         }
 
