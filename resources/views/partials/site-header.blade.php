@@ -1,8 +1,8 @@
 {{-- Header situs bersama (landing, panduan). $home = '' di landing, route('landing') di halaman lain. --}}
-@php $home = $home ?? ''; $waLink = $waLink ?? 'https://wa.me/6285891111795'; @endphp
+@php $home = $home ?? ''; $waLink = $waLink ?? 'https://wa.me/6285891111795'; $solid = $solid ?? false; /* solid: header putih sejak awal (halaman berlatar putih) */ @endphp
     <header
         x-data="{ scrolled: false, featureOpen: false, mobileFeatures: false, mobileOpen: false }"
-        x-init="scrolled = window.scrollY > 40; window.addEventListener('scroll', () => scrolled = window.scrollY > 40, { passive: true })"
+        x-init="scrolled = {{ $solid ? 'true' : 'window.scrollY > 40' }}; window.addEventListener('scroll', () => scrolled = {{ $solid ? 'true' : 'window.scrollY > 40' }}, { passive: true })"
         :class="scrolled || mobileOpen || featureOpen ? 'bg-white shadow-[0_2px_16px_rgba(15,23,42,.08)]' : 'bg-transparent'"
         class="fixed top-0 inset-x-0 z-40 transition-[background-color,box-shadow] duration-300 will-change-transform [transform:translate3d(0,0,0)] [backface-visibility:hidden] pt-[env(safe-area-inset-top)]"
     >
