@@ -104,6 +104,9 @@ class PlatformAiOperations
                 'type' => 'text',
                 'text' => $question,
             ]];
+            if (! $attachments && str_starts_with($operation, 'telegram') && PlatformTelegramImages::$current) {
+                $attachments = PlatformTelegramImages::$current; // foto yang dikirim Bos di grup Telegram
+            }
             foreach ($attachments as $attachment) {
                 array_push($userContent, ...$this->attachmentService->modelParts($attachment));
             }

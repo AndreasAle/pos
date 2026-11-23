@@ -90,6 +90,16 @@ class AditFieldVisitPacingTest extends TestCase
         $this->assertCount(1, collect(Http::recorded())->filter(fn ($x) => str_contains($x[0]->url(), 'sendMessage')), 'Ramli mengabari sekali per brief.');
     }
 
+    public function test_affirmed_problem_from_adits_last_message_is_recorded(): void
+    {
+        \App\Models\PlatformAiWhatsAppMessage::create(['direction' => 'outbound', 'phone' => '6281200000001', 'body' => 'Dengan Yoka, pesanan dan pembayaran langsung tercatat jadi kasir tidak repot pas ramai.']);
+        $this->turn('kerenn lohh, bener mas saya ada masalah nih di bagian itu', 20);
+        $pain = $this->p->fresh()->intelligence['facts']['pain_point'] ?? null;
+        $this->assertNotNull($pain);
+        $this->assertStringContainsString('antrean kasir', $pain['value']);
+        $this->assertSame('prospek (mengiyakan)', $pain['source']);
+    }
+
     public function test_declining_the_offer_does_not_create_a_visit(): void
     {
         $this->turn('gimana cara pasangnya?', 10);

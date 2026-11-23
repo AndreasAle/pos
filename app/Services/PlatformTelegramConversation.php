@@ -42,9 +42,12 @@ class PlatformTelegramConversation
         try {
             $payload = (array) $update->payload;
             $message = (array) data_get($payload, 'message', []);
-            $text = trim((string) data_get($message, 'text', ''));
+            PlatformTelegramImages::$current = [];
+            // Foto dikirim Telegram dengan "caption", bukan "text".
+            $text = trim((string) (data_get($message, 'text') ?? data_get($message, 'caption', '')));
             $fromId = data_get($message, 'from.id');
-            if ($text === '' || data_get($message, 'from.is_bot')) {
+            $hasImage = PlatformTelegramImages::hasImage($message);
+            if (($text === '' && ! $hasImage) || data_get($message, 'from.is_bot')) {
                 $this->finish($update, 'ignored');
 
                 return;
@@ -85,6 +88,13 @@ class PlatformTelegramConversation
                 return;
             }
             $group->update(['last_activity_at' => now()]);
+            // Foto: unduh sekali, ikut terbaca oleh agen. Foto tanpa teks disimpan untuk pesan berikutnya.
+            PlatformTelegramImages::$current = app(PlatformTelegramImages::class)->collect($bot, $group, $identity, $message, (int) $fromId, $text);
+            if ($text === '') {
+                $this->finish($update, 'photo_stored');
+
+                return;
+            }
             PlatformAiTelegramMessage::create(['platform_ai_telegram_group_id' => $group->id, 'platform_admin_id' => $identity->platform_admin_id, 'interaction_id' => $update->interaction_id, 'direction' => 'inbound', 'channel' => $threadId ? 'telegram_topic' : 'telegram_group', 'telegram_message_id' => $update->telegram_message_id, 'thread_id' => $threadId, 'content' => $text, 'delivery_status' => 'received']);
             // Balasan (reply) ke pesan agen: catat pesan yang dirujuk agar konteksnya bisa diselesaikan.
             $replied = $this->repliedMessage($group, $message);

@@ -36,6 +36,14 @@ final class SalesOrchestrator
                 $this->states->transition($p, 'opted_out', 'prospek', 'Prospek minta berhenti dihubungi.', [], $key ? $key.':stop' : null);
             } else {
                 $intel = config('yoka_sales.discovery') ? $this->intel->absorb($p, $text, $messageId) : ($p->intelligence ?? []);
+                // "bener, saya ada masalah di bagian itu": masalah yang baru disebut Adit ikut tercatat sebagai diiyakan prospek.
+                if (config('yoka_sales.discovery') && ! isset($this->intel->extract($text)['pain_point'])
+                    && preg_match('/\b(bener|benar|betul|iya|iyaa|nah itu|itu dia|setuju|ada masalah|masalah(nya)? (di|disitu|di situ)|repot(nya)? (di|disitu)|bagian itu)\b/iu', $text)) {
+                    $lastOut = (string) \App\Models\PlatformAiWhatsAppMessage::where('phone', $p->phone_normalized)->where('direction', 'outbound')->latest('id')->value('body');
+                    if ($pain = $this->intel->extract($lastOut)['pain_point'] ?? null) {
+                        $intel['facts']['pain_point'] = ['value' => $pain, 'source' => 'prospek (mengiyakan)', 'message_id' => $messageId, 'at' => now()->toIso8601String()];
+                    }
+                }
                 if (in_array($p->sales_stage, ['new_lead', 'outreach_pending_approval', 'outreach_sent', 'lost'], true)) {
                     $this->states->transition($p, 'engaged', 'prospek', 'Prospek membalas.');
                 }
