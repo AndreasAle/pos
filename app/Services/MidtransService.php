@@ -19,7 +19,17 @@ class MidtransService
 
     public function isConfigured(): bool
     {
-        return !empty(config('midtrans.server_key'));
+        return !empty(config('midtrans.server_key')) && $this->keyMatchesMode();
+    }
+
+    /**
+     * Key sandbox Midtrans diawali "SB-". Key sandbox dengan MIDTRANS_IS_PRODUCTION=true
+     * membuat checkout gagal di Midtrans, jadi checkout dimatikan saja sampai .env benar.
+     */
+    public function keyMatchesMode(): bool
+    {
+        // Hanya kasus pasti yang diblok: mode production dengan key sandbox.
+        return ! ((bool) config('midtrans.is_production') && str_starts_with((string) config('midtrans.server_key'), 'SB-'));
     }
 
     /**

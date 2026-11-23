@@ -39,10 +39,13 @@ class SubscriptionController extends Controller
         $outletCount = $business->outlets()->where('is_active', true)->count();
         $midtransConfigured = $this->midtrans->isConfigured();
         $isSandbox = ! config('midtrans.is_production');
+        $midtransMismatch = ! empty(config('midtrans.server_key')) && ! $this->midtrans->keyMatchesMode();
+        // Sama dengan checkout: perpanjangan dimulai dari akhir masa aktif yang masih berjalan.
+        $periodBase = $current?->ends_at && $current->ends_at->isFuture() ? $current->ends_at->copy() : today();
 
         return view('saas.plans', compact(
             'business', 'plans', 'current', 'subs', 'outletCount',
-            'midtransConfigured', 'isSandbox'
+            'midtransConfigured', 'isSandbox', 'midtransMismatch', 'periodBase'
         ));
     }
 
