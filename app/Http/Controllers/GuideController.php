@@ -296,13 +296,43 @@ class GuideController extends Controller
                     ['Tekan Pilih Paket', 'Tekan tombol Pilih Paket di bar tersebut. Tombol ini hanya terlihat oleh pemilik (owner).', null],
                     ['Bandingkan paket', 'Lihat harga, jumlah outlet, dan jumlah user di tiap paket, lalu pilih yang sesuai.', 'Pilih berdasarkan jumlah outlet dan kasir yang kamu punya sekarang.'],
                     ['Bayar online', 'Selesaikan pembayaran lewat Midtrans dengan metode yang tersedia di halaman pembayaran.', null],
-                    ['Paket aktif', 'Setelah pembayaran berhasil, paket aktif selama 30 hari dan statusnya terlihat di halaman Status Langganan.', null],
+                    ['Pilih durasi', 'Pilih lama berlangganan: 1, 3, 6, atau 12 bulan. Bayar di muka untuk 3, 6, atau 12 bulan lebih hemat.', null],
+                    ['Paket aktif', 'Setelah pembayaran berhasil, paket aktif sesuai durasi yang dipilih dan statusnya terlihat di halaman Langganan.', null],
                 ],
                 'faq' => [
                     ['Data trial hilang setelah berlangganan?', 'Tidak. Semua menu, transaksi, dan laporan tetap tersimpan.'],
                     ['Butuh bantuan memilih paket?', 'Chat tim Yoka lewat WhatsApp, kami bantu pilihkan.'],
                 ],
             ],
-        ];
+        ] + self::aiCreditGuide();
+    }
+
+    /** Panduan kredit Yoka AI. Angka dari config (satu sumber dengan aplikasi, panel admin, dan Adit). Hanya tampil bila fiturnya aktif. */
+    private static function aiCreditGuide(): array
+    {
+        if (! config('yoka_ai_credits.enabled')) {
+            return [];
+        }
+        $f = \App\Services\AiCreditsReport::facts();
+        $g = $f['jatah_gratis_per_bulan'];
+
+        return ['kredit-yoka-ai' => [
+            'category' => 'Akun',
+            'title' => 'Kredit Yoka AI: cara kerja dan cara beli',
+            'summary' => 'Tanya Yoka memakai kredit, terpisah dari langganan POS. Ada jatah gratis tiap bulan, dan kredit bisa dibeli kalau habis.',
+            'minutes' => 3,
+            'steps' => [
+                ['Cek saldo kredit', 'Buka Tanya Yoka. Sisa kredit tampil di pojok kanan atas. Rinciannya ada di menu akun kiri bawah, pilih Penggunaan.', null],
+                ['Pahami pemakaian', $f['pemakaian'], null],
+                ['Jatah gratis bulanan', 'Masa coba '.$g['masa_coba'].' kredit, YokaBasic '.$g['YokaBasic'].' kredit, Business '.$g['Business'].' kredit per bulan. '.$g['aturan'], null],
+                ['Beli kredit', 'Di halaman Penggunaan pilih paket: '.implode(', ', $f['paket_beli']).'. Bayar lewat Midtrans, kredit masuk otomatis setelah pembayaran dikonfirmasi.', 'Kredit yang dibeli berlaku '.$f['masa_berlaku_kredit_dibeli'].'.'],
+                ['Kalau kredit habis', $f['saat_habis'].' Fitur POS lain tetap jalan normal.', null],
+            ],
+            'faq' => [
+                ['Apakah kredit termasuk langganan?', 'Tidak. Langganan untuk aplikasi POS. Kredit khusus untuk Tanya Yoka, dengan jatah gratis bulanan sesuai paket.'],
+                ['Kredit saya habis padahal belum tanggal 1?', 'Beli paket kredit di halaman Penggunaan, atau tunggu jatah gratis terisi ulang tanggal 1.'],
+                ['Pembayaran kredit sudah, tapi saldo belum bertambah?', 'Kredit masuk otomatis begitu Midtrans mengonfirmasi. Kalau lebih dari 15 menit belum masuk, chat tim Yoka dengan bukti bayar.'],
+            ],
+        ]];
     }
 }

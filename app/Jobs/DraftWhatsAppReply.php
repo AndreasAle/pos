@@ -254,7 +254,7 @@ class DraftWhatsAppReply implements ShouldQueue
             ->map(fn ($m) => ($m->direction === 'inbound' ? 'Pelanggan' : 'Kamu').': '.Str::limit($m->body, 500))->implode("\n");
         $sub = $business ? BusinessSubscription::where('business_id', $business->id)->latest('id')->first() : null;
         $customer = $business
-            ? "Pengirim adalah pemilik/tim toko terdaftar \"{$business->name}\", status langganan ".($sub?->status ?? 'tidak diketahui').($sub?->ends_at ? ' sampai '.$sub->ends_at->toDateString() : '').'.'
+            ? "Pengirim adalah pemilik/tim toko terdaftar \"{$business->name}\", status langganan ".($sub?->status ?? 'tidak diketahui').($sub?->ends_at ? ' sampai '.$sub->ends_at->toDateString() : '').'. '.app(\App\Services\AiCreditsReport::class)->promptLine($business)
             : ($this->prospectContext ?? 'Pengirim belum terdaftar (kemungkinan calon pelanggan).');
         $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'period_prices', 'max_outlets', 'max_users'])
             ->map(fn ($p) => \App\Services\PlatformAgents\Sales\CommercialPolicy::planLine($p))->implode('; ');

@@ -107,6 +107,35 @@ class AiCredits
         return $added;
     }
 
+    /**
+     * Penyesuaian manual oleh super admin (bonus, kompensasi, koreksi, tes). Tidak ada uang yang masuk.
+     * Tambah masuk ke kantong berbayar (berlaku 12 bulan); kurang memotong kantong berbayar dulu, lalu gratis.
+     * Mengembalikan perubahan yang benar-benar terjadi (tidak pernah membuat saldo minus).
+     */
+    public function adjust(Business $business, int $delta, string $reason, ?int $adminId = null): int
+    {
+        if ($delta === 0) {
+            return 0;
+        }
+
+        return DB::transaction(function () use ($business, $delta, $reason, $adminId) {
+            $w = $this->lockedWallet($business);
+            if ($delta > 0) {
+                $w->update(['paid_balance' => $w->paid_balance + $delta,
+                    'paid_expires_at' => max($w->paid_expires_at?->toDateString() ?? '', now()->addMonthsNoOverflow((int) config('yoka_ai_credits.paid_validity_months', 12))->toDateString())]);
+                $free = 0;
+                $paid = $delta;
+            } else {
+                $paid = -min(-$delta, $w->paid_balance);
+                $free = -min(-$delta + $paid, $w->free_balance);
+                $w->update(['paid_balance' => $w->paid_balance + $paid, 'free_balance' => $w->free_balance + $free]);
+            }
+            $this->log($w, 'adjust', $free, $paid, 'adm:'.\Illuminate\Support\Str::uuid(), ['reason' => $reason, 'admin_id' => $adminId, 'requested' => $delta]);
+
+            return $free + $paid;
+        });
+    }
+
     public function monthlyAllowance(Business $business): int
     {
         $slug = $business->activeSubscription()->with('plan')->first()?->plan?->slug;

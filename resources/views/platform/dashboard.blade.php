@@ -19,10 +19,11 @@
 </section>
 
 @if($admin->canViewFinancials())
-<section class="mt-4 grid gap-4 md:grid-cols-3">
+<section class="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
     <article class="border border-slate-200 bg-slate-900 p-5 text-white"><p class="text-xs font-bold uppercase tracking-wider text-slate-300">Omzet seluruh toko</p><p class="mt-2 text-2xl font-black">Rp {{ number_format($stats['gross_revenue'], 0, ',', '.') }}</p></article>
     <article class="border border-emerald-800 bg-emerald-700 p-5 text-white"><p class="text-xs font-bold uppercase tracking-wider text-emerald-100">Pendapatan langganan bulan ini</p><p class="mt-2 text-2xl font-black">Rp {{ number_format($stats['subscription_revenue'], 0, ',', '.') }}</p></article>
     <a href="{{ route('platform.withdrawals.index') }}" class="border border-amber-300 bg-amber-50 p-5 text-amber-950 hover:bg-amber-100"><p class="text-xs font-bold uppercase tracking-wider">Antrean penarikan</p><p class="mt-2 text-2xl font-black">{{ $stats['pending_withdrawals'] }} permintaan</p></a>
+    <a href="{{ route('platform.ai-credits') }}" class="border border-indigo-200 bg-indigo-50 p-5 text-indigo-950 hover:bg-indigo-100"><p class="text-xs font-bold uppercase tracking-wider">Kredit AI bulan ini</p><p class="mt-2 text-2xl font-black">Rp {{ number_format($stats['ai_credits']['topup_rupiah_bulan_ini'], 0, ',', '.') }}</p><p class="mt-1 text-xs">{{ number_format($stats['ai_credits']['kredit_terpakai_bulan_ini'], 0, ',', '.') }} kredit terpakai · {{ $stats['ai_credits']['toko_kredit_habis'] }} toko habis</p></a>
 </section>
 @endif
 

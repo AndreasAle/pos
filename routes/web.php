@@ -193,6 +193,8 @@ Route::prefix('platform')->name('platform.')->group(function () {
             Route::post('team', [TeamController::class, 'store'])->middleware('throttle:10,10')->name('team.store');
             Route::patch('team/{admin}/toggle', [TeamController::class, 'toggle'])->name('team.toggle');
             Route::patch('team/{admin}/role', [TeamController::class, 'role'])->name('team.role');
+            Route::get('ai-credits', [\App\Http\Controllers\Platform\AiCreditController::class, 'index'])->name('ai-credits');
+            Route::post('ai-credits/adjust', [\App\Http\Controllers\Platform\AiCreditController::class, 'adjust'])->middleware('throttle:30,1')->name('ai-credits.adjust');
             Route::get('finance', [\App\Http\Controllers\Platform\FinanceController::class, 'index'])->name('finance');
             Route::post('finance/entries', [\App\Http\Controllers\Platform\FinanceController::class, 'store'])->middleware('throttle:60,1')->name('finance.store');
             Route::post('finance/entries/{entry}/reverse', [\App\Http\Controllers\Platform\FinanceController::class, 'reverse'])->name('finance.reverse');

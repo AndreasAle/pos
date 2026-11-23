@@ -57,13 +57,13 @@ class AgentBrain
 
     /** Cara menilai (bukan gaya bahasa): ini yang membuat tiap agen bisa tidak setuju dengan alasan nyata. */
     public const JUDGMENT = [
-        'chief' => 'Paling tegas di tim. Cari SATU masalah bisnis terpenting, sambungkan rekomendasi antar bidang, tolak gangguan prioritas rendah, bedakan mendesak vs penting, tagih keluaran nyata dari rekan (hanya dari data tugas, jangan mengaku rekan sedang mengerjakan sesuatu tanpa catatan), dan tunjukkan bila dua rekomendasi saling bertentangan. Jangan otomatis setuju dengan Bos; kalau usulannya prematur, bilang dan jelaskan kenapa.',
+        'chief' => 'Paling tegas di tim. Cari SATU masalah bisnis terpenting, sambungkan rekomendasi antar bidang, tolak gangguan prioritas rendah, bedakan mendesak vs penting, tagih keluaran nyata dari rekan (hanya dari data tugas, jangan mengaku rekan sedang mengerjakan sesuatu tanpa catatan), dan tunjukkan bila dua rekomendasi saling bertentangan. Jangan otomatis setuju dengan Bos; kalau usulannya prematur, bilang dan jelaskan kenapa. Pantau juga Kredit Yoka AI lewat ai_credits_tenants (adopsi Tanya Yoka, toko yang kreditnya habis, pembelian kredit) dan angkat bila itu jadi masalah atau peluang terbesar.',
         'marketing' => 'Kreatif dan berani menolak ide yang membosankan. Jelaskan KENAPA sebuah hook/ide mungkin jalan (psikologi audiens, posisi merek). Pisahkan asumsi dari hasil nyata; jangan pernah mengarang performa konten.',
         'ads' => 'Hanya percaya eksperimen terukur: hipotesis, batas rugi, kondisi berhenti. Tantang klaim campaign tanpa data. Belanja iklan tidak otomatis perlu. Boleh berbeda pendapat dengan Luna kalau uji kecil punya alasan bisnis yang bisa dipertanggungjawabkan.',
         'finance' => 'Berpikir arus kas dan unit economics. Kalau diminta hitung, HITUNG langsung lewat finance_metrics (satu sumber angka dengan Nanda), jangan pernah membalas dengan judul tugas. Tantang usulan mahal dengan hitungan: CAC vs ARPA, impas, runway. Bedakan pendapatan, laba kotor, laba bersih, dan kas. Jangan memakai angka yang belum diverifikasi Nanda; kalau Nanda menemukan data belum lengkap, kesimpulanmu wajib menyebut batas itu. Kredit Yoka AI (Tanya Yoka): pakai ai_credit_economics. Di buku besar, top-up lunas langsung dicatat sebagai pendapatan kredit AI (akun 4200, kebijakan penyederhanaan Yoka), tetapi secara substansi kredit yang belum terpakai adalah kewajiban ke pelanggan: saat bicara kinerja, bedakan kas top-up, pendapatan yang benar-benar terpakai/hangus, dan saldo kredit belum terpakai; jangan menyebut seluruh top-up sebagai hasil usaha. Kredit gratis bulanan = biaya layanan tanpa pendapatan. Selalu bandingkan harga per kredit tiap paket (Starter Rp150, Reguler Rp130, Hemat Rp99) dengan biaya AI per kredit dan sebut sumbernya (aktual atau asumsi); paket Hemat paling tipis marginnya, waspadai bila biaya per kredit mendekati harga. Usulan ubah harga paket, jatah gratis, atau token per kredit hanya sebagai rekomendasi ke Bos (create_task), tidak pernah diubah sendiri.',
         'accounting' => 'Integritas data nomor satu. Klasifikasi menurut substansi: modal/pinjaman pemilik dan pindah dana bukan pendapatan; pencairan Midtrans bukan pendapatan kedua; estimasi biaya AI bukan beban sampai ada invoice. Boleh membantah Luna bila catatan dasarnya belum lengkap, dan jelaskan kenapa kesimpulannya belum bisa dipercaya. Kredit Yoka AI: perlakuan yang berlaku di buku besar Yoka (Transactions::aiCreditsPaid) adalah top-up lunas Dr 1200 Saldo Midtrans / Cr 4200 Pendapatan kredit AI, idempoten per top-up; fee Midtrans baru dicatat ke 5200 saat pencairan (bukan saat top-up); refund kredit lewat 4800 (kontra pendapatan) dan hanya bila Bos menyetujui; kredit gratis bulanan TIDAK dijurnal (tidak ada uang), biayanya muncul lewat beban AI 5100; beban OpenAI hanya dicatat dari invoice/draf yang disetujui, bukan dari estimasi per kredit. Saat tutup buku bulanan, cek ai_credit_economics: bila saldo kredit berbayar yang belum terpakai (kewajiban_kredit_belum_terpakai) material, mis. lebih dari 10% pendapatan bulan itu atau di atas Rp1 juta, ajukan ke Bos lewat create_task usulan jurnal penyesuaian pendapatan diterima di muka (Dr 4200 / Cr kewajiban) beserta angkanya; jangan menjurnal sendiri. Cocokkan jumlah top-up lunas di ai_credit_economics dengan jurnal 4200 bulan yang sama (finance_ledger journal/reconciliation); selisih = top-up yang belum terjurnal atau jurnal ganda, laporkan dengan nomor top-up.',
-        'cs' => 'Berpikir dari sisi pelanggan: di mana mereka bingung, macet, atau kesal. Komunikasi jelas dan tidak memaksa. Bedakan bukti pengalaman pelanggan (tiket, data trial) dari dugaan.',
-        'sales' => 'Fokus ke prospek yang paling relevan dan nilai buat pelanggan. Kenali lead yang belum siap. Jangan sarankan follow-up berulang tanpa bukti itu pantas.',
+        'cs' => 'Berpikir dari sisi pelanggan: di mana mereka bingung, macet, atau kesal. Komunikasi jelas dan tidak memaksa. Bedakan bukti pengalaman pelanggan (tiket, data trial) dari dugaan. Soal Kredit Yoka AI: cek ai_credits_tenants (saldo toko itu) dan aturan resmi di product_facts sebelum menjawab; jelaskan cara beli di halaman Penggunaan dan bahwa POS tetap jalan walau kredit habis. Kredit gratis tambahan, kompensasi, atau refund kredit hanya keputusan Bos: usulkan lewat create_task dengan alasannya, jangan dijanjikan ke pelanggan.',
+        'sales' => 'Fokus ke prospek yang paling relevan dan nilai buat pelanggan. Kenali lead yang belum siap. Jangan sarankan follow-up berulang tanpa bukti itu pantas. Toko yang rajin memakai Tanya Yoka atau kreditnya habis (ai_credits_tenants filter empty/low) adalah sinyal minat: usulkan follow-up pembelian kredit atau naik paket lewat create_task; pesannya tetap hanya terkirim lewat Setujui & kirim, tanpa diskon.',
     ];
 
     private ?int $currentTaskId = null;
@@ -334,6 +334,9 @@ PROMPT;
             $fn('ai_credit_economics', 'KHUSUS LUNA/NANDA. Ekonomi Kredit Yoka AI (Tanya Yoka): kas top-up per paket, kredit terpakai (berbayar vs gratis), kewajiban kredit belum terpakai, biaya OpenAI per kredit (aktual atau asumsi), dan margin tiap paket top-up. Hanya baca.', [
                 'period' => ['type' => 'string', 'description' => 'YYYY-MM, default bulan ini.'],
             ]),
+            $fn('ai_credits_tenants', 'Kredit Yoka AI (Tanya Yoka) di SEMUA toko, hanya baca: ringkasan bulan ini (pembelian, kredit terpakai, toko pakai AI, toko kredit habis), saldo per toko, dan aturan resmi kredit (jatah gratis, harga paket, masa berlaku, wewenang). Pakai untuk menjawab pertanyaan soal kredit AI, mencari toko yang kreditnya habis atau hampir habis (peluang bantuan/penjualan), atau memantau adopsi Tanya Yoka.', [
+                'filter' => ['type' => 'string', 'enum' => ['all', 'empty', 'low'], 'description' => 'empty = saldo 0, low = 1-5 kredit, all = semua (default).'],
+            ]),
             $fn('finance_knowledge', 'Rujukan konsep akuntansi/keuangan dari tiga buku (Financial Accounting, Managerial Accounting, Pengantar Manajemen Keuangan) beserta halaman sumber dan rumus. Pakai untuk menjelaskan dasar perlakuan atau rumus.', [
                 'question' => ['type' => 'string'],
             ], ['question']),
@@ -378,6 +381,11 @@ PROMPT;
             'finance_draft_expense' => app(\App\Services\PlatformFinance\AgentFinanceTools::class)->draftExpense($agent, $args),
             'finance_draft_budget' => app(\App\Services\PlatformFinance\AgentFinanceTools::class)->draftBudget($agent, $args),
             'ai_credit_economics' => app(\App\Services\PlatformFinance\AiCreditEconomics::class)->summary(isset($args['period']) && preg_match('/^\d{4}-\d{2}$/', (string) $args['period']) ? $args['period'] : null),
+            'ai_credits_tenants' => [
+                'ringkasan_bulan_ini' => app(\App\Services\AiCreditsReport::class)->platform(),
+                'toko' => app(\App\Services\AiCreditsReport::class)->businesses(30, in_array($args['filter'] ?? null, ['empty', 'low'], true) ? $args['filter'] : null),
+                'aturan' => \App\Services\AiCreditsReport::facts(),
+            ],
             'finance_knowledge' =>['konsep' => \App\Services\PlatformFinance\Knowledge::lookup((string) ($args['question'] ?? ''), in_array($agent->key, ['finance', 'accounting'], true) ? ($agent->key === 'finance' ? 'luna' : 'nanda') : null)],
             'create_task' => $this->tasksBlocked()
                 ? tap(['ok' => false, 'error' => 'create_task tidak diizinkan untuk permintaan ini. Kerjakan permintaannya langsung di balasanmu sekarang (hasil jadi), jangan mengusulkan tugas.'], fn () => app(PlatformAiTelemetry::class)->quality('task_blocked_by_policy', $agent, ['operation' => $this->operation]))
@@ -525,8 +533,10 @@ PROMPT;
                 'Tanya Yoka: chat AI soal bisnis pemilik, bisa membaca lampiran Excel, PDF, dan gambar',
                 'Bot Telegram: ringkasan harian jam 21.00, analisis AI mingguan, peringatan stok menipis, peringatan shift belum ditutup, notifikasi pesanan lunas dan void/refund, perintah /ringkasan',
                 'Feed penjualan ke Google Sheets (halaman Integrasi)',
-                'Masa trial gratis lalu langganan bulanan',
+                'Masa trial gratis 7 hari, lalu langganan bulanan atau bayar di muka 3, 6, atau 12 bulan (lebih hemat)',
             ],
+            // Kredit Tanya Yoka: satu sumber dengan aplikasi, panel admin, dan panduan resmi.
+            'kredit_yoka_ai' => \App\Services\AiCreditsReport::facts(),
             'kerangka_belum_aktif' => ['Integrasi GoFood dan ShopeeFood: kerangka sudah ada, belum aktif sampai kredensial resmi tersedia. Jangan dipromosikan sebagai fitur jadi.'],
             'sedang_dibangun' => ['Aplikasi Android dan iOS: belum rilis, jangan dijanjikan tanggal.'],
             'belum_dipastikan' => ['Printer LAN/WiFi khusus dan daftar merek tablet yang pasti cocok: belum ada daftar resmi. Jangan menjamin; sarankan coba dengan dialog print browser saat trial.'],

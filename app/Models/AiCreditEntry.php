@@ -15,6 +15,11 @@ class AiCreditEntry extends Model
         return ['meta' => 'array', 'free_change' => 'integer', 'paid_change' => 'integer'];
     }
 
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
+    }
+
     public function change(): int
     {
         return $this->free_change + $this->paid_change;
