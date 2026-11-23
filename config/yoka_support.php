@@ -10,7 +10,7 @@ return [
     // Target respon resmi, mis. "maksimal 1x24 jam kerja". null = belum ditetapkan.
     'response_target' => env('YOKA_SUPPORT_RESPONSE_TARGET') ?: null,
     'channels' => [
-        'WhatsApp resmi Yoka (dijawab Adit, asisten AI, kapan saja; tim manusia ikut menangani bila perlu)',
+        'WhatsApp resmi Yoka (dibalas Adit kapan saja; tim manusia ikut menangani bila perlu)',
         'Panduan tertulis di yokapos.com/panduan',
     ],
     'escalation' => 'Adit mencatat kasus ke tim Yoka; tim manusia menindaklanjuti. Tidak ada janji waktu selama jam/target belum ditetapkan.',

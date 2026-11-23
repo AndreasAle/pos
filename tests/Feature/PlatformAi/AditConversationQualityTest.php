@@ -62,9 +62,10 @@ class AditConversationQualityTest extends TestCase
         $this->assertNull(OpeningStrategy::personName($this->p));
         $opening = app(OpeningStrategy::class)->opening($this->p);
         $this->assertSame('VERIFIED_PECEL_LELE', $opening['category']);
-        $this->assertStringContainsString('Selamat pagi Pak/Bu, izin kenalan ya.', $opening['message']);
+        $this->assertStringStartsWith('Selamat pagi Pak/Bu', $opening['message']);
         $this->assertStringNotContainsStringIgnoringCase('kak andopos', $opening['message']);
-        $this->assertStringContainsString('asisten AI', $opening['message']);
+        $this->assertStringContainsString('Saya Adit dari Yoka POS', $opening['message']);
+        $this->assertStringNotContainsString('AI', $opening['message']);
         $this->assertStringNotContainsString('yokapos.com', $opening['message']);
         $this->assertSame(1, substr_count($opening['message'], '?'));
         $this->assertStringContainsString('JANGAN sapa dengan nama bisnis', app(ProspectDesk::class)->context($this->p));
@@ -75,6 +76,13 @@ class AditConversationQualityTest extends TestCase
 
         $budi = new PlatformAiProspect(['business_name' => 'Pecel Lele Cak Budi', 'contact_name' => 'siti']);
         $this->assertSame('Siti', OpeningStrategy::personName($budi));
+        $cak = new PlatformAiProspect(['business_name' => 'Pecel Lele Cak Budi', 'contact_name' => 'budi']);
+        $this->assertSame('Budi', OpeningStrategy::personName($cak));
+        $this->assertSame('Cak Budi', OpeningStrategy::salutation($cak));
+        $this->assertSame('Kak Siti', OpeningStrategy::salutation($budi));
+        $this->assertSame('Pak/Bu', OpeningStrategy::salutation($this->p));
+        $texts = collect(range(1, 12))->map(fn ($i) => app(OpeningStrategy::class)->opening(new PlatformAiProspect(['business_name' => "Pecel Lele {$i}", 'phone_normalized' => '62812000000'.$i, 'business_type' => 'Pecel Lele']))['message'])->unique();
+        $this->assertGreaterThan(1, $texts->count(), 'Pembuka tidak identik untuk semua warung.');
         $this->assertNull(OpeningStrategy::personName(new PlatformAiProspect(['business_name' => 'X', 'contact_name' => 'Warung Siti'])));
     }
 
@@ -301,6 +309,18 @@ class AditConversationQualityTest extends TestCase
         $this->assertSame(0, PlatformAiCommercialProposal::count());
         $claim = $this->review('Update aplikasi dan perbaikan bug berkala tanpa biaya tambahan. Daftar di yokapos.com/register ya.', $r['strategy']);
         $this->assertStringNotContainsString('tanpa biaya tambahan', $claim['text']);
+    }
+
+    public function test_adit_does_not_call_itself_ai_unless_asked(): void
+    {
+        $r = $this->turn('harganya berapa kak?', 60);
+        $q = $this->review('Saya Adit, asisten AI dari Yoka POS. Starter Rp99.000/bulan.', $r['strategy']);
+        $this->assertSame('Starter Rp99.000/bulan.', $q['text']);
+        $this->assertContains('ai_self_mention', $q['issues']);
+
+        $asked = $this->turn('ini bot ya kak?', 61);
+        $q = $this->review('Iya kak, saya asisten AI dari Yoka, tim manusia juga ikut bantu.', $asked['strategy']);
+        $this->assertStringContainsString('asisten AI', $q['text']);
     }
 
     public function test_flags_restore_old_behavior(): void

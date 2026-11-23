@@ -91,7 +91,7 @@ final class ConversationStrategy
         $rules[] = $allowQuestion ? 'Paling banyak SATU pertanyaan di balasan ini, dan tidak wajib bertanya.' : 'Jangan bertanya di balasan ini.';
         $rules[] = $allowTrial ? ($trialSent ? 'Link trial sudah pernah dikirim; sebut lagi hanya bila dia minta.' : 'Link trial boleh disebut sekali bila pas.') : 'Jangan menyebut link trial/daftar di balasan ini.';
 
-        return ['objective' => $objective, 'closing' => $closing, 'allow_question' => $allowQuestion, 'allow_trial_cta' => (bool) $allowTrial,
+        return ['asked_ai' => (bool) preg_match('/\b(bot|robot|ai|a\.i|chatgpt|gpt|otomatis|manusia|orang (asli|beneran|betulan))\b/iu', $text), 'objective' => $objective, 'closing' => $closing, 'allow_question' => $allowQuestion, 'allow_trial_cta' => (bool) $allowTrial,
             'hardware' => $hardware, 'bundle' => $bundle, 'rules' => $rules];
     }
 }

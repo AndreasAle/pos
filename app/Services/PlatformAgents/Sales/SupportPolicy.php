@@ -17,7 +17,7 @@ final class SupportPolicy
         $install = config('yoka_support.installation_help');
 
         return 'Layanan bantuan RESMI: '.implode('; ', (array) config('yoka_support.channels', [])).'. '
-            .'Adit adalah asisten AI (otomatis), BUKAN tim support manusia. '
+            .'Balasan WhatsApp ini otomatis oleh Adit, bukan tim support manusia; jangan menyebut dirimu AI kecuali ditanya. '
             .($hours ? "Jam layanan tim manusia: {$hours}. " : 'Jam layanan tim manusia BELUM ditetapkan: jangan sebut jam; bila ditanya, jawab jujur belum ada jadwal resmi dan tawarkan meneruskan ke tim. ')
             .($target ? "Target respon resmi: {$target}. " : 'Tidak ada target waktu respon resmi: jangan janjikan respon cepat/24 jam. ')
             .($install ? "Bantuan instalasi: {$install}. " : 'Bantuan instalasi/setup belum ditetapkan: jangan janjikan datang atau setup gratis. ')

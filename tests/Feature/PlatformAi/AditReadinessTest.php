@@ -94,8 +94,10 @@ class AditReadinessTest extends TestCase
     public function test_opening_is_short_and_natural(): void
     {
         $m = app(OpeningStrategy::class)->opening($this->p)['message'];
-        $this->assertStringStartsWith('Selamat pagi Pak/Bu, izin kenalan ya. Saya Adit, asisten AI dari Yoka POS.', $m);
-        $this->assertStringContainsString('Kami punya aplikasi kasir untuk usaha kuliner. Mau tanya sedikit, kalau warung sedang ramai', $m);
+        $this->assertStringStartsWith('Selamat pagi Pak/Bu', $m);
+        $this->assertStringContainsString('Saya Adit dari Yoka POS', $m);
+        $this->assertStringContainsString('aplikasi kasir untuk usaha kuliner', $m);
+        $this->assertStringContainsString('kalau warung sedang ramai', $m);
         $this->assertStringNotContainsStringIgnoringCase('andopos', $m);
         $this->assertSame(1, substr_count($m, '?'));
         $this->assertLessThan(300, mb_strlen($m));
@@ -129,7 +131,7 @@ class AditReadinessTest extends TestCase
     public function test_support_policy_is_truthful_when_hours_unset_and_allows_configured_hours(): void
     {
         $this->assertStringContainsString('BELUM ditetapkan', SupportPolicy::promptLine());
-        $this->assertStringContainsString('BUKAN tim support manusia', SupportPolicy::promptLine());
+        $this->assertStringContainsString('bukan tim support manusia', SupportPolicy::promptLine());
         $s = ['objective' => 'ANSWER_DIRECT_QUESTION', 'allow_question' => true, 'allow_trial_cta' => false];
         $this->assertSame('', app(ResponseQuality::class)->review('Support kami 24 jam nonstop.', $this->p, ['objective' => 'DISCOVER_NEED'] + $s)['text']);
 

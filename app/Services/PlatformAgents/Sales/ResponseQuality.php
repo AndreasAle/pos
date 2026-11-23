@@ -115,6 +115,12 @@ final class ResponseQuality
                 if ($s === '') {
                     continue;
                 }
+                // Tidak menyebut diri AI kecuali prospek menanyakannya (kalau ditanya tetap jujur).
+                if (empty($strategy['asked_ai']) && preg_match('/\b(asisten (ai|virtual)|sebagai (ai|bot)|(saya|aku) (adalah )?(ai|bot|robot)|ai (dari|milik) yoka)\b/iu', $s)) {
+                    $issues[] = 'ai_self_mention';
+
+                    continue;
+                }
                 if (preg_match(self::SUPPORT_CLAIM, $s) && ! SupportPolicy::mentionsOfficialHours($s)) {
                     $issues[] = 'unverified_support_claim';
 
