@@ -53,12 +53,29 @@ class FonnteWebhookController extends Controller
         $window = min(15, max(0, (int) config('yoka_sales.bd21.coalesce_seconds', 0)));
         $urgent = (bool) preg_match(\App\Services\PlatformAgents\ProspectDesk::STOP_PATTERN, $text)
             || in_array(\App\Services\PlatformAgents\CustomerService\CustomerSignals::HUMAN, \App\Services\PlatformAgents\CustomerService\CustomerSignals::detect($text), true);
-        if ($window > 0 && ! $urgent) {
-            DraftWhatsAppReply::dispatch($message->id)->delay(now()->addSeconds($window));
+        $prospectDelay = $urgent ? 0 : self::prospectDelay($phone);
+        if ($prospectDelay > 0 || ($window > 0 && ! $urgent)) {
+            DraftWhatsAppReply::dispatch($message->id)->delay(now()->addSeconds(max($prospectDelay, $window)));
         } else {
             DraftWhatsAppReply::dispatchAfterResponse($message->id);
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /** Prospek (bukan pelanggan) dibalas dengan jeda acak; pelanggan CS tetap cepat. */
+    private static function prospectDelay(string $phone): int
+    {
+        $min = max(0, (int) config('yoka_sales.bd21.prospect_reply_delay_min', 0));
+        $max = max($min, (int) config('yoka_sales.bd21.prospect_reply_delay_max', 0));
+        if ($max === 0) {
+            return 0;
+        }
+        $p = \App\Models\PlatformAiProspect::where('phone_normalized', $phone)->first();
+        if (! $p || $p->opted_out_at || in_array($p->status, ['trial', 'bayar'], true)) {
+            return 0;
+        }
+
+        return random_int($min, $max);
     }
 }

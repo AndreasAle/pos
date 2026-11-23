@@ -75,6 +75,36 @@ class PlatformTelegramNotifications
         return $sent;
     }
 
+    /** Ramli mengabari grup Telegram: ada warung yang setuju dikunjungi. Satu kali per brief. */
+    public function fieldVisitAlert(PlatformAiTask $task): int
+    {
+        $b = (array) data_get($task->payload, 'brief', []);
+        $sent = 0;
+        foreach (PlatformAiTelegramGroup::where('enabled', true)->get() as $group) {
+            $claim = PlatformAiTelegramNotification::claim('field_visit', $group, null, (string) $task->id);
+            if (! $claim) {
+                continue;
+            }
+            $bot = $this->chief();
+            if (! $bot) {
+                $claim->update(['status' => 'skipped']);
+
+                continue;
+            }
+            $where = trim(($b['bisnis'] ?? 'Prospek').(! empty($b['kota']) ? ' di '.$b['kota'] : ''));
+            $text = "Bos, ada jadwal kunjungan baru nih: {$where} mau didatangi buat demo."
+                .(! empty($b['kontak']) ? " Kontaknya {$b['kontak']}." : '')
+                .' Catat sekarang: '.($b['cara_catat_sekarang'] ?? 'belum diketahui').'. Masalahnya: '.($b['masalah'] ?? 'belum diketahui').'.'
+                .(! empty($b['minat_perangkat']) ? ' Dia juga nanya printer.' : '')
+                ." Adit belum janji jam, jadi atur waktunya langsung ke prospek ya. Brief lengkap di Tim AI tugas #{$task->id}.";
+            $message = $this->gateway->send($bot, $group, $text);
+            $claim->update(['status' => $message->delivery_status, 'platform_ai_telegram_message_id' => $message->id]);
+            $sent += $message->delivery_status === 'delivered' ? 1 : 0;
+        }
+
+        return $sent;
+    }
+
     public function pendingAlerts(): int
     {
         $sent = 0;

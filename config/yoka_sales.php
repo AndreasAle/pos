@@ -31,7 +31,13 @@ return [
         'playbook' => (bool) env('ADIT_INDUSTRY_PLAYBOOK_ENABLED', true),
         'hardware' => (bool) env('ADIT_HARDWARE_OPPORTUNITY_ENABLED', true),     // catat minat printer; bundel -> approval
         'coalesce_seconds' => (int) env('ADIT_INBOUND_COALESCE_SECONDS', 0),     // 0 = mati; 8 disarankan; maks 15 detik (lewat queue)
-        'reply_lock_wait' => 45,                                                 // detik menunggu balasan lain ke nomor yang sama selesai
+        'reply_lock_wait' => 45,
+        // Jeda balasan ke PROSPEK (detik, acak di antara min-max) lewat queue, supaya ritmenya seperti orang membalas chat
+        // dan pesan beruntun terjawab sekali. Pesan stop/minta orang tetap segera. 0 = langsung.
+        'prospect_reply_delay_min' => (int) env('ADIT_PROSPECT_DELAY_MIN', 60),
+        'prospect_reply_delay_max' => (int) env('ADIT_PROSPECT_DELAY_MAX', 150),
+        // Tawaran tim mampir ke warung (sekali per prospek). Persetujuan prospek -> brief kunjungan + kabar Ramli di Telegram.
+        'offer_field_visit' => (bool) env('ADIT_OFFER_FIELD_VISIT', true),                                                 // detik menunggu balasan lain ke nomor yang sama selesai
     ],
     // Nomor uji internal (pisahkan koma, format 62...). Boleh jadi prospek walau terdaftar sebagai toko, untuk tes alur Adit.
     // Diisi hanya di .env server; jangan taruh nomor di repo publik.

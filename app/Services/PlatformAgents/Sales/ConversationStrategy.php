@@ -91,7 +91,16 @@ final class ConversationStrategy
         $rules[] = $allowQuestion ? 'Paling banyak SATU pertanyaan di balasan ini, dan tidak wajib bertanya.' : 'Jangan bertanya di balasan ini.';
         $rules[] = $allowTrial ? ($trialSent ? 'Link trial sudah pernah dikirim; sebut lagi hanya bila dia minta.' : 'Link trial boleh disebut sekali bila pas.') : 'Jangan menyebut link trial/daftar di balasan ini.';
 
-        return ['asked_ai' => (bool) preg_match('/\b(bot|robot|ai|a\.i|chatgpt|gpt|otomatis|manusia|orang (asli|beneran|betulan))\b/iu', $text), 'objective' => $objective, 'closing' => $closing, 'allow_question' => $allowQuestion, 'allow_trial_cta' => (bool) $allowTrial,
+        $intel = $p->intelligence ?? [];
+        $setupAsk = (bool) preg_match('/\b(cara|gimana|bagaimana)\s+(pasang|masang|install|instal|setting|pakai|pake|make)(nya)?\b|\b(skema|alur)(nya)?\b/iu', $text);
+        $offerVisit = config('yoka_sales.bd21.offer_field_visit') && empty($intel['visit_offered_at']) && $closing === null
+            && ! in_array($p->sales_stage, ['ready_for_field_visit', 'opted_out', 'won'], true)
+            && ($setupAsk || in_array($objective, ['READY_TO_BUY', 'OFFER_TRIAL'], true) || ($qualified && in_array($objective, ['DISCOVER_NEED', 'ANSWER_DIRECT_QUESTION'], true)));
+        if ($offerVisit) {
+            $rules[] = 'Tawarkan SEKALI dengan santai (ini satu-satunya pertanyaanmu di balasan ini): kalau dia mau, tim Yoka bisa mampir ke warungnya buat bantu pasang dan demo langsung, sekalian nyobain pecel lelenya hehe. Contoh nada: "kalau kakak mau, nanti tim kami bisa mampir ke warung buat bantu pasang sekalian demo langsung, sekalian makan pecel lelenya hehe". Jangan sebut jam, tanggal, atau biaya; tanya saja mau atau tidak.';
+        }
+
+        return ['offer_visit' => $offerVisit, 'asked_ai' => (bool) preg_match('/\b(bot|robot|ai|a\.i|chatgpt|gpt|otomatis|manusia|orang (asli|beneran|betulan))\b/iu', $text), 'objective' => $objective, 'closing' => $closing, 'allow_question' => $allowQuestion, 'allow_trial_cta' => (bool) $allowTrial,
             'hardware' => $hardware, 'bundle' => $bundle, 'rules' => $rules];
     }
 }

@@ -47,6 +47,11 @@ final class FieldVisit
             'risk' => 'low', 'requires_approval' => false, 'status' => 'proposed',
             'payload' => ['kind' => 'field_visit_brief', 'prospect_id' => $p->id, 'phone' => $p->phone_normalized, 'brief' => $brief['data']],
         ]);
+        try {
+            app(\App\Services\PlatformTelegramNotifications::class)->fieldVisitAlert($task);
+        } catch (\Throwable $e) {
+            report($e); // kabar Telegram gagal tidak boleh menggagalkan balasan ke prospek
+        }
         PlatformAiProspectEvent::create(['platform_ai_prospect_id' => $p->id, 'type' => 'field_visit', 'actor' => 'adit', 'reason' => 'Brief kunjungan dibuat.',
             'data' => ['task_id' => $task->id, 'consent' => mb_substr($evidence, 0, 200), 'message_id' => $messageId]]);
 

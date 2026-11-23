@@ -94,7 +94,10 @@ final class SalesOrchestrator
         }
 
         $p->refresh();
-        $visit = ! $duplicate && FieldVisit::detects($text) && ! in_array('REQUEST_STOP', $types, true);
+        $offeredAt = $p->intelligence['visit_offered_at'] ?? null;
+        $acceptsOffer = $offeredAt && now()->diffInHours(\Illuminate\Support\Carbon::parse($offeredAt), true) <= 72
+            && preg_match('/^\W*(boleh|mau|oke|ok|okey|gas|siap|bisa|silakan|silahkan|iya|ya|yuk|ayo|monggo)\b(?!.*\b(nanti dulu|belum|ga|gak|nggak|tidak)\b)/iu', $text);
+        $visit = ! $duplicate && (FieldVisit::detects($text) || $acceptsOffer) && ! in_array('REQUEST_STOP', $types, true);
         if ($visit && app(FieldVisit::class)->prepare($p, $text, $messageId)) {
             $escalation ??= 'Prospek setuju didatangi / minta demo langsung (brief kunjungan dibuat).';
             $p->refresh();
@@ -115,6 +118,11 @@ final class SalesOrchestrator
             $p->forceFill(['intelligence' => $intel])->save();
             PlatformAiProspectEvent::create(['platform_ai_prospect_id' => $p->id, 'type' => 'hardware', 'actor' => 'adit', 'reason' => $strategy['bundle'] ? 'Minta bundel perangkat' : 'Tanya printer/perangkat',
                 'data' => $intel['hardware'], 'idempotency_key' => $key ? $key.':hw' : null]);
+        }
+        if (! $duplicate && ! empty($strategy['offer_visit'])) {
+            $intel = $p->intelligence ?? [];
+            $intel['visit_offered_at'] = now()->toIso8601String();
+            $p->forceFill(['intelligence' => $intel])->save();
         }
         if (! $duplicate && $strategy['closing']) {
             $intel = $p->intelligence ?? [];
