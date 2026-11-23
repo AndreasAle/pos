@@ -100,6 +100,24 @@ class AditFieldVisitPacingTest extends TestCase
         $this->assertSame('prospek (mengiyakan)', $pain['source']);
     }
 
+    public function test_thanks_after_visit_closes_without_repeating(): void
+    {
+        $this->turn('gimana cara pasangnya mas?', 30);
+        $this->turn('oke aman langsung datang aja nanti', 31);
+        $this->assertSame(1, PlatformAiTask::where('type', 'field_visit_brief')->count());
+        $sent = 'Terima kasih kak, sudah saya teruskan ke tim Yoka untuk mengatur waktunya datang ke warung kakak.';
+        \App\Models\PlatformAiWhatsAppMessage::create(['direction' => 'outbound', 'phone' => '6281200000001', 'body' => $sent]);
+
+        $r = $this->turn('siap trims ya', 32);
+        $this->assertSame('CLOSE_CONVERSATION', $r['strategy']['objective']);
+        $this->assertStringContainsString('JANGAN mengulang info kunjungan', $r['context']);
+        $this->assertSame(1, PlatformAiTask::where('type', 'field_visit_brief')->count(), 'Terima kasih bukan persetujuan kunjungan baru.');
+
+        $q = app(\App\Services\PlatformAgents\Sales\ResponseQuality::class)->review($sent, $this->p->fresh(), $r['strategy'], [$sent]);
+        $this->assertSame('Sama-sama kak, sampai ketemu nanti ya.', $q['text']);
+        $this->assertContains('repeated_sentence', $q['issues']);
+    }
+
     public function test_declining_the_offer_does_not_create_a_visit(): void
     {
         $this->turn('gimana cara pasangnya?', 10);

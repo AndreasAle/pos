@@ -25,7 +25,7 @@ final class ConversationStrategy
 
     public const TRIAL_REQUEST = '/\b(mau|pengen|ingin|boleh|bisa|gimana|cara) (coba|nyoba|trial|daftar)\b|\bcoba gratis\b|\blink (daftar|trial)\b/iu';
 
-    public const CLOSING = '/\b(nanti (aku|saya|gue|gw)?\s*(kabar(i|in)|hubungi|chat|kontak|info)|(pikir|pikir-pikir|diskusi(kan)?|rundingan) dulu|(makasih|terima ?kasih|thanks|thx)( (ya|kak|min|banyak))*\s*$|udah dulu|sudah dulu|cukup dulu|lain kali)\b/iu';
+    public const CLOSING = '/\b(nanti (aku|saya|gue|gw)?\s*(kabar(i|in)|hubungi|chat|kontak|info)|(pikir|pikir-pikir|diskusi(kan)?|rundingan) dulu|(makasih|makasi|terima ?kasih|trims|trimakasih|tengkyu|thanks|thank you|thx|tq|suwun|nuhun)( (ya|yaa|kak|mas|min|bro|banyak|dit|adit))*\W*$|udah dulu|sudah dulu|cukup dulu|lain kali)\b/iu';
 
     public const TRUST = ['PREVIOUS_BAD_EXPERIENCE', 'LOW_TRUST'];
 
@@ -71,7 +71,9 @@ final class ConversationStrategy
             'CLOSE_CONVERSATION' => match ($closing) {
                 'OPTED_OUT' => ['Satu kalimat sopan bahwa kamu tidak akan menghubungi lagi. Tanpa tawaran apa pun.'],
                 'NOT_INTERESTED' => ['Terima dengan sopan, tanpa membujuk. Boleh bilang dia bisa kembali kapan saja. Tanpa pertanyaan.'],
-                default => ['Dia mau menyudahi obrolan. Tutup dengan hangat: terima kasih, sebut singkat SATU kebutuhan yang tadi dia ceritakan dan bahwa kamu bisa bantu tunjukkan alurnya kalau nanti mau lanjut. Tanpa pertanyaan, tanpa link, tanpa jualan baru. Jangan cuma "oke siap".'],
+                default => $p->sales_stage === 'ready_for_field_visit'
+                    ? ['Kunjungan sudah diatur dan dia cuma berterima kasih. Balas SANGAT singkat (satu kalimat), mis. "sama-sama kak, sampai ketemu nanti ya". JANGAN mengulang info kunjungan atau kalimat yang sudah kamu kirim, tanpa pertanyaan, tanpa link.']
+                    : ['Dia mau menyudahi obrolan. Tutup dengan hangat: terima kasih, sebut singkat SATU kebutuhan yang tadi dia ceritakan dan bahwa kamu bisa bantu tunjukkan alurnya kalau nanti mau lanjut. Tanpa pertanyaan, tanpa link, tanpa jualan baru. Jangan cuma "oke siap".'],
             },
             'ARRANGE_FIELD_VISIT' => ['Dia setuju didatangi/minta demo langsung. Terima kasih, bilang sudah kamu teruskan ke tim Yoka untuk mengatur waktunya. JANGAN menyebut jam, tanggal, atau siapa yang datang.'],
             'BUILD_TRUST' => ['Dia punya pengalaman buruk/ragu. JANGAN langsung menyebut fitur atau klaim layanan. Akui kekhawatirannya secara spesifik (bukan "paham banget"), lalu tanyakan apa persisnya masalah waktu itu (aplikasinya error, data hilang, atau bantuannya sulit dihubungi). Jangan menjanjikan layanan support 24 jam, respon cepat, atau tim tertentu.'],

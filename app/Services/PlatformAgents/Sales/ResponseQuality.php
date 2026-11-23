@@ -35,6 +35,22 @@ final class ResponseQuality
         return $text === '.' ? '' : $text;
     }
 
+    private function alreadySent(string $sentence, array $previous): bool
+    {
+        $norm = fn ($s) => preg_replace('/[^a-z ]/', '', mb_strtolower($s));
+        $q = $norm($sentence);
+        foreach ($previous as $prev) {
+            foreach (preg_split('/(?<=[.!?])\s+|\n+/u', (string) $prev) ?: [] as $s) {
+                similar_text($q, $norm($s), $pct);
+                if ($pct >= 85) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function alreadyAsked(string $question, array $previous): bool
     {
         $norm = fn ($s) => preg_replace('/[^a-z ]/', '', mb_strtolower($s));
@@ -62,7 +78,7 @@ final class ResponseQuality
         return match ($strategy['objective'] ?? null) {
             'ANSWER_DIRECT_QUESTION' => $plans !== '' ? "Paket Yoka POS saat ini: {$plans}. Ada juga trial gratis 7 hari." : null,
             'IDENTIFY_HARDWARE_INTEREST' => 'Langganan Yoka POS belum termasuk printer. Struk bisa dicetak lewat print browser atau printer Bluetooth dengan aplikasi RawBT di Android; sebaiknya cek dulu tipe printernya.',
-            'CLOSE_CONVERSATION' => ($strategy['closing'] ?? null) === 'OPTED_OUT' ? 'Baik, kami tidak akan menghubungi lagi. Terima kasih.' : 'Terima kasih. Kalau nanti mau lanjut, tinggal balas pesan ini ya.',
+            'CLOSE_CONVERSATION' => $p->sales_stage === 'ready_for_field_visit' && ($strategy['closing'] ?? null) !== 'OPTED_OUT' ? 'Sama-sama kak, sampai ketemu nanti ya.' : (($strategy['closing'] ?? null) === 'OPTED_OUT' ? 'Baik, kami tidak akan menghubungi lagi. Terima kasih.' : 'Terima kasih. Kalau nanti mau lanjut, tinggal balas pesan ini ya.'),
             'BUILD_TRUST' => 'Boleh diceritakan, kendala waktu itu lebih ke aplikasinya error, data hilang, atau bantuannya sulit dihubungi?',
             'READY_TO_BUY' => ConversationStrategy::BUY_STEPS,
             'OFFER_TRIAL' => 'Bisa, daftar di yokapos.com/register untuk trial gratis 7 hari.',
@@ -118,6 +134,12 @@ final class ResponseQuality
                 // Tidak menyebut diri AI kecuali prospek menanyakannya (kalau ditanya tetap jujur).
                 if (empty($strategy['asked_ai']) && preg_match('/\b(asisten (ai|virtual)|sebagai (ai|bot)|(saya|aku) (adalah )?(ai|bot|robot)|ai (dari|milik) yoka)\b/iu', $s)) {
                     $issues[] = 'ai_self_mention';
+
+                    continue;
+                }
+                // Kalimat yang sudah pernah dikirim ke nomor ini tidak diulang (mis. "sudah saya teruskan ke tim..." dua kali).
+                if (mb_strlen($s) > 25 && $this->alreadySent($s, $previous)) {
+                    $issues[] = 'repeated_sentence';
 
                     continue;
                 }

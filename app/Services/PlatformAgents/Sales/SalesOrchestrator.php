@@ -82,7 +82,8 @@ final class SalesOrchestrator
                     $q['category'] === 'qualified' => 'qualified',
                     default => 'discovery',
                 };
-                if ($target && $p->sales_stage !== $target) {
+                // Tahap yang sudah maju (kunjungan diatur, menunggu approval, trial, langganan) tidak mundur karena obrolan biasa.
+                if ($target && $p->sales_stage !== $target && ! in_array($p->sales_stage, ['ready_for_field_visit', 'negotiation_pending_approval', 'approved_offer_ready', 'trial_active', 'won'], true)) {
                     $this->states->transition($p, $target, 'adit', 'Dari analisis pesan: '.($types ? implode(', ', $types) : $q['category']));
                 }
                 $next = config('yoka_sales.discovery') ? $this->intel->nextQuestion($q, array_slice($intel['asked'] ?? [], -2)) : null;
@@ -103,9 +104,10 @@ final class SalesOrchestrator
 
         $p->refresh();
         $offeredAt = $p->intelligence['visit_offered_at'] ?? null;
-        $acceptsOffer = $offeredAt && now()->diffInHours(\Illuminate\Support\Carbon::parse($offeredAt), true) <= 72
+        $isThanks = (bool) preg_match(ConversationStrategy::CLOSING, $text) && ! str_contains($text, '?');
+        $acceptsOffer = ! $isThanks && $p->sales_stage !== 'ready_for_field_visit' && $offeredAt && now()->diffInHours(\Illuminate\Support\Carbon::parse($offeredAt), true) <= 72
             && preg_match('/^\W*(boleh|mau|oke|ok|okey|gas|siap|bisa|silakan|silahkan|iya|ya|yuk|ayo|monggo)\b(?!.*\b(nanti dulu|belum|ga|gak|nggak|tidak)\b)/iu', $text);
-        $visit = ! $duplicate && (FieldVisit::detects($text) || $acceptsOffer) && ! in_array('REQUEST_STOP', $types, true);
+        $visit = ! $duplicate && ! $isThanks && (FieldVisit::detects($text) || $acceptsOffer) && ! in_array('REQUEST_STOP', $types, true);
         if ($visit && app(FieldVisit::class)->prepare($p, $text, $messageId)) {
             $escalation ??= 'Prospek setuju didatangi / minta demo langsung (brief kunjungan dibuat).';
             $p->refresh();
