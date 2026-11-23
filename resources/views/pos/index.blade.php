@@ -1348,7 +1348,7 @@
     <span x-text="barcodeErrorMsg"></span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+@vite('resources/js/alpine.js')
 <script>
 function posApp() {
     return {
@@ -1426,7 +1426,8 @@ function posApp() {
         kitchenEnabled: @json($categories->contains('send_to_kitchen', true)),
         // Only the tablet app can print to the kitchen printer unattended; a
         // browser would pop a print dialog after every sale.
-        inApp: /POSKasirApp/.test(navigator.userAgent),
+        // Both tablet apps: the client build (POSKasirApp) and Yoka (YokaPOSApp).
+        inApp: /POSKasirApp|YokaPOSApp/.test(navigator.userAgent),
         activeCategory: null, search: '',
 
         // Offline register (null config = feature off, page behaves as before)

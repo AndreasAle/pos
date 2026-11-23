@@ -8,7 +8,7 @@
     <title>@yield('title', 'Platform') — Yoka</title>
     @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    @vite('resources/js/alpine.js')
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
 </head>
 <body class="min-h-full bg-slate-100 text-slate-900 antialiased" x-data="{ menu: false }">

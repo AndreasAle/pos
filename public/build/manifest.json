@@ -4,6 +4,12 @@
     "src": "resources/css/app.css",
     "isEntry": true
   },
+  "resources/js/alpine.js": {
+    "file": "assets/alpine-IprlBhKD.js",
+    "name": "alpine",
+    "src": "resources/js/alpine.js",
+    "isEntry": true
+  },
   "resources/js/app.js": {
     "file": "assets/app-D9IKnpkk.js",
     "name": "app",
