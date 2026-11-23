@@ -660,59 +660,42 @@
         </script>
     </section>
 
-    {{-- ================= PRICING ================= --}}
-    <section id="harga" class="py-24 px-6 bg-slate-50">
-        <div class="max-w-7xl mx-auto">
-            <div class="text-center max-w-2xl mx-auto mb-14">
-                <span class="text-emerald-600 font-semibold text-sm uppercase tracking-wide">Paket Harga</span>
-                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2">Pilih Paket Sesuai Skala Bisnis Anda</h2>
-                <p class="text-slate-600 mt-3">Mulai dari UMKM kecil hingga bisnis multi-outlet — semua bisa disesuaikan.</p>
+    {{-- ================= HARGA (ringkas; detail di /harga dan /bundling) ================= --}}
+    @php
+        try {
+            $fromPrice = (int) \App\Models\SubscriptionPlan::where('is_active', true)->where('price', '>', 0)->min('price');
+        } catch (\Throwable $e) {
+            $fromPrice = 0;
+        }
+        $fromPrice = $fromPrice ?: 99000;
+        $bundleFrom = (int) collect((array) config('yoka_store.bundles'))->min('price');
+    @endphp
+    <section id="harga" class="bg-slate-50 px-6 py-24">
+        <div class="mx-auto max-w-[1100px]">
+            <div class="mx-auto mb-12 max-w-2xl text-center">
+                <span class="text-sm font-semibold uppercase tracking-wide text-emerald-600">Harga</span>
+                <h2 class="mt-2 text-3xl font-extrabold text-slate-900 md:text-4xl">Mulai Rp{{ number_format($fromPrice, 0, ',', '.') }} per bulan</h2>
+                <p class="mt-3 text-slate-600">Pakai di HP atau tablet yang sudah ada, atau ambil paket lengkap dengan perangkatnya.</p>
             </div>
-            @php
-                // Harga resmi dari tabel paket (sumber yang sama dengan checkout Midtrans); fallback bila DB belum siap.
-                try {
-                    $planPrices = \App\Models\SubscriptionPlan::where('is_active', true)->pluck('price', 'slug')->map(fn ($p) => (float) $p)->all();
-                    $basicYear = \App\Models\SubscriptionPlan::where('slug', 'starter')->where('is_active', true)->first()?->priceFor(12);
-                } catch (\Throwable $e) {
-                    $planPrices = [];
-                    $basicYear = null;
-                }
-                $planPrices += ['starter' => 149000, 'business' => 249000, 'enterprise' => 499000];
-                $priceOf = ['YokaBasic' => 'starter', 'Business' => 'business', 'Custom' => 'enterprise'];
-            @endphp
-            <div class="grid lg:grid-cols-3 gap-6">
-                @foreach ([
-                    ['YokaBasic', 'Untuk warung dan UMKM kuliner yang baru memulai digitalisasi kasir', ['POS transaksi', 'Manajemen produk & stok', 'QRIS static', 'Cetak struk', 'Laporan dasar'], false, 'Pilih YokaBasic'],
-                    ['Business', 'Untuk cafe/resto yang ingin kontrol operasional lebih ketat', ['Semua fitur paket YokaBasic', 'Shift kasir', 'Export Excel & PDF', 'Laporan profit & COGS', 'Audit log', 'Notifikasi stok menipis'], true, 'Pilih Business'],
-                    ['Custom', 'Untuk multi-outlet, resto besar, atau kebutuhan khusus', ['Multi-outlet & multi-user', 'Custom fitur sesuai kebutuhan', 'Training tim & staf', 'Support prioritas'], false, 'Konsultasi Sekarang'],
-                ] as [$name, $desc, $features, $highlight, $cta])
-                    <div class="rounded-3xl bg-white p-8 {{ $highlight ? 'border-2 border-emerald-500 shadow-2xl shadow-emerald-100 lg:scale-[1.03]' : 'border border-slate-200' }}">
-                        @if($highlight)
-                            <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold mb-3">Paling Direkomendasikan</span>
-                        @endif
-                        <h3 class="text-xl font-extrabold text-slate-900">{{ $name }}</h3>
-                        <p class="text-sm text-slate-500 mt-1">{{ $desc }}</p>
-                        <p class="mt-5 mb-6">
-                            @if($name === 'Custom')<span class="block text-sm text-slate-500">Mulai dari</span>@endif
-                            <span class="text-3xl font-extrabold text-slate-900">Rp{{ number_format($planPrices[$priceOf[$name]], 0, ',', '.') }}</span>
-                            <span class="text-sm text-slate-500">/ bulan</span>
-                        </p>
-                        <ul class="space-y-3 mb-8">
-                            @foreach ($features as $f)
-                                <li class="flex items-start gap-2 text-sm text-slate-600">
-                                    <span class="mt-0.5 w-5 h-5 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">✓</span>
-                                    {{ $f }}
-                                </li>
-                            @endforeach
-                        </ul>
-                        <a href="{{ $name === 'Custom' ? $waLink : route('register') }}" @if($name === 'Custom') target="_blank" rel="noopener" @endif
-                           class="block text-center px-4 py-3 rounded-xl font-semibold transition-colors {{ $highlight ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200' : 'border border-slate-300 text-slate-700 hover:bg-slate-50' }}">
-                            {{ $cta }}
-                        </a>
+            <div class="grid gap-5 md:grid-cols-2">
+                <a href="{{ route('pricing') }}" class="hover-card group flex flex-col rounded-3xl border border-slate-200 bg-white p-8">
+                    <p class="text-sm font-bold text-emerald-700">Paket langganan</p>
+                    <p class="mt-2 text-2xl font-extrabold text-slate-900">YokaBasic, Business, Custom</p>
+                    <p class="mt-2 flex-1 text-slate-600">Bayar bulanan atau hemat dengan paket 3, 6, dan 12 bulan. Coba gratis 7 hari.</p>
+                    <span class="mt-6 inline-flex items-center gap-2 font-bold text-emerald-700 transition-all group-hover:gap-3">Lihat harga langganan <span aria-hidden="true">&rarr;</span></span>
+                </a>
+                <a href="{{ route('pricing.bundles') }}" class="hover-card group flex flex-col overflow-hidden rounded-3xl bg-[#0B1B3F] p-8 text-white">
+                    <p class="text-sm font-bold text-emerald-300">Paket bundling</p>
+                    <p class="mt-2 text-2xl font-extrabold">Aplikasi + perangkat kasir</p>
+                    <p class="mt-2 text-slate-300">Printer, tablet, scanner, sampai mesin kasir. Dites dan dipasang tim Yoka. Mulai Rp{{ number_format($bundleFrom, 0, ',', '.') }}.</p>
+                    <div class="mt-4 flex h-24 items-end gap-1">
+                        <div class="min-w-0 shrink h-20 w-24"><x-device-art kind="tablet"/></div>
+                        <div class="min-w-0 shrink h-16 w-20"><x-device-art kind="printer"/></div>
+                        <div class="min-w-0 shrink h-20 w-12"><x-device-art kind="mpos"/></div>
                     </div>
-                @endforeach
+                    <span class="mt-4 inline-flex items-center gap-2 font-bold text-emerald-300 transition-all group-hover:gap-3">Lihat paket bundling <span aria-hidden="true">&rarr;</span></span>
+                </a>
             </div>
-            <p class="text-center text-sm text-slate-500 mt-8">Harga dalam Rupiah (IDR) per bulan per bisnis. @if($basicYear)YokaBasic bayar 12 bulan Rp{{ number_format($basicYear, 0, ',', '.') }}, lebih hemat. @endif Coba gratis 7 hari, pembayaran langganan aman lewat Midtrans.</p>
         </div>
     </section>
 

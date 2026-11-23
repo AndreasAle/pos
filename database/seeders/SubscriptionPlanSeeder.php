@@ -23,11 +23,11 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 // YokaBasic (dulu Starter). Slug tetap 'starter' agar langganan lama tetap terhubung.
-                // Daftar harga v1.0, 2026-11-23: bayar di muka 3/6/12 bulan lebih hemat, harga bulanan tidak didiskon.
+                // Daftar harga v2, 2026-11-24 (dari sheet harga pemilik): bayar di muka 3/6/12 bulan lebih hemat, harga bulanan tidak didiskon.
                 'name'        => 'YokaBasic',
                 'slug'        => 'starter',
-                'price'       => 149000,
-                'period_prices' => ['3' => 399000, '6' => 749000, '12' => 1399000],
+                'price'       => 99000,
+                'period_prices' => ['3' => 270000, '6' => 499000, '12' => 950000],
                 'max_outlets' => 2,
                 'max_users'   => 10,
                 'features'    => ['pos', 'inventory', 'reports', 'kitchen', 'loyalty'],
@@ -37,7 +37,8 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name'        => 'Business',
                 'slug'        => 'business',
-                'price'       => 249000,
+                'price'       => 199000,
+                'period_prices' => ['3' => 549000, '6' => 999000, '12' => 1869000],
                 'max_outlets' => 5,
                 'max_users'   => 30,
                 'features'    => ['pos', 'inventory', 'reports', 'kitchen', 'loyalty', 'multi_outlet', 'export'],
@@ -47,7 +48,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name'        => 'Custom',
                 'slug'        => 'enterprise',
-                'price'       => 499000,
+                'price'       => 399000,
                 'max_outlets' => 999,
                 'max_users'   => 999,
                 'features'    => ['pos', 'inventory', 'reports', 'kitchen', 'loyalty', 'multi_outlet', 'export', 'api', 'priority_support'],

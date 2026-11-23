@@ -90,7 +90,8 @@
                 <a href="{{ $home }}#keunggulan" class="hover:opacity-70 transition-opacity">Keunggulan</a>
                 <a href="{{ route('guides.index') }}" class="hover:opacity-70 transition-opacity">Panduan</a>
                 <a href="{{ route('articles.index') }}" class="hover:opacity-70 transition-opacity">Artikel</a>
-                <a href="{{ $home }}#harga" class="hover:opacity-70 transition-opacity">Paket Harga</a>
+                <a href="{{ route('pricing') }}" class="hover:opacity-70 transition-opacity">Harga</a>
+                <a href="{{ route('pricing.bundles') }}" class="hover:opacity-70 transition-opacity">Bundling</a>
                 <a href="{{ $home }}#faq" class="hover:opacity-70 transition-opacity">FAQ</a>
             </nav>
 
@@ -135,7 +136,8 @@
             <a @click="mobileOpen=false" href="{{ $home }}#keunggulan" class="block text-sm font-medium text-slate-700">Keunggulan</a>
             <a href="{{ route('guides.index') }}" class="block text-sm font-medium text-slate-700">Panduan</a>
             <a href="{{ route('articles.index') }}" class="block text-sm font-medium text-slate-700">Artikel</a>
-            <a @click="mobileOpen=false" href="{{ $home }}#harga" class="block text-sm font-medium text-slate-700">Paket Harga</a>
+            <a href="{{ route('pricing') }}" class="block text-sm font-medium text-slate-700">Harga</a>
+            <a href="{{ route('pricing.bundles') }}" class="block text-sm font-medium text-slate-700">Bundling</a>
             <a @click="mobileOpen=false" href="{{ $home }}#faq" class="block text-sm font-medium text-slate-700">FAQ</a>
             <x-lang-switch variant="light" />
             <a href="{{ $waLink }}" target="_blank"

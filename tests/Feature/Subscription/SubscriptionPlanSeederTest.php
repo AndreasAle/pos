@@ -19,7 +19,7 @@ class SubscriptionPlanSeederTest extends TestCase
         $this->assertDatabaseHas('subscription_plans', [
             'name' => 'YokaBasic',
             'slug' => 'starter',
-            'price' => 149000,
+            'price' => 99000,
             'max_outlets' => 2,
             'max_users' => 10,
             'is_active' => true,
@@ -27,7 +27,7 @@ class SubscriptionPlanSeederTest extends TestCase
         $this->assertDatabaseHas('subscription_plans', [
             'name' => 'Business',
             'slug' => 'business',
-            'price' => 249000,
+            'price' => 199000,
             'max_outlets' => 5,
             'max_users' => 30,
             'is_active' => true,
@@ -35,7 +35,7 @@ class SubscriptionPlanSeederTest extends TestCase
         $this->assertDatabaseHas('subscription_plans', [
             'name' => 'Custom',
             'slug' => 'enterprise',
-            'price' => 499000,
+            'price' => 399000,
             'max_outlets' => 999,
             'max_users' => 999,
             'is_active' => true,
