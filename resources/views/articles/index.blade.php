@@ -14,7 +14,7 @@
     @include('partials.site-header', ['waLink' => $waLink, 'home' => route('landing')])
 
     <main>
-        <section class="bg-emerald-600 text-white pt-[60px] sm:pt-[68px] lg:pt-[76px]">
+        <section class="bg-emerald-600 text-white pt-[96px] sm:pt-[100px] lg:pt-[104px]">
             <div class="max-w-[1200px] mx-auto px-5 sm:px-6 py-12 sm:py-16 lg:py-20">
                 <p class="text-xs sm:text-sm font-bold uppercase tracking-[.16em] text-emerald-100">Artikel</p>
                 <h1 class="mt-3 max-w-[760px] text-[32px] sm:text-[42px] lg:text-[52px] font-extrabold leading-[1.08] tracking-[-.03em]">Tips mengelola cafe, resto, dan toko</h1>

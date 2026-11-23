@@ -7,7 +7,7 @@
 
 @section('content')
 {{-- Pembuka --}}
-<section class="bg-emerald-600 pt-[60px] text-white sm:pt-[68px] lg:pt-[76px]">
+<section class="bg-emerald-600 pt-[96px] text-white sm:pt-[100px] lg:pt-[104px]">
     <div class="mx-auto grid max-w-[1200px] items-center gap-8 px-5 py-12 sm:px-6 sm:py-16 lg:grid-cols-[1.1fr_.9fr] lg:py-20 [&>*]:min-w-0">
         <div>
             <p class="text-xs font-bold uppercase tracking-[.16em] text-emerald-100 sm:text-sm">Paket bundling</p>
