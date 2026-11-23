@@ -103,4 +103,26 @@ class BillingPeriodTest extends TestCase
         $this->actingAs($this->owner())->get(route('saas.plans'))->assertOk()
             ->assertSee('1399000')->assertSee('name="months"', false);
     }
+
+    public function test_production_mode_with_a_sandbox_key_disables_checkout(): void
+    {
+        config(['midtrans.is_production' => true, 'midtrans.server_key' => 'SB-Mid-server-x']);
+        $this->assertFalse(app(MidtransService::class)->isConfigured());
+
+        config(['midtrans.server_key' => 'Mid-server-x']);
+        $this->assertTrue(app(MidtransService::class)->isConfigured());
+
+        config(['midtrans.is_production' => false, 'midtrans.server_key' => 'SB-Mid-server-x']);
+        $this->assertTrue(app(MidtransService::class)->isConfigured());
+    }
+
+    public function test_plans_page_warns_about_a_sandbox_key_in_production(): void
+    {
+        config(['midtrans.is_production' => true, 'midtrans.server_key' => 'SB-Mid-server-x']);
+        $this->setUpPos();
+        $this->basic();
+
+        $this->actingAs($this->owner())->get(route('saas.plans'))->assertOk()
+            ->assertSee('Server Key masih key sandbox')->assertDontSee('Midtrans sandbox, bukan pembayaran sungguhan');
+    }
 }

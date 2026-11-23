@@ -261,7 +261,7 @@ class SubscribeTest extends TestCase
         $response = $this->actingAs($this->owner())->get(route('saas.plans'));
 
         $response->assertOk()
-            ->assertSee('Kelola paket dan pembayaran')->assertSee('Bayar dengan Midtrans')
+            ->assertSee('Riwayat pembayaran')->assertSee('Lama berlangganan')
             ->assertSee('Paket Langganan')->assertDontSee('Under Construction');
         $plans = $response->viewData('plans');
         $this->assertTrue($plans->contains('id', $visible->id));
