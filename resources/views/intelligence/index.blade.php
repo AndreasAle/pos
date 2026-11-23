@@ -97,7 +97,7 @@
                     </div>
                     <a href="{{ route('ai-credits.index') }}" class="shrink-0 rounded-xl bg-[#16A34A] px-4 py-2.5 text-[13px] font-bold text-white hover:bg-[#15803D]">Top-up kredit</a>
                 </div>
-                <form @submit.prevent="ask" :class="{ 'opacity-60': noCredits }" class="mx-auto w-full rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition" :class="messages.length === 0 ? 'max-w-3xl' : 'max-w-4xl'">
+                <form @submit.prevent="ask" class="mx-auto w-full rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition" :class="[messages.length === 0 ? 'max-w-3xl' : 'max-w-4xl', noCredits ? 'bg-slate-50' : '']">
                     <div x-show="files.length" class="flex flex-wrap gap-1.5 px-2 pb-1 pt-0.5"><template x-for="(f,i) in files" :key="i"><span class="inline-flex items-center gap-1.5 rounded-lg bg-[#E8F7EF] px-2.5 py-1 text-[12px] font-semibold text-[#087A4E]"><span x-text="f.name"></span><button type="button" @click="files.splice(i,1)" class="text-[#087A4E]/60 hover:text-red-600" aria-label="Hapus lampiran">×</button></span></template></div>
                     <div class="flex items-end gap-2">
                         <input type="file" x-ref="picker" multiple accept="{{ \App\Services\Intelligence\AttachmentService::ACCEPT }}" class="hidden" @change="pick($event)">

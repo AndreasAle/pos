@@ -162,7 +162,7 @@ class AiCreditsTest extends TestCase
     public function test_credits_page_shows_balance_and_packs(): void
     {
         $this->actingAs($this->owner())->get(route('ai-credits.index'))->assertOk()
-            ->assertSee('Sisa kredit')->assertSee('Rp39.000')->assertSee('Jatah gratis bulanan');
+            ->assertSee('Saldo kredit')->assertSee('Beli kredit')->assertSee('Rp39.000')->assertSee('Jatah gratis bulanan');
         $this->actingAs($this->owner())->get(route('intelligence.index'))->assertOk()->assertSee(route('ai-credits.index'), false);
     }
 
