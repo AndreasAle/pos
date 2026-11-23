@@ -61,6 +61,8 @@ use Illuminate\Support\Facades\Route;
 
 // ── Public ───────────────────────────────────────────────────────────────────
 Route::get('/', fn () => view('landing'))->name('landing');
+Route::get('/harga', [\App\Http\Controllers\PricingController::class, 'plans'])->name('pricing');
+Route::get('/bundling', [\App\Http\Controllers\PricingController::class, 'bundles'])->name('pricing.bundles');
 
 // Ganti bahasa antarmuka (Indonesia / Inggris). Pilihan disimpan di cookie.
 Route::get('/lang/{locale}', function (string $locale) {

@@ -46,14 +46,14 @@ class BillingPeriodTest extends TestCase
         $plan = $this->basic();
 
         $this->assertSame('YokaBasic', $plan->name);
-        $this->assertSame([1 => 149000, 3 => 399000, 6 => 749000, 12 => 1399000], $plan->periods());
+        $this->assertSame([1 => 99000, 3 => 270000, 6 => 499000, 12 => 950000], $plan->periods());
         $this->assertNull($plan->priceFor(2));
     }
 
     public function test_checkout_charges_the_period_price_and_records_the_months(): void
     {
         $this->mockMidtrans(function ($amount, $item) {
-            $this->assertSame(1399000, $amount);
+            $this->assertSame(950000, $amount);
             $this->assertSame('Langganan YokaBasic 12 bulan', $item);
         });
         $this->setUpPos();
@@ -64,7 +64,7 @@ class BillingPeriodTest extends TestCase
         $this->actingAs($this->owner())->post(route('saas.checkout'), ['plan_id' => $plan->id, 'months' => 12])->assertRedirect();
 
         $sub = BusinessSubscription::where('business_id', $this->business->id)->where('status', 'pending')->sole();
-        $this->assertSame('1399000.00', $sub->amount);
+        $this->assertSame('950000.00', $sub->amount);
         $this->assertSame(12, $sub->months);
         $this->assertSame($base->addMonthsNoOverflow(12)->toDateString(), $sub->ends_at->toDateString());
         $this->assertSame(12, RevenueRecognition::termMonths($sub), 'Pendapatan diakui 12 bulan walau perpanjangan dihitung dari akhir masa lama.');
@@ -72,14 +72,14 @@ class BillingPeriodTest extends TestCase
 
     public function test_one_month_checkout_is_unchanged(): void
     {
-        $this->mockMidtrans(fn ($amount) => $this->assertSame(149000, $amount));
+        $this->mockMidtrans(fn ($amount) => $this->assertSame(99000, $amount));
         $this->setUpPos();
         $plan = $this->basic();
 
         $this->actingAs($this->owner())->post(route('saas.checkout'), ['plan_id' => $plan->id])->assertRedirect();
 
         $sub = BusinessSubscription::where('business_id', $this->business->id)->where('status', 'pending')->sole();
-        $this->assertSame('149000.00', $sub->amount);
+        $this->assertSame('99000.00', $sub->amount);
         $this->assertSame(1, $sub->months);
     }
 
@@ -101,7 +101,7 @@ class BillingPeriodTest extends TestCase
         $this->basic();
 
         $this->actingAs($this->owner())->get(route('saas.plans'))->assertOk()
-            ->assertSee('1399000')->assertSee('name="months"', false);
+            ->assertSee('950000')->assertSee('name="months"', false);
     }
 
     public function test_production_mode_with_a_sandbox_key_disables_checkout(): void

@@ -56,7 +56,8 @@
                         <ul class="space-y-3.5 text-sm text-slate-500">
                             <li><a href="{{ $home ?? '' }}#tentang" class="transition hover:text-emerald-700">Tentang Yoka</a></li>
                             <li><a href="{{ $home ?? '' }}#keunggulan" class="transition hover:text-emerald-700">Keunggulan</a></li>
-                            <li><a href="{{ $home ?? '' }}#harga" class="transition hover:text-emerald-700">Paket Harga</a></li>
+                            <li><a href="{{ route('pricing') }}" class="transition hover:text-emerald-700">Harga</a></li>
+                            <li><a href="{{ route('pricing.bundles') }}" class="transition hover:text-emerald-700">Paket Bundling</a></li>
                             <li><a href="{{ $home ?? '' }}#faq" class="transition hover:text-emerald-700">FAQ</a></li>
                         </ul>
                     </div>

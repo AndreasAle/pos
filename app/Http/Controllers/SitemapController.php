@@ -7,7 +7,7 @@ class SitemapController extends Controller
 {
     public function __invoke()
     {
-        $urls = [[route('landing'), '1.0', 'weekly', null], [route('articles.index'), '0.8', 'weekly', null], [route('guides.index'), '0.8', 'monthly', null]];
+        $urls = [[route('landing'), '1.0', 'weekly', null], [route('pricing'), '0.9', 'weekly', null], [route('pricing.bundles'), '0.8', 'weekly', null], [route('articles.index'), '0.8', 'weekly', null], [route('guides.index'), '0.8', 'monthly', null]];
         foreach (ArticleController::articles() as $slug => $a) {
             $urls[] = [route('articles.show', $slug), '0.7', 'monthly', $a['published']];
         }
