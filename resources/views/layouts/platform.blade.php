@@ -11,7 +11,7 @@
     @vite('resources/js/alpine.js')
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
 </head>
-<body class="min-h-full bg-slate-100 text-slate-900 antialiased" x-data="{ menu: false }">
+<body class="min-h-full bg-slate-100 text-slate-900 antialiased" x-data="{ menu: false }" @keydown.escape.window="menu = false">
     @php
         $platformAdmin = auth('platform')->user();
         $platformAiUnread = 0;
@@ -47,60 +47,108 @@
     </header>
 
     <div x-show="menu" x-cloak class="fixed inset-0 z-20 bg-black/40 lg:hidden" @click="menu = false"></div>
-    <aside class="fixed bottom-0 left-0 top-16 z-30 w-64 -translate-x-full border-r border-slate-200 bg-white p-4 transition-transform lg:translate-x-0" :class="menu && 'translate-x-0'">
-        <nav class="space-y-1 text-sm font-semibold">
-            <a href="{{ route('platform.dashboard') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.dashboard') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-emerald-600"></span> Ringkasan Platform
-            </a>
-            <a href="{{ route('platform.businesses.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.businesses.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-sky-600"></span> Semua Toko
-            </a>
-            @if($platformAdmin->canManageWithdrawals())
-                <a href="{{ route('platform.withdrawals.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.withdrawals.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                    <span class="h-2 w-2 bg-amber-500"></span> Antrean Penarikan
-                </a>
-            @endif
-            @if($platformAdmin->canViewYokaFinance())
-            <a href="{{ route('platform.finance') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.finance*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-emerald-600"></span> Keuangan Yoka
-            </a>
-            @endif
-            @if($platformAdmin->canViewFinancials())
-            <a href="{{ route('platform.ai-credits') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.ai-credits*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-indigo-600"></span> Kredit AI
-            </a>
-            @endif
-            <a href="{{ route('platform.activity') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.activity') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-violet-600"></span> Aktivitas Tim
-            </a>
-            @if($platformAdmin->isSuperAdmin())
-            <a href="{{ route('platform.ai-team.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.ai-team.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-fuchsia-600"></span> Tim AI
-                @if($platformAiUnread > 0)<span class="ml-auto flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white">{{ $platformAiUnread > 99 ? '99+' : $platformAiUnread }}</span>@endif
-            </a>
-            <a href="{{ route('platform.prospects.index') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.prospects.*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-lime-600"></span> Prospek Adit
-            </a>
-            <a href="{{ route('platform.team') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.team*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-teal-600"></span> Tim Yoka
-            </a>
-            @endif
-            <a href="{{ route('platform.account') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.account*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-slate-500"></span> Akun Saya
-            </a>
-            @if($platformAdmin->isSuperAdmin())
-            <a href="{{ route('platform.system') }}" class="flex items-center gap-3 px-3 py-3 {{ request()->routeIs('platform.system*') ? 'bg-emerald-100 text-emerald-900' : 'text-slate-600 hover:bg-slate-100' }}">
-                <span class="h-2 w-2 bg-rose-500"></span> Sistem &amp; Integrasi
-            </a>
-            @endif
+    <aside class="fixed bottom-0 left-0 top-16 z-30 flex w-[19rem] -translate-x-full flex-col border-r border-slate-200 bg-white transition-transform duration-200 lg:translate-x-0" :class="menu && 'translate-x-0'" aria-label="Navigasi platform">
+        <div class="border-b border-slate-100 px-5 py-4">
+            <p class="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">Pusat Operasional</p>
+            <p class="mt-1 text-xs leading-relaxed text-slate-500">Kelola bisnis, keuangan, dan tim Yoka dari satu tempat.</p>
+        </div>
+
+        @php
+            $navBase = 'group flex items-center gap-3 rounded-xl px-3 py-2.5 transition';
+            $navIdle = 'text-slate-600 hover:bg-slate-100 hover:text-slate-950';
+            $navActive = 'bg-emerald-50 text-emerald-950 ring-1 ring-inset ring-emerald-200';
+            $iconBase = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg';
+        @endphp
+
+        <nav class="flex-1 space-y-6 overflow-y-auto px-3 py-4 text-sm" @click="menu = false">
+            <div>
+                <p class="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Gambaran Umum</p>
+                <div class="space-y-1">
+                    <a href="{{ route('platform.dashboard') }}" class="{{ $navBase }} {{ request()->routeIs('platform.dashboard') ? $navActive : $navIdle }}">
+                        <span class="{{ $iconBase }} {{ request()->routeIs('platform.dashboard') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 13h6V4H4v9Zm0 7h6v-3H4v3Zm10 0h6v-9h-6v9Zm0-13h6V4h-6v3Z"/></svg></span>
+                        <span><span class="block font-bold">Beranda</span><span class="block text-[11px] font-normal text-slate-500">Kondisi Yoka hari ini</span></span>
+                    </a>
+                    <a href="{{ route('platform.businesses.index') }}" class="{{ $navBase }} {{ request()->routeIs('platform.businesses.*') ? $navActive : $navIdle }}">
+                        <span class="{{ $iconBase }} {{ request()->routeIs('platform.businesses.*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 10h18M5 10v9h14v-9M4 10l2-5h12l2 5M9 19v-5h6v5"/></svg></span>
+                        <span><span class="block font-bold">Toko Pelanggan</span><span class="block text-[11px] font-normal text-slate-500">Cari dan bantu semua toko</span></span>
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <p class="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Uang &amp; Penggunaan</p>
+                <div class="space-y-1">
+                    @if($platformAdmin->canManageWithdrawals())
+                        <a href="{{ route('platform.withdrawals.index') }}" class="{{ $navBase }} {{ request()->routeIs('platform.withdrawals.*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.withdrawals.*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h16v11H4V7Zm0 4h16M16 15h1"/></svg></span>
+                            <span><span class="block font-bold">Pencairan Dana</span><span class="block text-[11px] font-normal text-slate-500">Periksa permintaan penarikan</span></span>
+                        </a>
+                    @endif
+                    @if($platformAdmin->canViewYokaFinance())
+                        <a href="{{ route('platform.finance') }}" class="{{ $navBase }} {{ request()->routeIs('platform.finance*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.finance*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 19V9m5 10V5m6 14v-7m5 7V3"/></svg></span>
+                            <span><span class="block font-bold">Keuangan Perusahaan</span><span class="block text-[11px] font-normal text-slate-500">Pendapatan, biaya, dan laporan</span></span>
+                        </a>
+                    @endif
+                    @if($platformAdmin->canViewFinancials())
+                        <a href="{{ route('platform.ai-credits') }}" class="{{ $navBase }} {{ request()->routeIs('platform.ai-credits*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.ai-credits*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg></span>
+                            <span><span class="block font-bold">Kredit AI Pelanggan</span><span class="block text-[11px] font-normal text-slate-500">Saldo dan pemakaian tiap toko</span></span>
+                        </a>
+                    @endif
+                </div>
+            </div>
+
+            <div>
+                <p class="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Tim &amp; Pekerjaan</p>
+                <div class="space-y-1">
+                    @if($platformAdmin->isSuperAdmin())
+                        <a href="{{ route('platform.ai-team.index') }}" class="{{ $navBase }} {{ request()->routeIs('platform.ai-team.*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.ai-team.*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 9h.01M15 9h.01M8 13h8m-9 6h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3Z"/></svg></span>
+                            <span class="min-w-0 flex-1"><span class="block font-bold">Ruang Kerja Tim AI</span><span class="block text-[11px] font-normal text-slate-500">Obrolan, tugas, dan persetujuan</span></span>
+                            @if($platformAiUnread > 0)<span class="flex h-6 min-w-6 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[10px] font-black text-white">{{ $platformAiUnread > 99 ? '99+' : $platformAiUnread }}</span>@endif
+                        </a>
+                        <a href="{{ route('platform.prospects.index') }}" class="{{ $navBase }} {{ request()->routeIs('platform.prospects.*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.prospects.*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-3v6m-3-3h6"/></svg></span>
+                            <span><span class="block font-bold">Calon Pelanggan</span><span class="block text-[11px] font-normal text-slate-500">Daftar kontak untuk Adit</span></span>
+                        </a>
+                        <a href="{{ route('platform.team') }}" class="{{ $navBase }} {{ request()->routeIs('platform.team*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.team*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2m19 0v-2a4 4 0 0 0-3-3.87M8.5 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8-7.87a4 4 0 0 1 0 7.75"/></svg></span>
+                            <span><span class="block font-bold">Anggota Tim Yoka</span><span class="block text-[11px] font-normal text-slate-500">Akun dan akses staf</span></span>
+                        </a>
+                    @endif
+                    <a href="{{ route('platform.activity') }}" class="{{ $navBase }} {{ request()->routeIs('platform.activity') ? $navActive : $navIdle }}">
+                        <span class="{{ $iconBase }} {{ request()->routeIs('platform.activity') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 8v4l3 2m6-2a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg></span>
+                        <span><span class="block font-bold">Riwayat Aktivitas</span><span class="block text-[11px] font-normal text-slate-500">Catatan perubahan dan akses</span></span>
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <p class="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Pengaturan</p>
+                <div class="space-y-1">
+                    <a href="{{ route('platform.account') }}" class="{{ $navBase }} {{ request()->routeIs('platform.account*') ? $navActive : $navIdle }}">
+                        <span class="{{ $iconBase }} {{ request()->routeIs('platform.account*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M20 21a8 8 0 0 0-16 0m8-10a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg></span>
+                        <span><span class="block font-bold">Profil &amp; Keamanan</span><span class="block text-[11px] font-normal text-slate-500">Akun, sandi, dan verifikasi</span></span>
+                    </a>
+                    @if($platformAdmin->isSuperAdmin())
+                        <a href="{{ route('platform.system') }}" class="{{ $navBase }} {{ request()->routeIs('platform.system*') ? $navActive : $navIdle }}">
+                            <span class="{{ $iconBase }} {{ request()->routeIs('platform.system*') ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-white' }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7.4-3.5a7.4 7.4 0 0 0-.1-1l2-1.5-2-3.5-2.5 1a8.6 8.6 0 0 0-1.7-1L14.8 3h-4l-.4 3a8.6 8.6 0 0 0-1.7 1L6.2 6l-2 3.5 2 1.5a7.4 7.4 0 0 0 0 2l-2 1.5 2 3.5 2.5-1a8.6 8.6 0 0 0 1.7 1l.4 3h4l.4-3a8.6 8.6 0 0 0 1.7-1l2.5 1 2-3.5-2-1.5a7.4 7.4 0 0 0 .1-1Z"/></svg></span>
+                            <span><span class="block font-bold">Sistem &amp; Integrasi</span><span class="block text-[11px] font-normal text-slate-500">Kesehatan layanan dan koneksi</span></span>
+                        </a>
+                    @endif
+                </div>
+            </div>
         </nav>
 
-        <div class="absolute bottom-5 left-4 right-4 border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
-            Data lintas tenant bersifat internal. Buka data pelanggan hanya saat diperlukan untuk bantuan.
+        <div class="border-t border-slate-100 p-3">
+            <div class="rounded-xl bg-slate-50 px-3 py-2.5 text-[11px] leading-relaxed text-slate-500">
+                Data pelanggan bersifat internal. Buka hanya saat diperlukan untuk membantu pelanggan.
+            </div>
         </div>
     </aside>
 
-    <main class="min-h-screen pt-16 lg:pl-64">
+    <main class="min-h-screen pt-16 lg:pl-[19rem]">
         <div class="p-4 sm:p-6 lg:p-8">
             @if(session('success'))
                 <div class="mb-5 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{{ session('success') }}</div>
