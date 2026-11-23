@@ -50,7 +50,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // password; send its expired sessions back to the PIN pad instead.
         $middleware->redirectGuestsTo(fn (Request $request) => $request->is('platform') || $request->is('platform/*')
                 ? route('platform.login')
+                // ...except the account steps (/kasir/setup, PIN creation, quick
+                // setup): "Masuk dengan akun" on the PIN pad must reach the
+                // account sign-in, not bounce back to the pad.
                 : ($request->cookies->has(PinLoginController::OUTLET_COOKIE)
+                    && ! $request->is('kasir/setup', 'kasir/setup/*', 'kasir/pin-baru', 'kasir/mulai', 'kasir/mulai/*')
                     ? route('pin.show')
                     : route('login')));
 

@@ -140,6 +140,7 @@ class OfflineRegister {
         try {
             const { status, body } = await fetchJson(this.cfg.ping_url);
             if (status === 200 && body?.ok) {
+                const wasSignedOut = this.state.auth === false;
                 this.csrf = body.csrf || this.csrf;
                 // A page served from the offline cache carries an old token; the
                 // register's own fetch() calls read it from this meta tag.
@@ -148,13 +149,19 @@ class OfflineRegister {
                 this.state.lastOnlineAt = Date.now();
                 await db.setMeta(this.key('last_online_at'), this.state.lastOnlineAt);
                 this.setOnline(true);
+                // setOnline() only reports a change of online/offline; a session
+                // coming back must reach the screen too.
+                if (wasSignedOut) this.emit();
+                // Back online (or signed in again): send the queue right away.
                 if (this.state.pending > 0) this.sync();
                 return true;
             }
             if (status === 401 || status === 419) {
                 // Reachable but signed out: sales stay queued until a PIN login.
+                const changed = this.state.auth !== false;
                 this.state.auth = false;
                 this.setOnline(true);
+                if (changed) this.emit();
                 return false;
             }
             this.setOnline(false);
