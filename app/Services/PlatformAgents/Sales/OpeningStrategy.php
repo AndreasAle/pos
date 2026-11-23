@@ -50,9 +50,9 @@ final class OpeningStrategy
 
     /** Variasi kalimat pembuka supaya pesan ke warung-warung berbeda tidak identik (bukan broadcast). */
     private const OPENERS = [
-        "{hi}, izin kenalan ya. Saya Adit dari Yoka POS.\n\nKami punya aplikasi kasir untuk {aud}. Mau tanya sedikit, {q}",
-        "{hi}. Saya Adit dari Yoka POS, kami bikin aplikasi kasir untuk {aud}.\n\nBoleh tanya sebentar, {q}",
-        "{hi}, maaf ganggu waktunya sebentar. Saya Adit dari Yoka POS, aplikasi kasir untuk {aud}.\n\nIzin tanya, {q}",
+        "{hi}, saya Adit dari Yoka POS.\n\n{value}\n\nKira-kira ini relevan untuk {biz}?",
+        "{hi}, izin kenalan ya, saya Adit dari Yoka POS.\n\n{value}\n\nKira-kira cocok nggak untuk {biz}?",
+        "{hi}, saya Adit dari Yoka POS.\n\n{value}\n\nBoleh tahu, ini relevan untuk {biz}?",
     ];
 
     public static function greeting(): string
@@ -72,7 +72,8 @@ final class OpeningStrategy
     {
         $hi = self::greeting().' '.self::salutation($p);
         $tpl = self::OPENERS[abs(crc32((string) ($p->phone_normalized ?: $p->business_name))) % count(self::OPENERS)];
-        $fill = fn (string $aud, string $q) => strtr($tpl, ['{hi}' => $hi, '{aud}' => $aud, '{q}' => $q]);
+        // Riset outreach (Gong, Backlinko, BuzzStream): pendek, konteks bidang usaha, ajakan berbasis minat (relevan atau tidak).
+        $fill = fn (string $value, string $object) => strtr($tpl, ['{hi}' => $hi, '{value}' => $value, '{biz}' => trim((string) $p->business_name) !== '' ? trim((string) $p->business_name) : $object]);
         $engaged = $p->phone_normalized && PlatformAiWhatsAppMessage::where('phone', $p->phone_normalized)->where('direction', 'inbound')->exists();
         $segment = IndustryPlaybook::for((string) $p->business_type, (string) $p->business_name, (string) $p->notes);
 
@@ -82,10 +83,10 @@ final class OpeningStrategy
         }
         if ($segment) {
             return ['category' => $segment['key'] === 'pecel_lele' ? 'VERIFIED_PECEL_LELE' : 'VERIFIED_'.strtoupper($segment['key']),
-                'message' => $fill($segment['audience'], $segment['opening_question'])];
+                'message' => $fill($segment['value'], $segment['object'])];
         }
 
-        return ['category' => 'UNKNOWN_BUSINESS', 'message' => $fill('usaha kuliner dan toko', 'penjualan sehari-hari biasanya masih dicatat manual atau sudah pakai aplikasi?')];
+        return ['category' => 'UNKNOWN_BUSINESS', 'message' => $fill('Kami bantu usaha kuliner dan toko supaya penjualan harian langsung tercatat, tanpa hitung dari nota.', 'usahanya')];
     }
 
     public function followup(PlatformAiProspect $p): string

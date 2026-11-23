@@ -64,7 +64,9 @@ class AditConversationQualityTest extends TestCase
         $this->assertSame('VERIFIED_PECEL_LELE', $opening['category']);
         $this->assertStringStartsWith('Selamat pagi Pak/Bu', $opening['message']);
         $this->assertStringNotContainsStringIgnoringCase('kak andopos', $opening['message']);
-        $this->assertStringContainsString('Saya Adit dari Yoka POS', $opening['message']);
+        $this->assertStringContainsString('saya Adit dari Yoka POS', $opening['message']);
+        $this->assertStringContainsString('untuk andopos?', $opening['message']);
+        $this->assertLessThan(45, str_word_count($opening['message']));
         $this->assertStringNotContainsString('AI', $opening['message']);
         $this->assertStringNotContainsString('yokapos.com', $opening['message']);
         $this->assertSame(1, substr_count($opening['message'], '?'));

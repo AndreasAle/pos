@@ -95,10 +95,11 @@ class AditReadinessTest extends TestCase
     {
         $m = app(OpeningStrategy::class)->opening($this->p)['message'];
         $this->assertStringStartsWith('Selamat pagi Pak/Bu', $m);
-        $this->assertStringContainsString('Saya Adit dari Yoka POS', $m);
-        $this->assertStringContainsString('aplikasi kasir untuk usaha kuliner', $m);
-        $this->assertStringContainsString('kalau warung sedang ramai', $m);
-        $this->assertStringNotContainsStringIgnoringCase('andopos', $m);
+        $this->assertStringContainsString('saya Adit dari Yoka POS', $m);
+        $this->assertStringContainsString('Kami bantu warung pecel lele supaya pesanan makan di tempat dan bungkus langsung tercatat', $m);
+        $this->assertMatchesRegularExpression('/(relevan|cocok nggak) untuk andopos\?$/', $m);
+        $this->assertStringNotContainsString('mengganggu', $m);
+        $this->assertStringNotContainsString('Kak andopos', $m); // nama usaha boleh disebut sebagai usaha, bukan sebagai nama orang
         $this->assertSame(1, substr_count($m, '?'));
         $this->assertLessThan(300, mb_strlen($m));
     }
