@@ -44,7 +44,7 @@ class YokaAgentLlmTest extends TestCase
         Http::fake(['*/chat/completions' => Http::response(['choices' => [['message' => ['content' => json_encode(['in_scope' => false])]]]])]);
         $reply = app(YokaAssistantService::class)->ask($this->owner(), 'Siapa presiden Perancis?');
 
-        $this->assertStringContainsString('hanya bisa membantu seputar bisnis', $reply['answer']);
+        $this->assertStringContainsString('di luar bisnismu', $reply['answer']);
         Http::assertSentCount(1);
     }
 
