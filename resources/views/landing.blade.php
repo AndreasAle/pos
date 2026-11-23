@@ -113,7 +113,7 @@
                      @unless (str_contains($s['imgClass'], 'hero-fade-y')) style="-webkit-mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }});mask-image:linear-gradient(to right,transparent 0,#000 {{ $s['maskStop'] ?? '8%' }})" @endunless
                      @if (str_contains($s['imgClass'], 'hero-fade-y')) style="--hero-mask-x: {{ $s['maskStop'] ?? '8%' }}" @endif
                      @if ($k === 0) fetchpriority="high" @else loading="lazy" @endif>
-                <div class="relative max-w-[1200px] mx-auto px-6 h-full flex items-start lg:items-center pt-[88px] sm:pt-[100px] lg:pt-0">
+                <div class="relative max-w-[1200px] mx-auto px-6 h-full flex items-start lg:items-center pt-[124px] sm:pt-[136px] lg:pt-8">
                     <div class="max-w-[520px] lg:pb-8">
                         <h1 class="text-[34px] md:text-[48px] font-extrabold leading-[1.15] text-white mb-5">{{ $s['title'] }}</h1>
                         <p class="text-base md:text-lg text-white/90 mb-8 max-w-[440px]">{{ $s['text'] }}</p>

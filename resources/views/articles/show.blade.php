@@ -45,7 +45,7 @@
 
     <main>
         <article>
-            <header class="bg-emerald-600 text-white pt-[60px] sm:pt-[68px] lg:pt-[76px]">
+            <header class="bg-emerald-600 text-white pt-[96px] sm:pt-[100px] lg:pt-[104px]">
                 <div class="max-w-[760px] mx-auto px-5 sm:px-6 py-10 sm:py-14">
                     <nav class="text-sm font-semibold text-emerald-100" aria-label="Breadcrumb">
                         <a href="{{ route('articles.index') }}" class="hover:text-white">Artikel</a>
