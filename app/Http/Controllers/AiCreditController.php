@@ -20,8 +20,17 @@ class AiCreditController extends Controller
         abort_unless($this->credits->enabled(), 404);
         $business = $request->user()->business;
 
+        $user = $request->user();
+        $balance = $this->credits->balance($business);
+
         return view('ai-credits.index', [
-            'balance' => $this->credits->balance($business),
+            // Sidebar Yoka AI (percakapan, insight, menu akun) supaya halaman ini tetap di dalam Yoka AI.
+            'conversations' => \App\Models\AssistantConversation::where('business_id', $user->business_id)->where('user_id', $user->id)->latest('updated_at')->limit(40)->get(),
+            'activeConversation' => null,
+            'businessInsights' => app(\App\Services\InsightService::class)->visible($business, 5),
+            'intelligenceAgents' => config('pos.features.intelligence_agents') ? \App\Models\IntelligenceAgent::where('business_id', $business->id)->orderBy('agent_key')->get() : collect(),
+            'credits' => $balance,
+            'balance' => $balance,
             'packs' => config('yoka_ai_credits.packs'),
             'entries' => AiCreditEntry::where('business_id', $business->id)->latest('id')->limit(30)->get(),
             'topups' => AiCreditTopup::where('business_id', $business->id)->where('status', 'pending')->latest('id')->limit(5)->get(),

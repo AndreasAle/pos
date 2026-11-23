@@ -36,7 +36,8 @@ class IntelligenceController extends Controller
             $intelligenceAgents = IntelligenceAgent::where('business_id', $user->business_id)->orderBy('agent_key')->get();
         }
 
-        $reportPrompt = $this->reportPrompt($request);
+        $reportPrompt = $this->reportPrompt($request)
+            ?? ($request->filled('ask') ? 'Jelaskan insight ini dan apa yang sebaiknya aku lakukan: '.\Illuminate\Support\Str::limit((string) $request->query('ask'), 200) : null);
 
         $credits = app(AiCredits::class)->enabled() ? app(AiCredits::class)->balance($user->business) : null;
 

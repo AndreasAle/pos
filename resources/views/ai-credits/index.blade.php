@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Kredit Yoka AI')
 @section('page-title', 'Kredit Yoka AI')
-@section('page-subtitle', 'Saldo untuk bertanya di Tanya Yoka, terpisah dari langganan.')
+@section('focus', '1')
 
 @section('content')
 @php
@@ -11,7 +11,21 @@
     ];
 @endphp
 
-<div class="page pb-10">
+<div class="flex h-[100dvh] flex-col overflow-hidden bg-white" x-data="yokaShell()">
+    <header class="relative z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-3 sm:px-5">
+        <a href="{{ route('intelligence.index') }}" aria-label="Kembali ke Tanya Yoka" title="Kembali ke Tanya Yoka" class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-[#0B1B3F] transition hover:border-[#16A34A] hover:bg-[#F4FBF7]">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <span class="text-[16px] font-extrabold text-[#0B1B3F]">Kredit Yoka AI</span>
+        <button type="button" @click="historyOpen = true" class="flex h-10 w-10 items-center justify-center rounded-xl border border-[#E5E7EB] bg-white text-slate-600 transition hover:bg-slate-50 lg:invisible" aria-label="Menu"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    </header>
+    <div class="relative flex min-h-0 flex-1">
+    @include('intelligence._sidebar')
+    <div x-show="historyOpen" x-cloak @click="historyOpen=false" class="absolute inset-0 z-10 bg-black/30 lg:hidden"></div>
+    <main class="min-w-0 flex-1 overflow-y-auto">
+    <div class="mx-auto max-w-5xl px-4 pb-10 pt-6 sm:px-8">
+    <p class="text-sm text-[#64748B]">Saldo untuk bertanya di Tanya Yoka, terpisah dari langganan.</p>
+    @if(session('error'))<div class="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{{ session('error') }}</div>@endif
     <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <x-kpi label="Sisa kredit" :value="number_format($balance['total'], 0, ',', '.')" :tone="$balance['total'] < 1 ? 'danger' : ($balance['total'] <= 5 ? 'warn' : 'brand')"
                :sub="$balance['total'] < 1 ? 'Habis. Top-up untuk lanjut bertanya.' : 'Sekitar '.number_format($balance['total'], 0, ',', '.').' pertanyaan biasa'" />
@@ -34,7 +48,7 @@
                         <input type="hidden" name="pack" value="{{ $key }}">
                         <div class="flex items-center justify-between gap-2">
                             <span class="font-semibold text-[#0B1B3F]">{{ $pack['name'] }}</span>
-                            @if($key === 'ai-300')<span class="text-xs font-semibold text-[#15803D]">Paling sering dipilih</span>@endif
+                            @if($key === 'ai-300')<span class="text-xs font-semibold text-[#15803D]">Terlaris</span>@endif
                         </div>
                         <p class="mt-2 text-2xl font-bold tabular-nums text-[#0B1B3F]">{{ number_format($pack['credits'], 0, ',', '.') }} <span class="text-sm font-normal text-[#64748B]">kredit</span></p>
                         <p class="mt-1 text-sm text-[#64748B]">Rp{{ number_format($per, 0, ',', '.') }} per kredit</p>
@@ -100,5 +114,24 @@
             </div>
         @endif
     </x-panel>
+    </div>
+    </main>
+    </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function yokaShell() {
+    return {
+        historyOpen: false, search: '', searchOpen: false,
+        async deleteConversation(id){
+            if(!confirm('Hapus percakapan ini?'))return;
+            const r=await fetch('{{ url('/intelligence/conversations') }}/'+id,{method:'DELETE',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'}});
+            if(r.ok)document.getElementById('conversation-'+id)?.remove();
+        },
+        async toggleAgent(id,event){const r=await fetch(`{{ url('/intelligence/agents') }}/${id}/toggle`,{method:'PATCH',headers:{'Accept':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}'}});if(r.ok)window.location.reload()},
+    }
+}
+</script>
+@endpush

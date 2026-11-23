@@ -37,69 +37,8 @@
     </header>
     <div class="relative min-h-0 flex-1">
     <div class="flex h-full min-w-0">
-        {{-- Riwayat percakapan --}}
-        <aside class="absolute lg:relative z-20 inset-y-0 left-0 flex w-[272px] shrink-0 flex-col border-r border-[#EEF0F2] bg-[#FAFBFA] transition-transform lg:translate-x-0"
-               :class="historyOpen ? 'translate-x-0 shadow-2xl lg:shadow-none' : '-translate-x-full'">
-            <div class="space-y-0.5 px-3 pt-3">
-                <a href="{{ route('intelligence.index') }}" class="flex h-10 items-center gap-3 rounded-lg px-3 text-[14px] font-bold text-[#0B1B3F] transition hover:bg-white">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
-                    Percakapan baru
-                </a>
-                <button type="button" @click="searchOpen = !searchOpen; $nextTick(() => searchOpen && $refs.search.focus())" class="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-[14px] font-bold text-[#0B1B3F] transition hover:bg-white">
-                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path stroke-linecap="round" d="M20 20l-3.5-3.5"/></svg>
-                    Cari
-                </button>
-                <div x-show="searchOpen" x-cloak class="px-1 pb-1 pt-0.5"><input x-ref="search" x-model="search" type="text" placeholder="Cari percakapan..." class="h-9 w-full rounded-lg border border-[#E5E7EB] bg-white px-3 text-[13px] font-semibold text-slate-700 placeholder:font-medium focus:border-[#65B98E] focus:outline-none focus:ring-2 focus:ring-[#E1F5EA]"></div>
-            </div>
-
-            <div class="mt-3 flex min-h-0 flex-1 flex-col">
-                <button type="button" @click="listOpen = !listOpen" class="mx-3 flex items-center gap-1.5 px-3 py-1.5 text-left text-[13px] font-bold text-slate-500 hover:text-slate-700">
-                    Terbaru
-                    <svg class="h-3.5 w-3.5 transition-transform" :class="listOpen ? '' : '-rotate-90'" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                <div x-show="listOpen" class="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-                    @forelse($conversations as $conversation)
-                    <div id="conversation-{{ $conversation->id }}" class="group relative" data-t="{{ \Illuminate\Support\Str::lower($conversation->title ?: 'percakapan baru') }}" x-show="!search || $el.dataset.t.includes(search.toLowerCase())">
-                        <a href="{{ route('intelligence.index', ['conversation' => $conversation->id]) }}" title="{{ $conversation->updated_at->diffForHumans() }}"
-                           class="block truncate rounded-lg py-2 pl-3 pr-9 text-[14px] transition {{ $activeConversation?->id === $conversation->id ? 'bg-[#E8F5ED] font-bold text-[#087A4E]' : 'font-semibold text-slate-700 hover:bg-white' }}">{{ $conversation->title ?: 'Percakapan baru' }}</a>
-                        <button type="button" @click.prevent="deleteConversation({{ $conversation->id }})" title="Hapus percakapan"
-                                class="absolute right-1.5 top-1.5 h-7 w-7 rounded-md text-slate-400 opacity-0 hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover:opacity-100">&times;</button>
-                    </div>
-                    @empty
-                    <p class="px-3 py-4 text-[13px] leading-relaxed text-slate-500">Belum ada percakapan. Mulai dengan pertanyaan tentang penjualan atau operasional bisnis.</p>
-                    @endforelse
-                </div>
-            </div>
-
-            <div class="border-t border-[#EEF0F2] p-2" x-data="{ insightOpen: false }">
-                <button type="button" @click="insightOpen = !insightOpen" class="flex h-11 w-full items-center gap-3 rounded-lg px-3 text-left transition hover:bg-white" :aria-expanded="insightOpen">
-                    <span class="flex h-7 w-7 items-center justify-center rounded-md bg-[#E1F5EA] text-[#0B8F5B]"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg></span>
-                    <span class="flex-1 text-[14px] font-bold text-[#0B1B3F]">Insight aktif</span>
-                    @if($businessInsights->count())<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[12px] font-bold text-amber-800">{{ $businessInsights->count() }}</span>@endif
-                    <svg class="h-3.5 w-3.5 text-slate-400 transition-transform" :class="insightOpen ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.6"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-                </button>
-                <div x-show="insightOpen" x-cloak class="max-h-56 space-y-1.5 overflow-y-auto px-1 pb-1 pt-1">
-                    @forelse($businessInsights->take(5) as $insight)
-                    <div class="rounded-lg bg-white px-3 py-2 ring-1 ring-[#EEF0F2]">
-                        <p class="text-[13px] font-bold leading-snug text-slate-700">{{ $insight->title }}</p>
-                        <p class="mt-0.5 text-[12px] text-slate-500">{{ $insight->confidence ?? 0 }}% yakin</p>
-                    </div>
-                    @empty
-                    <p class="px-2 py-1 text-[13px] text-slate-500">Tidak ada anomali penting saat ini.</p>
-                    @endforelse
-                </div>
-                @if(config('pos.features.intelligence_agents') && $intelligenceAgents->isNotEmpty())
-                <details class="mt-1 rounded-lg px-3 py-2">
-                    <summary class="cursor-pointer text-[13px] font-bold text-slate-600">Agen terjadwal</summary>
-                    <div class="mt-2 space-y-2">
-                        @foreach($intelligenceAgents as $agent)
-                        <div class="flex items-center justify-between gap-2 text-[13px]"><span>{{ str($agent->agent_key)->replace('_', ' ')->title() }}</span><button type="button" @click="toggleAgent({{ $agent->id }}, $event)" class="rounded-full px-2 py-1 font-semibold {{ $agent->enabled ? 'bg-[#E1F5EA] text-[#087A4E]' : 'bg-slate-100 text-slate-500' }}">{{ $agent->enabled ? 'Aktif' : 'Nonaktif' }}</button></div>
-                        @endforeach
-                    </div>
-                </details>
-                @endif
-            </div>
-        </aside>
+        {{-- Riwayat percakapan + menu akun --}}
+        @include('intelligence._sidebar')
 
         <div x-show="historyOpen" x-cloak @click="historyOpen=false" class="absolute inset-0 z-10 bg-black/30 lg:hidden"></div>
 
