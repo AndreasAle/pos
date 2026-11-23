@@ -256,8 +256,8 @@ class DraftWhatsAppReply implements ShouldQueue
         $customer = $business
             ? "Pengirim adalah pemilik/tim toko terdaftar \"{$business->name}\", status langganan ".($sub?->status ?? 'tidak diketahui').($sub?->ends_at ? ' sampai '.$sub->ends_at->toDateString() : '').'.'
             : ($this->prospectContext ?? 'Pengirim belum terdaftar (kemungkinan calon pelanggan).');
-        $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'max_outlets', 'max_users'])
-            ->map(fn ($p) => "{$p->name}: Rp ".number_format((float) $p->price, 0, ',', '.')."/bulan, {$p->max_outlets} outlet, {$p->max_users} user")->implode('; ');
+        $plans = SubscriptionPlan::where('is_active', true)->orderBy('sort_order')->get(['name', 'price', 'period_prices', 'max_outlets', 'max_users'])
+            ->map(fn ($p) => \App\Services\PlatformAgents\Sales\CommercialPolicy::planLine($p))->implode('; ');
         $trialDays = self::TRIAL_DAYS;
         $bubbleRule = match (true) {
             $this->prospectContext !== null && self::maxProspectBubbles() === 1 => '- Tulis SATU pesan WhatsApp utuh dan ringkas (boleh 2 paragraf pendek, dipisah baris kosong). Info utama di kalimat pertama.',

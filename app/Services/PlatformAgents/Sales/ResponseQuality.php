@@ -57,7 +57,7 @@ final class ResponseQuality
     public function fallback(array $strategy, PlatformAiProspect $p): ?string
     {
         $plans = app(CommercialPolicy::class)->officialPlans()
-            ->map(fn ($pl) => "{$pl->name} Rp ".number_format((float) $pl->price, 0, ',', '.')."/bulan ({$pl->max_outlets} outlet, {$pl->max_users} user)")->implode(', ');
+            ->map(fn ($pl) => CommercialPolicy::planLine($pl))->implode(', ');
 
         return match ($strategy['objective'] ?? null) {
             'ANSWER_DIRECT_QUESTION' => $plans !== '' ? "Paket Yoka POS saat ini: {$plans}. Ada juga trial gratis 7 hari." : null,

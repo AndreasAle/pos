@@ -31,7 +31,16 @@ final class CommercialPolicy
     /** @return \Illuminate\Support\Collection<int,SubscriptionPlan> */
     public function officialPlans()
     {
-        return SubscriptionPlan::where('is_active', true)->where('price', '>', 0)->orderBy('price')->get(['name', 'slug', 'price', 'max_outlets', 'max_users']);
+        return SubscriptionPlan::where('is_active', true)->where('price', '>', 0)->orderBy('price')->get(['name', 'slug', 'price', 'period_prices', 'max_outlets', 'max_users']);
+    }
+
+    /** Ringkasan harga resmi per paket, termasuk bayar di muka 3/6/12 bulan. Satu-satunya teks harga untuk prompt. */
+    public static function planLine(SubscriptionPlan $p): string
+    {
+        $rp = fn ($v) => 'Rp '.number_format((float) $v, 0, ',', '.');
+        $multi = collect($p->periods())->except(1)->map(fn ($amount, $m) => "{$m} bulan {$rp($amount)}")->implode(', ');
+
+        return "{$p->name} {$rp($p->price)}/bulan".($multi !== '' ? " (bayar di muka: {$multi})" : '')." ({$p->max_outlets} outlet, {$p->max_users} user)";
     }
 
     public function isCommercialRequest(string $text): bool
@@ -88,7 +97,7 @@ final class CommercialPolicy
                 + ['state' => self::NEEDS_HUMAN_APPROVAL, 'needs_approval' => true,
                     'analysis' => ['reason' => 'Permintaan penawaran aplikasi + perangkat; belum ada bundel resmi yang disetujui.', 'cost_status' => self::INSUFFICIENT_DATA,
                         'kind' => 'hardware_quotation', 'candidate_item' => $candidate ? ($candidate['model'].' (kompatibilitas: '.$candidate['compatibility'].', harga beli referensi: '.($candidate['purchase_cost'] ?? '-').')') : null,
-                        'draft_bundle' => config('yoka_hardware.bundles.starter-kit.initial_price'), 'missing_terms' => array_keys(array_filter((array) config('yoka_hardware.bundles.starter-kit.terms'), fn ($v) => $v === null))],
+                        'draft_bundle' => config('yoka_hardware.bundles.basic-3-58.initial_price'), 'missing_terms' => array_keys(array_filter((array) config('yoka_hardware.bundles.basic-3-58.terms'), fn ($v) => $v === null))],
                     'customer_guidance' => 'Langganan tidak termasuk perangkat dan belum ada paket bundel resmi. Bilang kamu tanyakan ke tim; jangan sebut harga perangkat, jangan janji printer gratis.'];
         }
         if ($plans->isEmpty()) {
@@ -157,7 +166,7 @@ final class CommercialPolicy
      */
     public function scrubReply(string $reply): array
     {
-        $allowed = array_merge($this->officialPlans()->map(fn ($p) => (int) round((float) $p->price))->all(), app(HardwareCatalog::class)->officialPrices());
+        $allowed = array_merge($this->officialPlans()->flatMap(fn ($p) => array_values($p->periods()))->all(), app(HardwareCatalog::class)->officialPrices());
         $removed = [];
         $sentences = preg_split('/(?<=[.!?])\s+|\n/u', $reply) ?: [];
         $kept = [];

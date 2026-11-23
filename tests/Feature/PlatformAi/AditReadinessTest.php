@@ -155,15 +155,17 @@ class AditReadinessTest extends TestCase
 
     public function test_approved_bundle_can_be_quoted_without_approval(): void
     {
-        config(['yoka_hardware.items.mp-58n.status' => 'approved', 'yoka_hardware.items.mp-58n.compatibility' => 'verified', 'yoka_hardware.items.mp-58n.selling_price' => 250000,
-            'yoka_hardware.bundles.starter-kit.status' => 'approved',
-            'yoka_hardware.bundles.starter-kit.terms' => ['shipping' => 'ongkir ditanggung pembeli', 'installation' => 'setup jarak jauh', 'warranty' => '3 bulan', 'returns' => '7 hari', 'refunds' => 'sesuai kebijakan', 'taxes' => 'termasuk']]);
+        config(['yoka_hardware.items.mp-58n.status' => 'approved', 'yoka_hardware.items.mp-58n.compatibility' => 'verified', 'yoka_hardware.items.mp-58n.selling_price' => 349000,
+            'yoka_hardware.bundles.basic-3-58.status' => 'approved',
+            'yoka_hardware.bundles.basic-3-58.terms' => ['shipping' => 'ongkir ditanggung pembeli', 'installation' => 'setup jarak jauh', 'warranty' => '3 bulan', 'returns' => '7 hari', 'refunds' => 'sesuai kebijakan', 'taxes' => 'termasuk']]);
         $e = app(CommercialPolicy::class)->evaluate('aplikasi sama printer sekalian berapa?');
         $this->assertSame(CommercialPolicy::STANDARD_OFFER, $e['state']);
-        $this->assertSame(349000.0, $e['official_price']);
-        [$clean] = app(CommercialPolicy::class)->scrubReply('Starter Kit Rp349.000 sudah termasuk printer. Printer saja Rp250.000.');
+        $this->assertSame(699000.0, $e['official_price']);
+        [$clean, $removed] = app(CommercialPolicy::class)->scrubReply('YokaBasic 3 bulan + printer Rp699.000. Printer saja Rp349.000. Paket 12 bulan + printer Rp1.649.000.');
+        $this->assertStringContainsString('Rp699.000', $clean);
         $this->assertStringContainsString('Rp349.000', $clean);
-        $this->assertStringContainsString('Rp250.000', $clean);
+        $this->assertStringNotContainsString('Rp1.649.000', $clean, 'Bundel yang masih draft tidak boleh disebut.');
+        $this->assertCount(1, $removed);
     }
 
     // ---- Kunjungan lapangan ----

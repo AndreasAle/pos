@@ -21,6 +21,10 @@ class RevenueRecognition
     /** Jumlah bulan layanan: dibulatkan dari jumlah hari / 30, minimal 1. */
     public static function termMonths(BusinessSubscription $sub): int
     {
+        // Durasi yang dibeli lebih akurat dari selisih tanggal (perpanjangan dihitung dari akhir masa lama).
+        if ((int) $sub->months > 0) {
+            return (int) $sub->months;
+        }
         if (! $sub->starts_at || ! $sub->ends_at) {
             return 1;
         }

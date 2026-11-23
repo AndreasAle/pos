@@ -22,9 +22,12 @@ class SubscriptionPlanSeeder extends Seeder
                 'sort_order'  => 1,
             ],
             [
-                'name'        => 'Starter',
+                // YokaBasic (dulu Starter). Slug tetap 'starter' agar langganan lama tetap terhubung.
+                // Daftar harga v1.0, 2026-11-23: bayar di muka 3/6/12 bulan lebih hemat, harga bulanan tidak didiskon.
+                'name'        => 'YokaBasic',
                 'slug'        => 'starter',
-                'price'       => 99000,
+                'price'       => 149000,
+                'period_prices' => ['3' => 399000, '6' => 749000, '12' => 1399000],
                 'max_outlets' => 2,
                 'max_users'   => 10,
                 'features'    => ['pos', 'inventory', 'reports', 'kitchen', 'loyalty'],
