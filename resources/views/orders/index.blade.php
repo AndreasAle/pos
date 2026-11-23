@@ -72,6 +72,12 @@
                     <tr class="group hover:bg-[#ECFDF3]/50 transition-colors cursor-pointer" onclick="window.location='{{ route('orders.show', $order) }}'">
                         <td class="px-6 py-4">
                             <a href="{{ route('orders.show', $order) }}" class="font-mono text-[13px] font-semibold text-[#16A34A] hover:underline">{{ $order->order_number }}</a>
+                            @if($order->offline_number)
+                                <div class="mt-1 flex flex-wrap gap-1">
+                                    <x-pill tone="blue">Offline</x-pill>
+                                    @if($order->offline_review)<x-pill tone="amber">Perlu dicek</x-pill>@endif
+                                </div>
+                            @endif
                         </td>
                         <td class="px-6 py-4">
                             <span class="flex items-center gap-2.5 text-slate-700">

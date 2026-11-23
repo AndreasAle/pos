@@ -260,6 +260,8 @@ Route::prefix('platform')->name('platform.')->group(function () {
 
 // ── Kasir: masuk dengan PIN (tablet) ─────────────────────────────────────────
 // Sengaja di luar grup 'business': perangkat belum punya sesi sampai PIN benar.
+// Service worker for the offline register; public so it can be fetched before login.
+Route::get('/pos-sw.js', \App\Http\Controllers\PosServiceWorkerController::class)->name('pos.sw');
 Route::get('/kasir', [PinLoginController::class, 'show'])->name('pin.show');
 Route::post('/kasir/pair', [PinLoginController::class, 'pair'])->name('pin.pair')->middleware('throttle:20,1');
 Route::post('/kasir/unpair', [PinLoginController::class, 'unpair'])->name('pin.unpair');
@@ -366,6 +368,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     // validasi gagal, supaya kasir melihat pesan asli bukan galat parsing.
     Route::middleware('json')->group(function () {
         Route::post('pos/order', [PosController::class, 'store'])->name('pos.store');
+        // Offline register: replay of queued cash sales + connectivity/CSRF check.
+        Route::post('pos/sync', [\App\Http\Controllers\PosSyncController::class, 'sync'])->middleware('throttle:60,1')->name('pos.sync');
+        Route::get('pos/ping', [\App\Http\Controllers\PosSyncController::class, 'ping'])->middleware('throttle:120,1')->name('pos.ping');
         Route::post('pos/qris/dynamic', [PosController::class, 'dynamicQris'])->name('pos.qris.dynamic');
         Route::post('pos/qris-draft', [PosController::class, 'createQrisDraft'])->name('pos.qris-draft');
         Route::post('pos/qris-confirm/{order}', [PosController::class, 'confirmQrisManual'])->name('pos.qris-confirm');

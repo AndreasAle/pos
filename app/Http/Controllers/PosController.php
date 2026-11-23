@@ -140,11 +140,55 @@ class PosController extends Controller
             'use_dynamic'   => $qrisDynamic,
         ];
 
+        $offlineConfig = $this->offlineConfig($user, $business, $activeShift, $productsJson, $bundlesJson, $settings);
+
         return view('pos.index', compact(
             'categories', 'productsJson', 'bundlesJson',
             'promotions', 'activeShift', 'settings', 'business',
-            'qrisData', 'midtransClientKey', 'midtransEnabled'
+            'qrisData', 'midtransClientKey', 'midtransEnabled', 'offlineConfig'
         ));
+    }
+
+    /**
+     * What the register needs to keep selling cash without a connection. The
+     * page itself (menu, prices, tax) is cached by the service worker; this adds
+     * who is selling, where, the receipt layout and the hard limits. Null while
+     * the feature is off, so the page behaves exactly as before.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function offlineConfig($user, $business, $activeShift, $productsJson, $bundlesJson, array $settings): ?array
+    {
+        if (! config('pos.features.pos_offline')) {
+            return null;
+        }
+
+        $outlet = $activeShift?->outlet ?? $user->outlet;
+
+        // Changes whenever anything that prices a cart changes, so a sale synced
+        // later can be matched to the menu it was rung up from.
+        $catalogVersion = substr(hash('sha256', json_encode([
+            $productsJson, $bundlesJson,
+            $settings['enable_tax'] ?? null, $settings['tax_percent'] ?? null,
+            $settings['enable_service'] ?? null, $settings['service_percent'] ?? null,
+        ])), 0, 16);
+
+        return [
+            'enabled'         => true,
+            'business_id'     => $business->id,
+            'outlet_id'       => $outlet?->id,
+            'user_id'         => $user->id,
+            'user_name'       => $user->name,
+            'shift_id'        => $activeShift?->id,
+            'catalog_version' => $catalogVersion,
+            'snapshot_at'     => now()->toIso8601String(),
+            'max_hours'       => (int) config('pos.offline.max_hours'),
+            'max_orders'      => (int) config('pos.offline.max_orders'),
+            'sync_url'        => route('pos.sync'),
+            'ping_url'        => route('pos.ping'),
+            'sw_url'          => asset('pos-sw.js'),
+            'receipt'         => \App\Support\ReceiptOptions::forBusiness($business, $outlet),
+        ];
     }
 
     /**
@@ -174,6 +218,9 @@ class PosController extends Controller
             'hold_name'                => 'nullable|string|max:60',
             // The held order this sale came from; it is removed once rung up.
             'draft_id'                 => 'nullable|integer',
+            // Minted by the register per sale; a retry with the same one returns
+            // the order already made instead of ringing it up twice.
+            'client_uuid'              => 'nullable|uuid',
         ];
     }
 
@@ -197,11 +244,14 @@ class PosController extends Controller
 
         $order = $this->posService->createOrder(auth()->user(), $request->all());
 
-        // Send WhatsApp receipt if enabled
-        $this->sendWhatsAppReceipt($order);
+        // A retry of a sale already recorded: same answer, no second receipt.
+        if ($order->wasRecentlyCreated) {
+            $this->sendWhatsAppReceipt($order);
+        }
 
         return response()->json([
             'success'      => true,
+            'duplicate'    => ! $order->wasRecentlyCreated,
             'order_id'     => $order->id,
             'order_number' => $order->order_number,
             'receipt_url'  => route('receipt.show', $order),
