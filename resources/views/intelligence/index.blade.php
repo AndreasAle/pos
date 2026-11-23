@@ -97,29 +97,22 @@
                     </div>
                     <a href="{{ route('ai-credits.index') }}" class="shrink-0 rounded-xl bg-[#16A34A] px-4 py-2.5 text-[13px] font-bold text-white hover:bg-[#15803D]">Top-up kredit</a>
                 </div>
-                <form @submit.prevent="ask" class="mx-auto w-full rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition" :class="messages.length === 0 ? 'max-w-3xl' : 'max-w-4xl'">
+                <form @submit.prevent="ask" :class="{ 'opacity-60': noCredits }" class="mx-auto w-full rounded-2xl border border-slate-300 bg-white p-2 shadow-[0_8px_30px_rgba(15,23,42,.08)] focus-within:border-[#65B98E] focus-within:ring-4 focus-within:ring-[#E1F5EA] transition" :class="messages.length === 0 ? 'max-w-3xl' : 'max-w-4xl'">
                     <div x-show="files.length" class="flex flex-wrap gap-1.5 px-2 pb-1 pt-0.5"><template x-for="(f,i) in files" :key="i"><span class="inline-flex items-center gap-1.5 rounded-lg bg-[#E8F7EF] px-2.5 py-1 text-[12px] font-semibold text-[#087A4E]"><span x-text="f.name"></span><button type="button" @click="files.splice(i,1)" class="text-[#087A4E]/60 hover:text-red-600" aria-label="Hapus lampiran">×</button></span></template></div>
                     <div class="flex items-end gap-2">
                         <input type="file" x-ref="picker" multiple accept="{{ \App\Services\Intelligence\AttachmentService::ACCEPT }}" class="hidden" @change="pick($event)">
-                        <button type="button" @click="$refs.picker.click()" class="mb-0.5 flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-[#0B8F5B]" aria-label="Lampirkan dokumen" title="Lampirkan dokumen (PDF, Excel, CSV, gambar)"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.5l-8.6 8.6a5 5 0 01-7.1-7.1l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.7 1.7 0 01-2.4-2.4l8.3-8.3"/></svg></button>
-                        <textarea x-model="question" x-ref="input" @keydown.enter="if(!$event.shiftKey){$event.preventDefault();ask()}" rows="1" maxlength="2000" placeholder="Tanya apa saja soal bisnismu..." class="max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"></textarea>
-                        <button type="submit" :disabled="loading || !question.trim()" class="w-10 h-10 mb-0.5 rounded-xl bg-[#0B8F5B] hover:bg-[#087A4E] disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition" aria-label="Kirim">
+                        <button type="button" @click="$refs.picker.click()" :disabled="noCredits" class="disabled:cursor-not-allowed disabled:opacity-40 mb-0.5 flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-[#0B8F5B]" aria-label="Lampirkan dokumen" title="Lampirkan dokumen (PDF, Excel, CSV, gambar)"><svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12.5l-8.6 8.6a5 5 0 01-7.1-7.1l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.7 1.7 0 01-2.4-2.4l8.3-8.3"/></svg></button>
+                        <textarea x-model="question" x-ref="input" :disabled="noCredits" :placeholder="noCredits ? 'Kredit habis. Top-up untuk lanjut bertanya.' : 'Tanya apa saja soal bisnismu...'" @keydown.enter="if(!$event.shiftKey){$event.preventDefault();ask()}" rows="1" maxlength="2000" class="disabled:cursor-not-allowed max-h-32 min-h-11 flex-1 resize-none border-0 bg-transparent px-3 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-0"></textarea>
+                        <button type="submit" :disabled="loading || !question.trim() || noCredits" class="w-10 h-10 mb-0.5 rounded-xl bg-[#0B8F5B] hover:bg-[#087A4E] disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center justify-center transition" aria-label="Kirim">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-6 6l6-6 6 6"/></svg>
                         </button>
                     </div>
                 </form>
-                <div x-show="messages.length === 0" class="mt-4 flex w-full max-w-3xl flex-wrap justify-center gap-2.5">
-                    <template x-for="chip in chips" :key="chip.text">
-                        <button type="button" @click="question = chip.text; ask()" class="inline-flex h-10 items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-4 text-[14px] font-bold text-[#0B1B3F] shadow-sm transition hover:border-[#9DD8BA] hover:bg-[#F4FBF7]">
-                            <span class="text-[#0B8F5B]" x-text="chip.icon"></span><span x-text="chip.title"></span>
-                        </button>
-                    </template>
-                </div>
                 <div x-show="messages.length === 0" class="mt-6 w-full max-w-3xl">
                     <p class="mb-2 px-1 text-[13px] font-bold uppercase tracking-wide text-slate-400">Coba tanyakan</p>
                     <div class="divide-y divide-[#EEF0F2] overflow-hidden rounded-2xl border border-[#EEF0F2] bg-white">
                         <template x-for="idea in ideas" :key="idea">
-                            <button type="button" @click="question = idea; ask()" class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[14px] font-semibold text-slate-700 transition hover:bg-[#F4FBF7] hover:text-[#087A4E]">
+                            <button type="button" @click="question = idea; ask()" :disabled="noCredits" class="disabled:cursor-not-allowed disabled:opacity-50 flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[14px] font-semibold text-slate-700 transition hover:bg-[#F4FBF7] hover:text-[#087A4E]">
                                 <span x-text="idea"></span>
                                 <svg class="h-4 w-4 shrink-0 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                             </button>
@@ -139,28 +132,15 @@
 function yokaChat(initialConversation, initialMessages, initialQuestion, initialCredits) {
     return {
         credits: initialCredits,
+        get noCredits(){ return !!this.credits && this.credits.total < 1 },
         historyOpen: false, search: '', searchOpen: false, listOpen: true, files: [], loading: false, streaming: false, status: 'Memahami pertanyaan…', actionLoading: false, question: initialQuestion || '', conversationId: initialConversation, messages: initialMessages || [],
         greeting: (() => { const h = new Date().getHours(), p = h < 11 ? 'pagi' : (h < 15 ? 'siang' : (h < 18 ? 'sore' : 'malam')); return 'Selamat ' + p + ', ' + @js(\Illuminate\Support\Str::of(auth()->user()->name)->before(' ')->title()->toString()) + '!' })(),
-        chips: [
-            {icon:'↗',title:'Ringkasan penjualan',text:'Bagaimana omzet hari ini?'},
-            {icon:'★',title:'Produk terlaris',text:'Produk paling laris bulan ini'},
-            {icon:'!',title:'Kondisi stok',text:'Stok apa yang perlu segera dibeli?'},
-            {icon:'◷',title:'Jam ramai',text:'Jam berapa paling ramai bulan ini?'},
-            {icon:'✦',title:'Ide promo',text:'Kasih ide promo untuk menaikkan omzet bulan ini'},
-            {icon:'✓',title:'Audit bisnis',text:'Audit lengkap bisnisku, apa yang harus aku perbaiki?'},
-        ],
         ideas: [
             'Bandingkan omzet minggu ini dengan minggu lalu',
             'Menu mana yang laris tapi margin rendah, dan kurang laku tapi margin tinggi?',
             'Buatkan caption Instagram untuk produk terlaris minggu ini',
             'Pelanggan mana yang sudah lama tidak datang dan bagaimana mengajak mereka kembali?',
             'Bagaimana tren pasar kopi susu sekarang dan posisi tokoku?',
-        ],
-        prompts: [
-            {icon:'↗',title:'Ringkasan penjualan',text:'Bagaimana omzet hari ini?'},
-            {icon:'★',title:'Produk unggulan',text:'Produk paling laris bulan ini'},
-            {icon:'!',title:'Kondisi stok',text:'Stok apa yang perlu segera dibeli?'},
-            {icon:'◷',title:'Waktu operasional',text:'Jam berapa paling ramai bulan ini?'},
         ],
         init(){this.scroll()},
         pick(e){const max=3,limit=5*1024*1024;for(const f of e.target.files){if(this.files.length>=max){alert('Maksimal 3 file per pesan.');break}if(f.size>limit){alert(f.name+' lebih dari 5 MB.');continue}this.files.push(f)}e.target.value=''},
@@ -214,7 +194,7 @@ function yokaChat(initialConversation, initialMessages, initialQuestion, initial
         },
         async ask(){
             const text=this.question.trim(); if(!text||this.loading)return;
-            if(this.credits&&this.credits.total<1)return;
+            if(this.noCredits)return;
             const sending=this.files.slice(); const form=new FormData(); form.append('question',text); if(this.conversationId)form.append('conversation_id',this.conversationId); sending.forEach(f=>form.append('files[]',f));
             this.messages.push({role:'user',content:text,attachments:sending.map(f=>f.name)}); this.question=''; this.files=[]; this.loading=true; this.scroll();
             this.status='Memahami pertanyaan…'; let live=null, raw='', done=null;
