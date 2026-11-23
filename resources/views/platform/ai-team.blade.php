@@ -85,7 +85,7 @@
                                     <div class="flex items-end gap-2.5" :class="message.role === 'user' ? 'flex-row-reverse justify-start' : 'justify-start'">
                                         <img :src="message.role === 'user' ? @js(asset('images/ai-team/andreas.jpg')) : @js(asset(data_get($profiles,$agent->key.'.avatar')))" :alt="message.role === 'user' ? (message.admin || 'Anda') : @js($agent->name)" class="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white shadow-sm">
                                         <div class="max-w-[88%]">
-                                            <div class="rounded-2xl px-4 py-3.5 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-700'"><p class="whitespace-pre-line break-words text-[14px] leading-7" x-text="message.content"></p><div x-show="(message.attachments || []).length" class="mt-3 space-y-1.5 border-t pt-3" :class="message.role === 'user' ? 'border-white/20' : 'border-slate-100'"><template x-for="file in (message.attachments || [])" :key="file.name"><div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs" :class="message.role === 'user' ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-600'"><svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg><span class="truncate" x-text="file.name"></span></div></template></div></div>
+                                            <div class="rounded-2xl px-4 py-3.5 shadow-sm" :class="message.role === 'user' ? 'rounded-br-md bg-emerald-700 text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-700'"><template x-for="(seg,si) in segments(message.content)" :key="si"><div><p x-show="seg.type === 'text'" class="whitespace-pre-line break-words text-[14px] leading-7" x-text="seg.text"></p><div x-show="seg.type === 'chart'" x-html="seg.type === 'chart' ? chartHtml(seg.chart) : ''" class="my-3"></div></div></template><div x-show="(message.attachments || []).length" class="mt-3 space-y-1.5 border-t pt-3" :class="message.role === 'user' ? 'border-white/20' : 'border-slate-100'"><div x-show="(message.attachments || []).some(f => f.preview)" class="flex flex-wrap gap-2"><template x-for="file in (message.attachments || []).filter(f => f.preview)" :key="'p'+file.name"><img :src="file.preview" :alt="file.name" class="h-24 max-w-[180px] rounded-lg object-cover ring-1 ring-white/30"></template></div><template x-for="file in (message.attachments || []).filter(f => !f.preview)" :key="file.name"><div class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs" :class="message.role === 'user' ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-600'"><svg class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg><span class="truncate" x-text="file.name"></span></div></template></div></div>
                                             <div class="mt-1 flex items-center gap-2 px-1 text-[10px] text-slate-400" :class="message.role === 'user' ? 'justify-end' : ''"><span x-text="message.role === 'user' ? (message.admin || 'Anda') : '{{ $agent->name }}'"></span><span>·</span><span x-text="message.time || 'Baru saja'"></span><span x-show="message.mode" class="rounded bg-slate-200 px-1.5 py-0.5 font-bold text-slate-600" x-text="modeLabel(message.mode)"></span></div>
                                         </div>
                                     </div>
@@ -97,11 +97,11 @@
                                 <div class="mb-3 flex gap-2 overflow-x-auto pb-1">
                                     @foreach(data_get($profiles,$agent->key.'.prompts',[]) as $prompt)<button type="button" @click="sendPrompt(@js($prompt))" class="whitespace-nowrap rounded-full border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-emerald-400 hover:text-emerald-700">{{ $prompt }}</button>@endforeach
                                 </div>
-                                <div x-show="files.length" class="mb-2 flex flex-wrap gap-2"><template x-for="(file,index) in files" :key="file.name+file.size"><span class="inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600"><span class="max-w-48 truncate" x-text="file.name"></span><button type="button" @click="removeFile(index)" class="font-black text-slate-400 hover:text-rose-600">×</button></span></template></div>
+                                <div x-show="files.length" class="mb-2 flex flex-wrap gap-2"><template x-for="(file,index) in files" :key="file.name+file.size+index"><span class="relative inline-flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-600" :class="file.preview ? 'p-1' : 'px-2.5 py-1.5'"><img x-show="file.preview" :src="file.preview" :alt="file.name" class="h-16 w-16 rounded-md object-cover"><span x-show="!file.preview" class="max-w-48 truncate" x-text="file.name"></span><button type="button" @click="removeFile(index)" class="font-black text-slate-400 hover:text-rose-600" :class="file.preview ? 'absolute -right-2 -top-2 h-5 w-5 rounded-full bg-white shadow ring-1 ring-slate-200' : ''" aria-label="Hapus lampiran">×</button></span></template></div>
                                 <form @submit.prevent="sendMessage()" class="flex items-end gap-2">
                                     <input type="file" x-ref="filePicker" multiple accept="{{ \App\Services\PlatformAiAttachmentService::ACCEPT }}" class="hidden" @change="pickFiles($event)">
                                     <button type="button" @click="$refs.filePicker.click()" :disabled="sending" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40" aria-label="Lampirkan file"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-width="2" d="M15.2 7.4 8.9 13.7a2 2 0 1 0 2.8 2.8l7-7a4 4 0 0 0-5.7-5.6l-7.7 7.7a6 6 0 1 0 8.5 8.5l6.3-6.3"/></svg></button>
-                                    <textarea x-model="draft" @keydown="handleMessageKeydown($event)" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… (Shift+Enter untuk baris baru)"></textarea>
+                                    <textarea x-model="draft" @keydown="handleMessageKeydown($event)" @paste="pasteFiles($event)" rows="1" maxlength="4000" class="max-h-32 min-h-[48px] flex-1 resize-none rounded-xl border-slate-300 px-3.5 py-3 text-sm leading-6 focus:border-emerald-500 focus:ring-emerald-500" placeholder="Tulis pesan… tempel screenshot dengan Ctrl+V (Shift+Enter baris baru)"></textarea>
                                     <button type="submit" :disabled="sending || (!draft.trim() && !files.length)" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white disabled:cursor-not-allowed disabled:opacity-40" aria-label="Kirim pesan"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 14-7-4 14-3-6-7-1Z"/></svg></button>
                                 </form>
                                 <p x-show="chatError" x-text="chatError" class="mt-2 text-xs text-rose-700"></p>
@@ -401,31 +401,63 @@ function aiTeamWorkspace(initialAgent, initialMessages, chatRoutes, readRoutes, 
             event.stopPropagation();
             this.sendMessage();
         },
-        pickFiles(event) {
+        pickFiles(event) { this.addFiles(Array.from(event.target.files || [])); event.target.value=''; },
+        pasteFiles(event) {
+            const images=Array.from(event.clipboardData?.items || []).filter(item=>item.kind==='file' && item.type.startsWith('image/')).map(item=>item.getAsFile()).filter(Boolean);
+            if (!images.length) return;
+            event.preventDefault();
+            const stamp=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+            this.addFiles(images.map((file,i)=>new File([file],`tempelan-${stamp}-${this.files.length+i+1}.${(file.type.split('/')[1]||'png').replace('jpeg','jpg')}`,{type:file.type})));
+        },
+        addFiles(incoming) {
             this.chatError='';
-            const incoming=Array.from(event.target.files || []);
             const allowed=['pdf','xlsx','xls','csv','txt','md','json','png','jpg','jpeg','webp'];
             for (const file of incoming) {
                 const extension=(file.name.split('.').pop() || '').toLowerCase();
                 if (!allowed.includes(extension)) { this.chatError=`${file.name}: format file belum didukung.`; continue; }
                 if (file.size > 5*1024*1024) { this.chatError=`${file.name}: ukuran maksimal 5 MB.`; continue; }
-                if (this.files.length >= 3) { this.chatError='Maksimal 3 file dalam satu pesan.'; break; }
-                if (!this.files.some(existing=>existing.name===file.name && existing.size===file.size)) this.files.push(file);
+                if (this.files.length >= 6) { this.chatError='Maksimal 6 file dalam satu pesan.'; break; }
+                if (this.files.some(existing=>existing.name===file.name && existing.size===file.size)) continue;
+                if (file.type.startsWith('image/')) file.preview=URL.createObjectURL(file);
+                this.files.push(file);
             }
-            event.target.value='';
+        },
+        segments(content) {
+            const out=[]; const re=/```grafik\s*([\s\S]*?)```/g; let last=0, m;
+            const text=String(content || '');
+            while ((m=re.exec(text))) {
+                if (m.index>last) out.push({type:'text',text:text.slice(last,m.index).trim()});
+                try { const chart=JSON.parse(m[1]); if (Array.isArray(chart.items) && chart.items.length) out.push({type:'chart',chart}); } catch(e) {}
+                last=re.lastIndex;
+            }
+            if (last<text.length) out.push({type:'text',text:text.slice(last).trim()});
+            return out.filter(seg=>seg.type==='chart' || seg.text);
+        },
+        chartHtml(c) {
+            const esc=s=>String(s ?? '').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+            const items=c.items.slice(0,12).map(i=>({label:i.label,value:Number(i.value)||0,shown:i.formatted ?? ((Number(i.value)||0).toLocaleString('id-ID')+(c.unit?(' '+c.unit):''))}));
+            const max=Math.max(...items.map(i=>i.value),1);
+            let body='';
+            if (c.kind==='line' && items.length>1) {
+                const w=320,h=120,pad=8; const pts=items.map((it,i)=>[pad+i*(w-2*pad)/(items.length-1), h-pad-(it.value/max)*(h-2*pad)]);
+                body=`<svg viewBox="0 0 ${w} ${h}" class="h-32 w-full"><polyline fill="none" stroke="#16A34A" stroke-width="2.5" points="${pts.map(p=>p.join(',')).join(' ')}"/>${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="#16A34A"><title>${esc(items[i].label)}: ${esc(items[i].shown)}</title></circle>`).join('')}</svg><div class="mt-1 flex justify-between text-[10px] text-slate-500">${items.map(i=>`<span>${esc(i.label)}</span>`).join('')}</div>`;
+            } else {
+                body=items.map(i=>`<div class="flex items-center gap-2 text-xs"><span class="w-28 shrink-0 truncate text-slate-600" title="${esc(i.label)}">${esc(i.label)}</span><span class="h-3 flex-1 rounded-full bg-slate-100"><span class="block h-3 rounded-full bg-[#16A34A]" style="width:${Math.max(2,Math.round(i.value/max*100))}%"></span></span><span class="w-20 shrink-0 text-right font-bold text-[#0B1B3F]">${esc(i.shown)}</span></div>`).join('<div class="h-1.5"></div>');
+            }
+            return `<div class="rounded-xl border border-slate-200 bg-white p-3"><p class="text-xs font-black text-[#0B1B3F]">${esc(c.title)}</p>${c.subtitle?`<p class="text-[11px] text-slate-500">${esc(c.subtitle)}</p>`:''}<div class="mt-2">${body}</div>${c.note?`<p class="mt-2 text-[10px] text-slate-400">${esc(c.note)}</p>`:''}</div>`;
         },
         removeFile(index) { this.files.splice(index,1); },
         async sendMessage() {
             const content=this.draft.trim(); if ((!content && !this.files.length) || this.sending) return;
             const agentId=this.activeAgent; const selectedFiles=[...this.files]; const question=content || 'Tolong baca file ini dan beri tahu aku temuan pentingnya.';
             this.sending=true; this.chatError=''; this.draft=''; this.files=[];
-            const optimistic={id:'local-'+Date.now(),role:'user',content:question,admin:'Anda',time:'Baru saja',attachments:selectedFiles.map(file=>({name:file.name,size:file.size}))};
+            const optimistic={id:'local-'+Date.now(),role:'user',content:question,admin:'Anda',time:'Baru saja',attachments:selectedFiles.map(file=>({name:file.name,size:file.size,preview:file.preview}))};
             if (!this.messages[agentId]) this.messages[agentId]=[]; this.messages[agentId].push(optimistic); this.$nextTick(()=>this.scrollMessages());
             try {
                 const body=new FormData(); if(content)body.append('message',content); selectedFiles.forEach(file=>body.append('files[]',file));
                 const response=await fetch(this.chatRoutes[agentId],{method:'POST',headers:{'Accept':'application/json','X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content},body});
                 const data=await response.json(); if(!response.ok) throw new Error(data.message || 'Pesan belum berhasil dikirim.');
-                const index=this.messages[agentId].findIndex(item=>item.id===optimistic.id); if(index>=0)this.messages[agentId][index]={...data.user,admin:'Anda',time:'Baru saja'};
+                const index=this.messages[agentId].findIndex(item=>item.id===optimistic.id); if(index>=0)this.messages[agentId][index]={...data.user,admin:'Anda',time:'Baru saja',attachments:optimistic.attachments};
                 this.messages[agentId].push({...data.assistant,time:'Baru saja'}); this.$nextTick(()=>this.scrollMessages());
             } catch(error) {
                 this.messages[agentId]=this.messages[agentId].filter(item=>item.id!==optimistic.id); this.draft=content; this.files=selectedFiles; this.chatError=error.message;

@@ -110,4 +110,18 @@ class PlatformAiVisionTest extends TestCase
         $this->assertNotNull($withImage, 'Gambar dashboard ikut dikirim ke model.');
         $this->assertStringContainsString('KAMU BISA MELIHAT GAMBAR', $withImage);
     }
+
+    public function test_yusuf_gets_chart_guidance_and_page_supports_paste(): void
+    {
+        $admin = PlatformAdmin::create(['name' => 'Owner', 'email' => 'o3@yoka.test', 'password' => 'password-kuat', 'role' => 'super_admin', 'is_active' => true]);
+        app(\App\Services\PlatformAiOperations::class)->ensureAgents();
+        $yusuf = PlatformAiAgent::where('key', 'marketing')->firstOrFail();
+        $as = fn () => $this->actingAs($admin, 'platform')->withSession(['platform_2fa_passed_at' => now()->timestamp]);
+        $as()->post(route('platform.ai-team.chat', $yusuf), ['message' => 'suf engagement minggu ini gimana'], ['Accept' => 'application/json'])->assertOk();
+        $system = collect(Http::recorded())->map(fn ($p) => json_encode($p[0]->data()))->first(fn ($j) => str_contains($j, 'Yusuf'));
+        $this->assertStringContainsString('GRAFIK DI DASHBOARD', $system);
+
+        $as()->get(route('platform.ai-team.index'))->assertOk()->assertSee('pasteFiles', false)->assertSee('chartHtml', false)->assertSee('Ctrl+V', false);
+        $this->assertSame(6, \App\Services\PlatformAiAttachmentService::MAX_FILES);
+    }
 }

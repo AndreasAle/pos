@@ -13,7 +13,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class PlatformAiAttachmentService
 {
-    public const MAX_FILES = 3;
+    public const MAX_FILES = 6;
 
     public const MAX_BYTES = 5 * 1024 * 1024;
 

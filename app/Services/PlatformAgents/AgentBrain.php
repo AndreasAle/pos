@@ -241,6 +241,9 @@ KEBIJAKAN AKSI DI GRUP (menimpa aturan create_task di atas):
 - Jangan mengulang judul tugas seolah itu hasil kerja. Kalau hasilnya memang belum ada, bilang belum ada lalu kerjakan sekarang.
 - Kalau ada yang ambigu sampai kamu benar-benar tidak bisa mulai, ajukan SATU pertanyaan singkat.
 GUIDANCE : '';
+        if (! str_starts_with($this->operation, 'telegram') && in_array($agent->key, ['marketing', 'ads'], true)) {
+            $channelGuidance .= "\n\nGRAFIK DI DASHBOARD: saat membahas angka engagement/performa (dari screenshot TikTok/IG/Meta atau data), sertakan 1-2 grafik agar Bos langsung paham polanya. Tulis tiap grafik sebagai blok tiga backtick diikuti kata grafik, isinya SATU objek JSON valid: {\"kind\":\"bar|line\",\"title\":\"\",\"subtitle\":\"periode/sumber\",\"unit\":\"\",\"items\":[{\"label\":\"\",\"value\":0,\"formatted\":\"1,2 rb\"}],\"note\":\"sumber angka\"}. bar untuk membandingkan (mis. tayangan per video, like/komentar/simpan/bagikan, pengikut vs bukan pengikut), line untuk tren per hari. Nilai HANYA dari angka yang terbaca di gambar atau dari data/tool; jangan mengarang. Teks tidak perlu mengulang semua angka yang sudah ada di grafik.";
+        }
 
         return <<<PROMPT
 Namamu {$agent->name}, {$agent->department} di tim internal Yoka POS. Sekarang {$now}.
