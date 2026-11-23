@@ -47,15 +47,17 @@
 
     <div class="ml-auto flex items-center gap-2 md:gap-3">
         {{-- Offline register status: online / offline / sales waiting to sync. --}}
-        <button type="button" x-show="offlineCfg" x-cloak @click="openQueue()"
+        <button type="button" x-show="offlineCfg" x-cloak @click="sessionExpired ? goSignIn() : openQueue()"
                 class="h-9 inline-flex items-center gap-1.5 text-xs font-bold px-3.5 rounded-full shadow-sm transition-colors"
-                :class="offState.failed > 0 ? 'bg-red-500 text-white'
+                :class="sessionExpired ? 'bg-red-500 text-white'
+                      : offState.failed > 0 ? 'bg-red-500 text-white'
                       : !offState.online ? 'bg-amber-300 text-amber-950'
                       : offState.pending > 0 ? 'bg-white text-[#0B1B3F]'
                       : 'bg-white/15 text-white border border-white/20'">
             <span class="w-1.5 h-1.5 rounded-full"
-                  :class="offState.failed > 0 ? 'bg-white' : !offState.online ? 'bg-amber-700' : offState.pending > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-300'"></span>
-            <span x-text="offState.failed > 0 ? offState.failed + ' gagal sinkron'
+                  :class="sessionExpired || offState.failed > 0 ? 'bg-white' : !offState.online ? 'bg-amber-700' : offState.pending > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-300'"></span>
+            <span x-text="sessionExpired ? 'Sesi habis · masuk lagi' + (offState.pending ? ' (' + offState.pending + ' antre)' : '')
+                        : offState.failed > 0 ? offState.failed + ' gagal sinkron'
                         : !offState.online ? 'Offline' + (offState.pending ? ' · ' + offState.pending + ' antre' : '')
                         : offState.syncing ? 'Menyinkron ' + offState.pending
                         : offState.pending > 0 ? offState.pending + ' menunggu sinkron'
@@ -1263,6 +1265,25 @@
 }
 </style>
 
+{{-- Back online but signed out: selling on would fail and the queue cannot be
+     sent, so the next step is the PIN pad. Not shown mid-payment or on the
+     success screen, so a sale in progress is never cut off. --}}
+<div x-show="sessionExpired && !payModal && !successModal" x-cloak
+     class="fixed inset-0 z-[70] flex items-center justify-center p-4" style="background:rgba(11,27,63,.6)">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <h3 class="text-lg font-extrabold text-[#0B1B3F]">Sesi kasir sudah habis</h3>
+        <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+            Internet sudah tersambung. Masuk lagi dengan PIN untuk melanjutkan
+            <template x-if="offState.pending > 0">
+                <span>dan mengirim <strong x-text="offState.pending"></strong> transaksi offline</span>
+            </template>.
+        </p>
+        <p x-show="cart.length" class="text-xs text-gray-500 mt-2">Pesanan di keranjang tetap tersimpan.</p>
+        <button type="button" @click="goSignIn()"
+                class="mt-5 w-full h-12 rounded-xl text-base font-bold text-white bg-[#16A34A] hover:bg-emerald-700">Masuk dengan PIN</button>
+    </div>
+</div>
+
 {{-- Offline queue: sales this device holds until the server confirms them. --}}
 <div x-show="queueModal" x-cloak class="fixed inset-0 z-[65] flex items-center justify-center p-4" style="background:rgba(11,27,63,.55)"
      @keydown.escape.window="queueModal = false">
@@ -1419,6 +1440,14 @@ function posApp() {
         lastOffline: null,
 
         get isOffline() { return !!this.offlineCfg && !this.offState.online; },
+        // Online, but the server says nobody is signed in (the page came from
+        // the offline cache after the session ended). Queued sales wait for a
+        // sign-in on purpose: the server never accepts sales without one.
+        get sessionExpired() { return !!this.offlineCfg && this.offState.online && this.offState.auth === false; },
+
+        // The PIN pad; after sign-in the register reloads and the queue syncs
+        // straight away. The cart is kept on the device meanwhile.
+        goSignIn() { window.location.href = '/kasir'; },
 
         get quickAmounts() {
             const g = this.grandTotal;

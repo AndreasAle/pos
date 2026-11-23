@@ -176,4 +176,28 @@ class DeviceSetupTest extends TestCase
     {
         $this->get(route('device.setup'))->assertRedirect(route('login'));
     }
+
+    public function test_account_sign_in_from_a_bound_device_reaches_the_login_page(): void
+    {
+        $this->setUpPos();
+
+        // Not bounced back to the PIN pad: that would loop forever.
+        $this->withUnencryptedCookie(PinLoginController::OUTLET_COOKIE, PinLoginController::pairingToken($this->outlet))
+            ->get(route('device.setup'))
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_an_expired_session_on_a_bound_device_still_lands_on_the_pin_pad(): void
+    {
+        $this->setUpPos();
+
+        $this->withUnencryptedCookie(PinLoginController::OUTLET_COOKIE, PinLoginController::pairingToken($this->outlet))
+            ->get(route('pos.index'))
+            ->assertRedirect(route('pin.show'));
+    }
+
+    public function test_the_register_ping_answers_401_once_signed_out(): void
+    {
+        $this->getJson(route('pos.ping'))->assertStatus(401);
+    }
 }
