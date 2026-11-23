@@ -45,6 +45,19 @@ return [
         // Merchant balance, withdrawal requests, and the admin queue for them.
         'balance' => env('FEATURE_BALANCE', false),
 
+        // Offline register: service worker, local queue of cash sales and
+        // background sync (docs/offline-mode). Off until rolled out per server.
+        'pos_offline' => env('FEATURE_POS_OFFLINE', false),
+
+    ],
+
+    // Hard limits for selling without a connection. Enforced in the browser
+    // (cannot be otherwise while offline) and re-checked on sync.
+    'offline' => [
+        'max_hours'  => (int) env('POS_OFFLINE_MAX_HOURS', 12),
+        'max_orders' => (int) env('POS_OFFLINE_MAX_ORDERS', 300),
+        // Sales older than this are still recorded but flagged for review.
+        'stale_hours' => (int) env('POS_OFFLINE_STALE_HOURS', 72),
     ],
 
 ];

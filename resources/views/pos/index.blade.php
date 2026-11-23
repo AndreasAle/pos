@@ -7,6 +7,9 @@
     <title>Kasir POS — {{ $business->name }}</title>
     @include('layouts._fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @if($offlineConfig)
+    @vite('resources/js/pos-offline/index.js')
+    @endif
     <link rel="icon" type="image/png" href="{{ asset('images/brand/yoka-icon.png') }}">
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
@@ -43,6 +46,22 @@
     @endif
 
     <div class="ml-auto flex items-center gap-2 md:gap-3">
+        {{-- Offline register status: online / offline / sales waiting to sync. --}}
+        <button type="button" x-show="offlineCfg" x-cloak @click="openQueue()"
+                class="h-9 inline-flex items-center gap-1.5 text-xs font-bold px-3.5 rounded-full shadow-sm transition-colors"
+                :class="offState.failed > 0 ? 'bg-red-500 text-white'
+                      : !offState.online ? 'bg-amber-300 text-amber-950'
+                      : offState.pending > 0 ? 'bg-white text-[#0B1B3F]'
+                      : 'bg-white/15 text-white border border-white/20'">
+            <span class="w-1.5 h-1.5 rounded-full"
+                  :class="offState.failed > 0 ? 'bg-white' : !offState.online ? 'bg-amber-700' : offState.pending > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-300'"></span>
+            <span x-text="offState.failed > 0 ? offState.failed + ' gagal sinkron'
+                        : !offState.online ? 'Offline' + (offState.pending ? ' · ' + offState.pending + ' antre' : '')
+                        : offState.syncing ? 'Menyinkron ' + offState.pending
+                        : offState.pending > 0 ? offState.pending + ' menunggu sinkron'
+                        : 'Online'"></span>
+        </button>
+
         <button @click="loadDrafts()" x-show="draftCount > 0" x-cloak
                 class="relative h-9 inline-flex items-center gap-1.5 text-xs font-bold text-amber-950 bg-amber-300 hover:bg-amber-200 px-3.5 rounded-full shadow-sm transition-colors">
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>Order Hold
@@ -761,6 +780,11 @@
                     </div>
 
                     <div>
+                        <div x-show="isOffline" x-cloak
+                             class="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] leading-snug text-amber-900">
+                            <span class="font-bold">Sedang offline.</span>
+                            Hanya pembayaran tunai yang bisa diproses. QRIS dan non-tunai aktif lagi saat internet tersambung.
+                        </div>
                         <p class="text-[12px] font-bold uppercase tracking-wider text-gray-400 mb-2">Metode pembayaran</p>
                         <div class="grid grid-cols-2 gap-2.5">
                             <button @click="selectPayMethod('cash')"
@@ -768,7 +792,8 @@
                                     class="flex items-center justify-center gap-2.5 h-12 sm:h-14 rounded-xl border-2 text-[15px] font-bold transition-all">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Cash
                             </button>
-                            <button @click="selectPayMethod('qris')"
+                            <button @click="selectPayMethod('qris')" :disabled="isOffline" :title="isOffline ? 'QRIS butuh internet' : ''"
+                                    :style="isOffline ? 'opacity:.45;cursor:not-allowed' : ''"
                                     :class="payMethod==='qris' ? 'bg-emerald-600 text-white border-emerald-600 shadow-[0_6px_16px_rgba(5,150,105,.28)]' : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400'"
                                     class="flex items-center justify-center gap-2.5 h-14 rounded-xl border-2 text-[15px] font-bold transition-all">
                                 <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>QRIS
@@ -777,7 +802,7 @@
                     </div>
 
                     {{-- Bayar terpisah --}}
-                    <button type="button" @click="toggleSplit()" class="w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3.5 py-2 sm:py-2.5 text-left hover:border-emerald-300 transition-colors">
+                    <button type="button" @click="toggleSplit()" x-show="!isOffline" class="w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3.5 py-2 sm:py-2.5 text-left hover:border-emerald-300 transition-colors">
                         <span>
                             <span class="block text-sm font-semibold text-gray-800">Bayar terpisah</span>
                             <span class="hidden sm:block text-xs text-gray-400">Sebagian cash, sebagian QRIS</span>
@@ -1163,10 +1188,14 @@
                 </div>
             </div>
 
-            <h3 class="font-extrabold text-white" style="font-size:1.4rem;margin-bottom:4px">
+            <h3 class="font-extrabold text-white" style="font-size:1.4rem;margin-bottom:4px"
+                x-text="lastOffline ? 'Tersimpan Offline' : 'Pembayaran Berhasil!'">
                 Pembayaran Berhasil!
             </h3>
             <p style="color:rgba(209,250,229,0.9);font-size:0.8rem" x-text="lastOrderNo"></p>
+            <p x-show="lastOffline" x-cloak style="color:rgba(209,250,229,0.9);font-size:0.75rem;margin-top:6px">
+                Transaksi tunai disimpan di perangkat dan dikirim otomatis saat internet tersambung.
+            </p>
         </div>
 
         {{-- Content --}}
@@ -1221,6 +1250,61 @@
     to   { stroke-dashoffset: 0; }
 }
 </style>
+
+{{-- Offline queue: sales this device holds until the server confirms them. --}}
+<div x-show="queueModal" x-cloak class="fixed inset-0 z-[65] flex items-center justify-center p-4" style="background:rgba(11,27,63,.55)"
+     @keydown.escape.window="queueModal = false">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" @click.outside="queueModal = false">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-start justify-between gap-3">
+            <div>
+                <h3 class="text-lg font-extrabold text-[#0B1B3F]">Transaksi offline</h3>
+                <p class="text-sm text-gray-500 mt-0.5">
+                    <span x-text="offState.online ? 'Online' : 'Offline'"></span>
+                    <span x-show="offState.lastOnlineAt"> &middot; terakhir tersambung <span x-text="fmtTime(offState.lastOnlineAt)"></span></span>
+                </p>
+            </div>
+            <button type="button" @click="queueModal = false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Tutup">&times;</button>
+        </div>
+
+        <div x-show="!offState.auth" x-cloak class="mx-5 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-900">
+            Sesi login habis. Antrean aman tersimpan dan akan dikirim setelah kasir login PIN lagi.
+        </div>
+        <div x-show="offState.error" x-cloak class="mx-5 mt-4 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800" x-text="offState.error"></div>
+
+        <div class="flex-1 overflow-y-auto px-5 py-3">
+            <template x-if="!queueList.length">
+                <p class="text-sm text-gray-500 py-8 text-center">Belum ada transaksi offline di perangkat ini.</p>
+            </template>
+            <template x-for="s in queueList" :key="s.client_uuid">
+                <div class="py-3 border-b border-gray-100 last:border-0 flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="text-sm font-bold text-[#0B1B3F]" x-text="s.order_number || s.offline_number"></p>
+                        <p class="text-xs text-gray-500"><span x-text="fmtTime(s.ordered_at)"></span> &middot; Rp <span x-text="fmt(s.grand_total)"></span></p>
+                        <p x-show="s.order_number" class="text-xs text-gray-400" x-text="s.offline_number"></p>
+                        <p x-show="s.message" class="text-xs text-red-600 mt-0.5" x-text="s.message"></p>
+                    </div>
+                    <div class="flex flex-col items-end gap-1.5 shrink-0">
+                        <span class="text-[11px] font-bold rounded-full px-2.5 py-1"
+                              :class="s.status === 'synced' ? 'bg-emerald-50 text-emerald-700'
+                                    : s.status === 'rejected' ? 'bg-red-50 text-red-700'
+                                    : 'bg-amber-50 text-amber-800'"
+                              x-text="s.status === 'synced' ? (s.review ? 'Terkirim, perlu dicek' : 'Terkirim')
+                                    : s.status === 'rejected' ? 'Ditolak server' : 'Menunggu'"></span>
+                        <button type="button" x-show="printVia === 'rawbt'" @click="offEngine.print(s)"
+                                class="text-xs font-semibold text-emerald-700 hover:underline">Cetak ulang</button>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div class="px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+            <p class="text-xs text-gray-500">Jangan hapus data aplikasi selama masih ada antrean.</p>
+            <button type="button" @click="syncNow()" :disabled="offState.syncing || !offState.online"
+                    class="h-10 px-4 rounded-xl text-sm font-bold text-white bg-[#16A34A] hover:bg-emerald-700 disabled:opacity-50"
+                    x-text="offState.syncing ? 'Menyinkron…' : 'Sinkron sekarang'"></button>
+        </div>
+    </div>
+</div>
 
 {{-- Barcode Error Toast --}}
 <div x-show="barcodeErrorModal" x-cloak x-transition
@@ -1312,6 +1396,18 @@ function posApp() {
         inApp: /POSKasirApp/.test(navigator.userAgent),
         activeCategory: null, search: '',
 
+        // Offline register (null config = feature off, page behaves as before)
+        offlineCfg: @json($offlineConfig),
+        offEngine: null,
+        offState: { online: true, pending: 0, failed: 0, syncing: false, auth: true, lastOnlineAt: null, error: '' },
+        queueModal: false, queueList: [],
+        // One id per sale, kept until it succeeds: a retry after a lost
+        // response returns the same order instead of a second one.
+        saleUuid: null,
+        lastOffline: null,
+
+        get isOffline() { return !!this.offlineCfg && !this.offState.online; },
+
         get quickAmounts() {
             const g = this.grandTotal;
             const ceil = Math.ceil(g / 10000) * 10000;
@@ -1339,6 +1435,8 @@ function posApp() {
             setInterval(() => this.tick(), 1000);
             this.fetchDrafts();
             this.initBarcodeListener();
+            this.restoreCart();
+            this.startOffline();
             // Every way a sale can succeed (cash, manual QRIS, Midtrans) ends by
             // opening the success screen, so the kitchen ticket hangs off that.
             this.$watch('successModal', open => {
@@ -1353,6 +1451,130 @@ function posApp() {
         },
 
         tick() { this.currentTime = new Date().toLocaleTimeString('id-ID'); },
+
+        // ── Offline register ────────────────────────────────────────────────
+        newUuid() {
+            if (window.crypto?.randomUUID) return crypto.randomUUID();
+            const b = crypto.getRandomValues(new Uint8Array(16));
+            b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+            const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+            return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+        },
+
+        startOffline() {
+            if (!this.offlineCfg) return;
+            const go = async () => {
+                try {
+                    this.offEngine = await window.YokaOffline.start(this.offlineCfg, s => {
+                        this.offState = s;
+                        if (this.queueModal) this.refreshQueue();
+                    });
+                } catch (e) {
+                    this.offState = { ...this.offState, error: 'Mode offline tidak bisa dimulai di perangkat ini.' };
+                }
+            };
+            if (window.YokaOffline) go();
+            else window.addEventListener('yoka-offline:ready', go, { once: true });
+        },
+
+        async refreshQueue() {
+            if (this.offEngine) this.queueList = await this.offEngine.list();
+        },
+        async openQueue() { await this.refreshQueue(); this.queueModal = true; },
+        async syncNow() { if (this.offEngine) { await this.offEngine.sync(); await this.refreshQueue(); } },
+
+        fmtTime(v) {
+            if (!v) return '';
+            const d = new Date(v);
+            return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        },
+
+        // The cart survives a reload (or the app being killed) on this device.
+        cartKey() { return 'pos_cart:' + (this.offlineCfg?.business_id ?? '') + ':' + (this.offlineCfg?.user_id ?? ''); },
+        saveCart() {
+            if (!this.offlineCfg) return;
+            try {
+                if (!this.cart.length) { localStorage.removeItem(this.cartKey()); return; }
+                localStorage.setItem(this.cartKey(), JSON.stringify({
+                    at: Date.now(), orderType: this.orderType, tableNumber: this.tableNumber, saleUuid: this.saleUuid,
+                    items: this.cart.filter(i => !i.isBundle).map(i => ({
+                        productId: i.productId, variantId: i.variantId, qty: i.qty, notes: i.notes,
+                        addonIds: i.selectedAddons.map(a => a.id),
+                    })),
+                }));
+            } catch (e) {}
+        },
+        forgetCart() {
+            if (!this.offlineCfg) return;
+            try { localStorage.removeItem(this.cartKey()); } catch (e) {}
+        },
+        restoreCart() {
+            if (!this.offlineCfg || this.cart.length) return;
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem(this.cartKey()) || 'null'); } catch (e) {}
+            if (!saved || !saved.items?.length || Date.now() - saved.at > 12 * 3600 * 1000) return;
+            for (const it of saved.items) {
+                const prod = this.allProducts.find(p => p.id === it.productId);
+                if (!prod) continue;
+                const variant = (prod.variants || []).find(v => v.id === it.variantId) || null;
+                const addons = (prod.addons || []).filter(a => (it.addonIds || []).includes(a.id));
+                this.pushCart(prod, variant, addons, it.qty);
+                if (it.notes) this.cart[this.cart.length - 1].notes = it.notes;
+            }
+            if (saved.orderType && saved.orderType !== 'delivery') this.orderType = saved.orderType;
+            this.tableNumber = saved.tableNumber || '';
+            this.saleUuid = saved.saleUuid || null;
+            this.calcTotals();
+        },
+
+        /** Why this cart cannot be sold offline, or '' when it can. */
+        offlineBlocker() {
+            if (this.payMethod !== 'cash' || this.isSplit) return 'Saat offline hanya pembayaran tunai yang bisa diproses.';
+            if (this.cart.some(i => i.isBundle)) return 'Paket (bundle) belum bisa dijual saat offline. Hapus paket dari keranjang dulu.';
+            if (this.customerId || this.promoId || (parseFloat(this.manualDisc) || 0) > 0 || (parseInt(this.redeemPoints) || 0) > 0)
+                return 'Pelanggan, promo, diskon, dan poin butuh internet. Hapus dulu dari pesanan untuk lanjut offline.';
+            if (this.orderType === 'delivery') return 'Pesanan delivery butuh internet.';
+            if (this.resumedDraftId) return 'Order hold butuh internet untuk diselesaikan.';
+            if (!this.offEngine) return 'Mode offline belum siap di perangkat ini.';
+            return this.offEngine.canSell();
+        },
+
+        async offlineCheckout() {
+            const reason = this.offlineBlocker();
+            if (reason) { alert(reason); return false; }
+            const sale = await this.offEngine.record({
+                client_uuid:   this.saleUuid,
+                order_type:    this.orderType,
+                table_number:  this.tableNumber || null,
+                items: this.cart.map(i => ({
+                    product_id:   i.productId,
+                    variant_id:   i.variantId,
+                    name:         i.name,
+                    qty:          i.qty,
+                    price:        i.unitPrice,
+                    subtotal:     i.lineTotal(),
+                    notes:        i.notes || null,
+                    addons:       i.selectedAddons.map(a => ({ id: a.id, name: a.name, price: parseFloat(a.price) })),
+                })),
+                subtotal:      this.subtotal,
+                tax:           this.tax,
+                service:       this.service,
+                grand_total:   this.grandTotal,
+                paid_amount:   this.paidAmt,
+                change_amount: Math.max(0, this.paidAmt - this.grandTotal),
+            });
+            // Paid: the saved cart must not come back after a reload or crash.
+            this.forgetCart();
+            this.lastOffline        = sale;
+            this.lastOrderNo        = sale.offline_number;
+            this.lastReceiptUrl     = '';
+            this.lastChange         = sale.change_amount;
+            this.lastPointsRedeemed = 0;
+            this.payModal       = false;
+            this.showQrisScreen = false;
+            this.successModal   = true;
+            return true;
+        },
 
         // ── Loyalty ──────────────────────────────────────────────────────────────
         async onCustomerChange() {
@@ -1583,8 +1805,18 @@ function posApp() {
             document.body.appendChild(frame);
         },
         printReceipt() {
-            if (!this.lastReceiptUrl) return;
             if (this.printVia === 'none') return;
+            // Offline sale: the receipt is built on the device and handed to the
+            // tablet app (or RawBT) as a rawbt: link — no server involved.
+            if (this.lastOffline) {
+                if (this.printVia !== 'rawbt') {
+                    alert('Struk offline hanya bisa dicetak lewat printer Bluetooth (RawBT). Ganti pilihan printer di atas, atau cetak ulang dari riwayat setelah online.');
+                    return;
+                }
+                this.offEngine?.print(this.lastOffline);
+                return;
+            }
+            if (!this.lastReceiptUrl) return;
             const url = this.lastReceiptUrl.replace(/\/$/, '') + '/print?via=' + this.printVia;
 
             if (this.printVia === 'rawbt') {
@@ -1665,6 +1897,7 @@ function posApp() {
             this.grandTotal = base + this.tax + this.service + fee;
             this.calcSplitChange();
             this.calcChange();
+            this.saveCart();
         },
 
         calcChange() { this.change = Math.max(0, this.paidAmt - this.grandTotal); },
@@ -1907,9 +2140,20 @@ function posApp() {
             if (this.processing) return;
             if (this.payMethod === 'cash' && this.paidAmt < this.grandTotal) return;
             this.processing = true;
+            this.saleUuid = this.saleUuid || this.newUuid();
+            this.saveCart();
+
+            // Known offline: do not even try the network.
+            if (this.isOffline) {
+                try { await this.offlineCheckout(); }
+                catch (e) { alert('Gagal menyimpan transaksi offline: ' + e.message); }
+                this.processing = false;
+                return;
+            }
 
             const body = {
                 ...this._buildCartBody(),
+                client_uuid: this.saleUuid,
                 ...(this.isSplit ? {
                     split_payments: this.splitPayments.map(p => ({ method: p.method, amount: parseFloat(p.amount) || 0 })),
                 } : {
@@ -1936,12 +2180,24 @@ function posApp() {
                     this.lastPointsRedeemed  = data.points_redeemed ?? 0;
                     this.payModal       = false;
                     this.showQrisScreen = false;
+                    this.lastOffline    = null;
+                    this.forgetCart();
                     this.successModal   = true;
                     this.fetchDrafts();
                 } else {
                     alert('Error: ' + (data.message || JSON.stringify(data)));
                 }
-            } catch(e) { alert('Koneksi error: ' + e.message); }
+            } catch(e) {
+                // The network failed mid-sale. With the offline register on, a
+                // cash sale is queued under the same uuid: if the server did get
+                // it, the sync answers "duplicate" and nothing is counted twice.
+                if (this.offlineCfg && this.offEngine && e instanceof TypeError && !this.offlineBlocker()) {
+                    try { await this.offlineCheckout(); this.offEngine.heartbeat(); }
+                    catch (e2) { alert('Gagal menyimpan transaksi offline: ' + e2.message); }
+                } else {
+                    alert('Koneksi error: ' + e.message + (this.offlineCfg ? '\n' + this.offlineBlocker() : ''));
+                }
+            }
             this.processing = false;
         },
 
@@ -1955,6 +2211,7 @@ function posApp() {
             this.deliveryFee = 0; this.deliveryAddress = ''; this.platformOrderNo = '';
             this.isSplit = false; this.splitPayments = [{ method: 'cash', amount: 0 }];
             this.successModal = false; this.showQrisScreen = false;
+            this.saleUuid = null; this.lastOffline = null;
             // Reset Midtrans QRIS state
             if (this.midtransPolling) { clearInterval(this.midtransPolling); this.midtransPolling = null; }
             this.midtransQrUrl = null; this.midtransOrderId = null;

@@ -15,19 +15,74 @@ use App\Models\Product;
 use App\Models\ProductBundle;
 use App\Models\ProductVariant;
 use App\Models\Promotion;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PosOrderService
 {
     public function __construct(protected InventoryService $inventory) {}
 
-    public function createOrder($user, array $data, bool $paymentPending = false): Order
+    /**
+     * Ring up a sale.
+     *
+     * $data['client_uuid'] (minted by the register) makes the call idempotent:
+     * a retry after a lost response, or an offline queue replayed twice, gets
+     * the order that already exists instead of a second one. Check
+     * $order->wasRecentlyCreated to tell the two apart.
+     *
+     * $offline is set only by the sync endpoint for a cash sale the register
+     * already completed without a connection. The money has changed hands, so
+     * rules that would refuse a live sale (short stock, a closed shift, a price
+     * that moved since) record it anyway and flag it in offline_review instead.
+     * Keys: shift_id, ordered_at, change_amount, client_total, offline_number,
+     * device_id, catalog_version.
+     */
+    public function createOrder($user, array $data, bool $paymentPending = false, ?array $offline = null): Order
     {
-        $created = DB::transaction(function () use ($user, $data, $paymentPending) {
+        $uuid = self::cleanUuid($data['client_uuid'] ?? null);
+
+        if ($uuid && $existing = $this->findByClientUuid((int) $user->business_id, $uuid)) {
+            return $existing;
+        }
+
+        try {
+            return $this->ringUp($user, $data, $paymentPending, $offline, $uuid);
+        } catch (QueryException $e) {
+            // Two requests with the same uuid raced past the lookup above; the
+            // unique index let exactly one through. Hand back that one.
+            if ($uuid && (int) ($e->errorInfo[1] ?? 0) === 1062
+                && $existing = $this->findByClientUuid((int) $user->business_id, $uuid)) {
+                return $existing;
+            }
+            throw $e;
+        }
+    }
+
+    public function findByClientUuid(int $businessId, string $uuid): ?Order
+    {
+        return Order::where('business_id', $businessId)->where('client_uuid', $uuid)->first();
+    }
+
+    /** A canonical lowercase UUID, or null for anything else. */
+    public static function cleanUuid(mixed $value): ?string
+    {
+        return is_string($value) && Str::isUuid($value) ? strtolower($value) : null;
+    }
+
+    private function ringUp($user, array $data, bool $paymentPending, ?array $offline, ?string $uuid): Order
+    {
+        $created = DB::transaction(function () use ($user, $data, $paymentPending, $offline, $uuid) {
             $business = $user->business;
             $settings = $business->settings ?? [];
-            $shift    = $user->activeShift()->first();
-            $allowNeg = !empty($settings['allow_negative_stock']);
+            $review   = [];
+            $shift    = $offline !== null
+                ? $this->offlineShift($user, $offline['shift_id'] ?? null, $review)
+                : $user->activeShift()->first();
+            // An offline sale already happened: a recipe short on stock is a
+            // count to fix, not a reason to lose the record of the sale.
+            $allowNeg = $offline !== null || !empty($settings['allow_negative_stock']);
 
             // ── Build normalised item list ────────────────────────────────────
             $subtotal = 0;
@@ -179,12 +234,28 @@ class PosOrderService
             // drawer is short. Non-cash single payments are settled for the
             // full total by the provider, so only cash and split are checked.
             $settlesNow = ! $paymentPending && ($isSplit || $data['payment_method'] === 'cash');
-            if ($settlesNow && $paidAmount + 0.5 < $grandTotal) {
+            if ($offline !== null) {
+                // The drawer holds what the register asked for at the time. Keep
+                // that, and flag it when today's prices disagree.
+                $clientTotal = (float) ($offline['client_total'] ?? $grandTotal);
+                if (abs($clientTotal - $grandTotal) >= 1) {
+                    $review[] = 'price_mismatch';
+                }
+                if ($paidAmount + 0.5 < $grandTotal) {
+                    $review[] = 'underpaid';
+                }
+            } elseif ($settlesNow && $paidAmount + 0.5 < $grandTotal) {
                 throw \Illuminate\Validation\ValidationException::withMessages([
                     'paid_amount' => 'Jumlah bayar kurang dari total tagihan.',
                 ]);
             }
-            $changeAmount   = max(0, $paidAmount - $grandTotal);
+            $changeAmount   = $offline !== null
+                ? max(0, (float) ($offline['change_amount'] ?? ($paidAmount - $grandTotal)))
+                : max(0, $paidAmount - $grandTotal);
+
+            $orderedAt = $offline !== null
+                ? $this->offlineTime($offline['ordered_at'] ?? null, $review)
+                : now();
             $primaryMethod  = $isSplit
                 ? ($splitPayments[0]['method'] ?? 'cash')
                 : $data['payment_method'];
@@ -219,8 +290,25 @@ class PosOrderService
                 'notes'            => $data['notes'] ?? null,
                 'table_number'     => $this->cleanText($data['table_number'] ?? null, 20),
                 'hold_name'        => $this->cleanText($data['hold_name'] ?? null, 60),
-                'ordered_at'       => now(),
+                'ordered_at'       => $orderedAt,
+                'client_uuid'      => $uuid,
+                'offline_number'   => $offline !== null ? $this->cleanText($offline['offline_number'] ?? null, 40) : null,
+                'device_id'        => $offline !== null ? $this->cleanText($offline['device_id'] ?? null, 64) : null,
+                'synced_at'        => $offline !== null ? now() : null,
+                'offline_review'   => $review ? implode(',', array_unique($review)) : null,
+                'offline_meta'     => $offline !== null ? [
+                    'client_total'    => (float) ($offline['client_total'] ?? $grandTotal),
+                    'server_total'    => (float) $grandTotal,
+                    'catalog_version' => $this->cleanText($offline['catalog_version'] ?? null, 64),
+                    'shift_id_sent'   => $offline['shift_id'] ?? null,
+                ] : null,
             ]);
+
+            // Receipts and reports read created_at: an offline sale belongs to
+            // the moment it was rung up, not the moment it reached the server.
+            if ($offline !== null) {
+                $order->forceFill(['created_at' => $orderedAt])->saveQuietly();
+            }
 
             // ── Save split payment records ────────────────────────────────────
             if ($isSplit) {
@@ -353,6 +441,65 @@ class PosOrderService
     }
 
     /** A customer of this business, or null — never another shop's. */
+    /**
+     * The shift an offline sale was rung up in. A shift closed since is kept
+     * (the cash went into that drawer) but flagged; an unknown one falls back
+     * to the cashier's current shift.
+     *
+     * @param  array<int, string>  $review
+     */
+    private function offlineShift($user, mixed $shiftId, array &$review): ?CashierShift
+    {
+        $shift = $shiftId
+            ? CashierShift::where('business_id', $user->business_id)->find((int) $shiftId)
+            : null;
+
+        if (!$shift) {
+            $shift = $user->activeShift()->first();
+            if (!$shift) {
+                $review[] = 'no_shift';
+            }
+
+            return $shift;
+        }
+
+        if ($shift->status !== 'open') {
+            $review[] = 'shift_closed';
+        }
+
+        return $shift;
+    }
+
+    /**
+     * When the register says the sale happened, kept inside a sane window: a
+     * tablet clock running ahead cannot date sales into the future, and one
+     * far behind cannot backdate them into a closed month.
+     *
+     * @param  array<int, string>  $review
+     */
+    private function offlineTime(mixed $raw, array &$review): Carbon
+    {
+        $now   = now();
+        $floor = $now->copy()->subHours(max(1, (int) config('pos.offline.stale_hours', 72)));
+
+        try {
+            $at = $raw ? Carbon::parse($raw)->setTimezone($now->getTimezone()) : $now->copy();
+        } catch (\Throwable) {
+            $at = $now->copy();
+        }
+
+        if ($at->greaterThan($now)) {
+            return $now;
+        }
+        if ($at->lessThan($floor)) {
+            $review[] = 'stale';
+
+            return $floor;
+        }
+
+        return $at;
+    }
+
     private function ownCustomerId(int $businessId, mixed $customerId): ?int
     {
         if (empty($customerId)) {

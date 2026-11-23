@@ -24,8 +24,32 @@
             <div class="mt-2 flex flex-wrap items-center gap-3">
                 <h2 class="font-mono text-xl sm:text-2xl font-bold tracking-tight">{{ $order->order_number }}</h2>
                 <x-order-status :status="$order->status" />
+                @if($order->offline_number)<x-pill tone="blue">Offline &middot; {{ $order->offline_number }}</x-pill>@endif
             </div>
             <p class="mt-1 text-sm text-[#64748B]">{{ $order->created_at->format('d/m/Y H:i') }} &middot; {{ $order->outlet->name }}</p>
+            @if($order->offline_review)
+                @php
+                    $reviewLabels = [
+                        'price_mismatch' => 'harga di perangkat berbeda dengan harga server saat sinkron',
+                        'underpaid'      => 'uang diterima kurang dari total menurut harga server',
+                        'shift_closed'   => 'shift sudah ditutup saat transaksi tersinkron',
+                        'no_shift'       => 'tidak ada shift terbuka',
+                        'stale'          => 'tersinkron lebih dari batas waktu offline',
+                    ];
+                    $meta = $order->offline_meta ?? [];
+                @endphp
+                <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p class="font-bold">Transaksi offline perlu dicek</p>
+                    <ul class="mt-1 list-disc pl-5">
+                        @foreach(explode(',', $order->offline_review) as $code)
+                            <li>{{ $reviewLabels[$code] ?? $code }}</li>
+                        @endforeach
+                    </ul>
+                    @if(isset($meta['client_total']))
+                        <p class="mt-1">Total di perangkat Rp {{ number_format($meta['client_total'], 0, ',', '.') }} &middot; total server Rp {{ number_format($meta['server_total'] ?? 0, 0, ',', '.') }}</p>
+                    @endif
+                </div>
+            @endif
         </div>
 
         <div class="flex flex-wrap items-center gap-2">

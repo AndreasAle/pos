@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Business;
 use App\Models\Order;
+use App\Models\Outlet;
 
 /**
  * What a printed receipt shows, read once from the shop's settings so the
@@ -25,14 +27,21 @@ class ReceiptOptions
 
     public static function for(Order $order): array
     {
-        $business = $order->business;
-        $outlet   = $order->outlet;
-        $s        = $business->settings ?? [];
+        return self::forBusiness($order->business, $order->outlet);
+    }
+
+    /**
+     * The same options without an order: the offline register renders its own
+     * receipts from these (resources/js/pos-offline/escpos.js).
+     */
+    public static function forBusiness(Business $business, ?Outlet $outlet = null): array
+    {
+        $s = $business->settings ?? [];
 
         $flag = fn (string $key) => (bool) ($s[$key] ?? self::TOGGLES[$key]);
 
-        $address = trim((string) ($s['receipt_address'] ?? '')) ?: ($outlet->address ?: $business->address);
-        $phone   = trim((string) ($s['receipt_phone'] ?? '')) ?: ($outlet->phone ?: $business->phone);
+        $address = trim((string) ($s['receipt_address'] ?? '')) ?: ($outlet?->address ?: $business->address);
+        $phone   = trim((string) ($s['receipt_phone'] ?? '')) ?: ($outlet?->phone ?: $business->phone);
 
         return [
             'name'       => trim((string) ($s['receipt_header'] ?? '')) ?: $business->name,

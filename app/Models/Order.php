@@ -35,6 +35,8 @@ class Order extends Model
         'dining_table_id', 'table_session_id', 'order_source',
         'acceptance_status', 'accepted_by', 'accepted_at', 'expires_at',
         'payment_gateway', 'gateway_reference', 'payment_expires_at',
+        'client_uuid', 'offline_number', 'device_id', 'synced_at',
+        'offline_review', 'offline_meta',
     ];
 
     protected function casts(): array
@@ -54,6 +56,8 @@ class Order extends Model
             'accepted_at' => 'datetime',
             'expires_at' => 'datetime',
             'payment_expires_at' => 'datetime',
+            'synced_at' => 'datetime',
+            'offline_meta' => 'array',
         ];
     }
 

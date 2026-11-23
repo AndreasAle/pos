@@ -25,6 +25,41 @@
         <p class="mt-1 text-sm text-[#64748B]">Hitung uang tunai di laci, lalu cocokkan dengan catatan penjualan sebelum menutup shift.</p>
     </div>
 
+    @if(config('pos.features.pos_offline'))
+    {{-- Sales rung up offline on THIS device that the server has not seen yet:
+         the drawer already holds their cash, the figures below do not. --}}
+    <div id="offline-pending-warning" hidden
+         class="fade-up mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <span class="font-bold"><span data-count>0</span> transaksi offline di perangkat ini belum tersinkron.</span>
+        Uangnya sudah ada di laci, tetapi belum masuk hitungan di bawah. Buka kasir saat online agar tersinkron dulu, lalu tutup shift.
+    </div>
+    <script>
+    (function () {
+        if (!('indexedDB' in window)) return;
+        var businessId = {{ (int) $shift->business_id }};
+        var open = indexedDB.open('yoka-pos-offline');
+        open.onupgradeneeded = function () { open.transaction.abort(); };
+        open.onsuccess = function () {
+            var db = open.result;
+            if (!db.objectStoreNames.contains('outbox')) return;
+            var req = db.transaction('outbox').objectStore('outbox').index('business_id').getAll(businessId);
+            req.onsuccess = function () {
+                var n = req.result.filter(function (s) { return s.status === 'queued' || s.status === 'retry'; }).length;
+                if (!n) return;
+                var box = document.getElementById('offline-pending-warning');
+                box.querySelector('[data-count]').textContent = n;
+                box.hidden = false;
+                document.querySelectorAll('form[action*="/close"]').forEach(function (f) {
+                    f.addEventListener('submit', function (e) {
+                        if (!confirm(n + ' transaksi offline belum tersinkron. Tetap tutup shift sekarang?')) e.preventDefault();
+                    });
+                });
+            };
+        };
+    })();
+    </script>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-4 items-start">
 
         {{-- Kiri: ringkasan --}}
