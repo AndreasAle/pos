@@ -208,6 +208,18 @@
                 </template>
             </div>
 
+            {{-- No products yet: owners can add them right here, no back office needed. --}}
+            <div x-show="!showBundles && allProducts.length === 0" x-cloak
+                 class="mx-auto max-w-md mt-10 bg-white rounded-xl p-6 text-center shadow-sm">
+                <p class="font-bold text-[#0B1B3F]">Belum ada produk</p>
+                @if(in_array(auth()->user()->role, ['owner', 'admin'], true))
+                    <p class="text-sm text-gray-500 mt-1">Tambahkan produk pertama untuk mulai berjualan.</p>
+                    <a href="{{ route('device.start') }}" class="inline-block mt-4 bg-[#16A34A] hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm">Tambah produk</a>
+                @else
+                    <p class="text-sm text-gray-500 mt-1">Minta pemilik menambahkan produk.</p>
+                @endif
+            </div>
+
             {{-- Product Grid --}}
             <div x-show="!showBundles"
                  class="grid gap-2 md:gap-3 [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))] md:[grid-template-columns:repeat(auto-fill,minmax(176px,1fr))]">

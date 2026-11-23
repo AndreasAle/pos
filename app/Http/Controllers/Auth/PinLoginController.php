@@ -43,46 +43,37 @@ class PinLoginController extends Controller
             return redirect()->route('pos.index');
         }
 
-        $outlet = $this->pairedOutlet($request);
+        $outlet = self::pairedOutlet($request);
 
         if (!$outlet) {
             return view('auth.pin-pair');
         }
 
-        $staff = User::where('business_id', $outlet->business_id)
+        $people = User::where('business_id', $outlet->business_id)
             ->where('is_active', true)
             ->whereIn('role', self::ALLOWED_ROLES)
-            ->whereNotNull('pin')
             ->where(fn ($q) => $q->where('outlet_id', $outlet->id)->orWhereNull('outlet_id'))
             ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+            ->get(['id', 'name', 'role', 'pin']);
 
-        return view('auth.pin-login', compact('outlet', 'staff'));
+        // Who can open the register with a PIN right now, and the owners and
+        // admins who cannot yet: they sign in with their account once and are
+        // asked to create one, instead of being missing from this screen.
+        $staff   = $people->whereNotNull('pin')->values();
+        $noPin   = $people->whereNull('pin')->whereIn('role', ['owner', 'admin'])->values();
+
+        return view('auth.pin-login', compact('outlet', 'staff', 'noPin'));
     }
 
     /**
-     * Pair this device with an outlet. The code is printed on the outlet record
-     * in the back office; it is not a secret, the PIN is.
+     * The cookie that binds this device to an outlet. Set only after the
+     * owner, an admin or the outlet's own staff signed in with their account
+     * and picked the outlet (DeviceSetupController): pairing by a typed outlet
+     * code was removed, because codes were not unique across businesses.
      */
-    public function pair(Request $request)
+    public static function pairingCookie(Outlet $outlet): \Symfony\Component\HttpFoundation\Cookie
     {
-        $request->validate([
-            'outlet_code' => 'required|string|max:50',
-        ]);
-
-        $outlet = Outlet::where('code', trim($request->outlet_code))
-            ->where('is_active', true)
-            ->first();
-
-        if (!$outlet) {
-            throw ValidationException::withMessages([
-                'outlet_code' => 'Kode outlet tidak ditemukan. Cek kembali di menu Outlet.',
-            ]);
-        }
-
-        return redirect()->route('pin.show')->withCookie(
-            cookie(self::OUTLET_COOKIE, $this->pairingToken($outlet), self::COOKIE_DAYS * 24 * 60)
-        );
+        return cookie(self::OUTLET_COOKIE, self::pairingToken($outlet), self::COOKIE_DAYS * 24 * 60);
     }
 
     public function login(Request $request)
@@ -91,7 +82,7 @@ class PinLoginController extends Controller
             'pin' => 'required|string|min:4|max:8',
         ]);
 
-        $outlet = $this->pairedOutlet($request);
+        $outlet = self::pairedOutlet($request);
 
         if (!$outlet) {
             return redirect()->route('pin.show');
@@ -151,17 +142,17 @@ class PinLoginController extends Controller
      * Editing the id by hand invalidates the signature, so a tablet cannot be
      * repointed at another outlet to fish for its PINs.
      */
-    private function pairingToken(Outlet $outlet): string
+    public static function pairingToken(Outlet $outlet): string
     {
-        return $outlet->id . '.' . $this->signature((string) $outlet->id);
+        return $outlet->id . '.' . self::signature((string) $outlet->id);
     }
 
-    private function signature(string $value): string
+    private static function signature(string $value): string
     {
         return substr(hash_hmac('sha256', 'pos-outlet:' . $value, config('app.key')), 0, 32);
     }
 
-    private function pairedOutlet(Request $request): ?Outlet
+    public static function pairedOutlet(Request $request): ?Outlet
     {
         $token = (string) $request->cookie(self::OUTLET_COOKIE);
 
@@ -171,7 +162,7 @@ class PinLoginController extends Controller
 
         [$id, $mac] = explode('.', $token, 2);
 
-        if (!ctype_digit($id) || !hash_equals($this->signature($id), $mac)) {
+        if (!ctype_digit($id) || !hash_equals(self::signature($id), $mac)) {
             return null;
         }
 

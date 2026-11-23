@@ -108,6 +108,12 @@ class OnboardingController extends Controller
 
         $request->user()->refresh();
 
+        // Signed up from the tablet app: bind this device, make a PIN, add the
+        // first products, all without the back office.
+        if (\App\Http\Controllers\Auth\LoginController::fromRegisterApp($request)) {
+            return redirect()->route('device.setup');
+        }
+
         return redirect()->route('dashboard')->with(
             'success',
             'Bisnis '.$business->name.' siap digunakan. Yuk kenali ruang kerja Yoka POS.'

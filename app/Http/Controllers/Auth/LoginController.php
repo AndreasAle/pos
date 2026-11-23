@@ -65,7 +65,7 @@ class LoginController extends Controller
             ? route('verification.notice')
             : ($user->requires_business_setup && ! $user->business_id
                 ? route('onboarding.business')
-                : route('dashboard'));
+                : (self::fromRegisterApp($request) ? route('device.setup') : route('dashboard')));
 
         return redirect()->intended($destination);
     }
@@ -116,6 +116,15 @@ class LoginController extends Controller
     private function throttleKey(Request $request): string
     {
         return Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
+    }
+
+    /**
+     * The Yoka tablet app is a register, not a back office: signing in there
+     * binds the device to an outlet and opens the till (DeviceSetupController).
+     */
+    public static function fromRegisterApp(Request $request): bool
+    {
+        return str_contains((string) $request->userAgent(), 'YokaPOSApp/');
     }
 
     public function logout(Request $request)

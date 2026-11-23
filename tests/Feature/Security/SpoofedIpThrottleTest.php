@@ -63,7 +63,7 @@ class SpoofedIpThrottleTest extends TestCase
             'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id, 'role' => 'cashier',
             'is_active' => true, 'pin' => Hash::make('482916'),
         ]);
-        $cookie = $this->post(route('pin.pair'), ['outlet_code' => $this->outlet->code])->getCookie('pos_outlet', false);
+        $cookie = new \Symfony\Component\HttpFoundation\Cookie('pos_outlet', \App\Http\Controllers\Auth\PinLoginController::pairingToken($this->outlet));
 
         for ($i = 0; $i < 30; $i++) {
             $this->withUnencryptedCookie('pos_outlet', $cookie->getValue())->withServerVariables($this->spoofed($i))
