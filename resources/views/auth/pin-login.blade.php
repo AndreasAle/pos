@@ -29,13 +29,13 @@
     <div class="bg-white rounded-3xl p-6 shadow-2xl">
 
         @if($staff->isEmpty())
-            <div class="text-center py-8">
-                <p class="text-4xl mb-3">🔒</p>
-                <p class="font-semibold text-gray-800">Belum ada kasir dengan PIN</p>
+            <div class="text-center py-6">
+                <p class="font-semibold text-gray-800">Belum ada yang punya PIN di outlet ini</p>
                 <p class="text-sm text-gray-500 mt-2 leading-relaxed">
-                    Pemilik perlu mengatur PIN dulu lewat back office:<br>
-                    <strong>Manajemen User → Edit → PIN Kasir</strong>
+                    Pemilik masuk sekali dengan akun, lalu membuat PIN untuk dirinya dan kasir.
                 </p>
+                <a href="{{ route('device.setup') }}"
+                   class="inline-block mt-5 bg-[#16A34A] hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl">Masuk dengan akun</a>
             </div>
         @else
             {{-- Names only. The PIN is the secret, not who works here. --}}
@@ -93,8 +93,17 @@
 
     </div>
 
+    @if($noPin->isNotEmpty() && !$staff->isEmpty())
+        {{-- Owners and admins who have not made a PIN yet: one tap to the account
+             sign-in, which then asks them to create one. --}}
+        <div class="mt-4 rounded-xl bg-white/10 px-4 py-3 text-center text-sm text-white">
+            {{ $noPin->pluck('name')->join(', ', ' dan ') }} belum punya PIN.
+            <a href="{{ route('device.setup') }}" class="font-bold underline">Masuk dengan akun untuk membuatnya</a>
+        </div>
+    @endif
+
     <div class="flex items-center justify-center gap-4 mt-6 text-xs">
-        <a href="{{ route('login') }}" class="text-emerald-200/70 underline">Login back office</a>
+        <a href="{{ route('device.setup') }}" class="text-emerald-200/70 underline">Masuk dengan akun</a>
         <span class="text-emerald-200/30">•</span>
         <form method="POST" action="{{ route('pin.unpair') }}">
             @csrf

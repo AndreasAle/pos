@@ -41,49 +41,35 @@ class PinLoginTest extends TestCase
     }
 
     /**
-     * Requests carrying the paired-outlet cookie.
-     *
-     * Pairs for real and reuses the token the server issued, so the test uses
-     * exactly what a tablet holds — signature and all.
+     * Requests carrying the paired-outlet cookie, signed exactly as the server
+     * issues it when an account binds the device (DeviceSetupController).
      */
     private function paired(?Outlet $outlet = null): self
     {
         $outlet = $outlet ?? $this->outlet;
 
-        $cookie = $this->post(route('pin.pair'), ['outlet_code' => $outlet->code])
-            ->getCookie(self::OUTLET_COOKIE, false);
-
-        $this->assertNotNull($cookie, 'Pairing did not set the outlet cookie.');
-
-        return $this->withUnencryptedCookie(self::OUTLET_COOKIE, $cookie->getValue());
+        return $this->withUnencryptedCookie(self::OUTLET_COOKIE, \App\Http\Controllers\Auth\PinLoginController::pairingToken($outlet));
     }
 
     // ── Pairing ──────────────────────────────────────────────────────────────
 
-    public function test_an_unpaired_device_is_asked_for_an_outlet_code(): void
+    public function test_an_unpaired_device_is_sent_to_sign_in_with_an_account(): void
     {
         $this->setUpPos();
 
         $this->get(route('pin.show'))
             ->assertOk()
-            ->assertSee('Pasangkan Perangkat');
+            ->assertSee('Hubungkan perangkat ini')
+            ->assertSee(route('device.setup'), false)
+            ->assertDontSee('outlet_code', false);
     }
 
-    public function test_a_valid_outlet_code_pairs_the_device(): void
+    public function test_pairing_by_typed_outlet_code_is_gone(): void
     {
         $this->setUpPos();
 
-        $this->post(route('pin.pair'), ['outlet_code' => $this->outlet->code])
-            ->assertRedirect(route('pin.show'))
-            ->assertCookie(self::OUTLET_COOKIE);
-    }
-
-    public function test_an_unknown_outlet_code_is_refused(): void
-    {
-        $this->setUpPos();
-
-        $this->post(route('pin.pair'), ['outlet_code' => 'TIDAKADA'])
-            ->assertSessionHasErrors('outlet_code');
+        $this->post('/kasir/pair', ['outlet_code' => $this->outlet->code])
+            ->assertCookieMissing(self::OUTLET_COOKIE);
     }
 
     public function test_a_paired_device_shows_the_pin_pad(): void
@@ -261,7 +247,7 @@ class PinLoginTest extends TestCase
         $paired->get(route('pin.show'))
             ->assertOk()
             ->assertSee('Masukkan PIN')
-            ->assertDontSee('Pasangkan Perangkat');
+            ->assertDontSee('Hubungkan perangkat ini');
     }
 
     public function test_unpairing_clears_the_outlet(): void

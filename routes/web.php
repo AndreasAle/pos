@@ -263,10 +263,21 @@ Route::prefix('platform')->name('platform.')->group(function () {
 // Service worker for the offline register; public so it can be fetched before login.
 Route::get('/pos-sw.js', \App\Http\Controllers\PosServiceWorkerController::class)->name('pos.sw');
 Route::get('/kasir', [PinLoginController::class, 'show'])->name('pin.show');
-Route::post('/kasir/pair', [PinLoginController::class, 'pair'])->name('pin.pair')->middleware('throttle:20,1');
 Route::post('/kasir/unpair', [PinLoginController::class, 'unpair'])->name('pin.unpair');
 Route::post('/kasir/login', [PinLoginController::class, 'login'])->name('pin.login')->middleware('throttle:30,1');
 Route::post('/kasir/logout', [PinLoginController::class, 'logout'])->name('pin.logout');
+
+// Menghubungkan perangkat ke outlet lewat login akun (bukan kode outlet), lalu
+// PIN pemilik dan setup cepat. Di bawah /kasir agar tampil di app tablet Yoka.
+Route::middleware(['auth', 'business', 'owner.verified'])->prefix('kasir')->name('device.')->group(function () {
+    Route::get('setup', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'show'])->name('setup');
+    Route::post('setup', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'store'])->name('setup.store');
+    Route::get('pin-baru', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'pinForm'])->name('pin');
+    Route::post('pin-baru', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'pinStore'])->name('pin.store')->middleware('throttle:20,1');
+    Route::get('mulai', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'start'])->name('start');
+    Route::post('mulai/produk', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'storeProduct'])->name('start.product')->middleware('throttle:60,1');
+    Route::post('mulai/kasir', [\App\Http\Controllers\Auth\DeviceSetupController::class, 'storeCashier'])->name('start.cashier')->middleware('throttle:20,1');
+});
 
 // ── Authenticated + Business ──────────────────────────────────────────────────
 Route::middleware(['auth', 'business', 'owner.verified'])->group(function () {
