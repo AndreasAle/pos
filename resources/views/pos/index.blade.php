@@ -33,7 +33,7 @@
     <div class="w-px h-6 bg-white/25"></div>
     @endif
 
-    <div class="flex items-center gap-1.5" title="Yoka POS">
+    <div class="flex flex-none items-center gap-1.5" title="Yoka POS">
         <img src="{{ asset('images/brand/yoka-logo-white.png') }}" alt="Yoka" class="h-6 w-auto">
         <span class="text-[17px] leading-none font-bold tracking-tight text-white">POS</span>
     </div>
@@ -48,7 +48,8 @@
     <div class="ml-auto flex items-center gap-2 md:gap-3">
         {{-- Offline register status: online / offline / sales waiting to sync. --}}
         <button type="button" x-show="offlineCfg" x-cloak @click="sessionExpired ? goSignIn() : openQueue()"
-                class="h-9 inline-flex items-center gap-1.5 text-xs font-bold px-3.5 rounded-full shadow-sm transition-colors"
+                class="h-9 min-w-9 inline-flex items-center justify-center gap-1.5 text-xs font-bold px-3 lg:px-3.5 rounded-full shadow-sm transition-colors"
+                :title="offState.online ? 'Online' : 'Offline'"
                 :class="sessionExpired ? 'bg-red-500 text-white'
                       : offState.failed > 0 ? 'bg-red-500 text-white'
                       : !offState.online ? 'bg-amber-300 text-amber-950'
@@ -56,7 +57,8 @@
                       : 'bg-white/15 text-white border border-white/20'">
             <span class="w-1.5 h-1.5 rounded-full"
                   :class="sessionExpired || offState.failed > 0 ? 'bg-white' : !offState.online ? 'bg-amber-700' : offState.pending > 0 ? 'bg-amber-500 animate-pulse' : 'bg-emerald-300'"></span>
-            <span x-text="sessionExpired ? 'Sesi habis · masuk lagi' + (offState.pending ? ' (' + offState.pending + ' antre)' : '')
+            <span :class="(!sessionExpired && !offState.failed && offState.online && !offState.syncing && !offState.pending) ? 'hidden lg:inline' : ''"
+                  x-text="sessionExpired ? 'Sesi habis · masuk lagi' + (offState.pending ? ' (' + offState.pending + ' antre)' : '')
                         : offState.failed > 0 ? offState.failed + ' gagal sinkron'
                         : !offState.online ? 'Offline' + (offState.pending ? ' · ' + offState.pending + ' antre' : '')
                         : offState.syncing ? 'Menyinkron ' + offState.pending
@@ -72,9 +74,9 @@
 
         <span class="hidden md:inline text-sm font-semibold text-white/80 tabular-nums" x-text="currentTime"></span>
 
-        <span class="hidden sm:flex items-center gap-2 pl-1 pr-3.5 py-1 rounded-full bg-white/10">
+        <span class="flex items-center gap-2 p-1 lg:pr-3.5 rounded-full bg-white/10" title="{{ auth()->user()->name }}">
             <span class="w-7 h-7 rounded-full bg-white text-emerald-700 text-xs font-extrabold flex items-center justify-center">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
-            <span class="text-sm font-semibold">{{ auth()->user()->name }}</span>
+            <span class="hidden lg:inline max-w-[180px] truncate text-sm font-semibold">{{ \Illuminate\Support\Str::before(auth()->user()->name, ' ') ?: auth()->user()->name }}</span>
         </span>
 
         {{-- How THIS device prints. A laptop and an Android phone at the same
@@ -85,7 +87,7 @@
                     class="h-9 inline-flex items-center gap-2 pl-3 pr-2.5 rounded-full text-xs font-semibold transition-colors"
                     :class="open ? 'bg-white/25' : 'bg-white/10 hover:bg-white/20'">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-                <span class="hidden sm:inline" x-text="(opts.find(o => o.v === printVia) || opts[0]).l"></span>
+                <span class="hidden lg:inline whitespace-nowrap" x-text="(opts.find(o => o.v === printVia) || opts[0]).l"></span>
                 <svg class="w-3.5 h-3.5 opacity-80 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
             </button>
             <div x-show="open" x-cloak x-transition.opacity.duration.150ms
@@ -106,16 +108,16 @@
         <form method="POST" action="{{ route('pin.logout') }}">
             @csrf
             <button type="submit" title="Ganti kasir"
-                    class="h-9 inline-flex items-center gap-2 px-3 sm:px-3.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 transition-colors">
+                    class="h-9 inline-flex items-center gap-2 px-2.5 lg:px-3.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 transition-colors">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                <span class="hidden sm:inline">Ganti Kasir</span>
+                <span class="hidden lg:inline whitespace-nowrap">Ganti Kasir</span>
             </button>
         </form>
 
         @if($activeShift)
         <a href="{{ route('shifts.close', $activeShift) }}"
            class="h-9 inline-flex items-center gap-1.5 px-3.5 rounded-full text-xs font-bold bg-white text-red-600 hover:bg-red-50 shadow-sm transition-colors">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg><span class="hidden sm:inline">Tutup Shift</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg><span class="hidden lg:inline whitespace-nowrap">Tutup Shift</span>
         </a>
         @endif
     </div>

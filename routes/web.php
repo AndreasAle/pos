@@ -342,9 +342,12 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::get('avatars/{user}', [ProfileAvatarController::class, 'show'])->name('avatar.show');
 
     // Categories
-    Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])
-        ->name('categories.kitchen');
-    Route::resource('categories', ProductCategoryController::class)->except(['create', 'show', 'edit']);
+    // Master data (kategori): hanya pemilik dan admin.
+    Route::middleware('role:owner,admin')->group(function () {
+        Route::patch('categories/{category}/kitchen', [ProductCategoryController::class, 'toggleKitchen'])
+            ->name('categories.kitchen');
+        Route::resource('categories', ProductCategoryController::class)->except(['create', 'show', 'edit']);
+    });
 
     // QR meja & self order
     Route::get('qr-tables', [QrTableController::class, 'index'])->middleware('role:owner,admin')->name('qr-tables.index');
@@ -361,17 +364,20 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::post('qr-orders/{order}/pay', [QrOrderController::class, 'pay'])->middleware('role:owner,admin,cashier')->name('qr-orders.pay');
     Route::get('qr-orders/{order}/payment-qr', [QrOrderController::class, 'paymentQr'])->middleware('role:owner,admin,cashier')->name('qr-orders.payment-qr');
 
-    // Products
-    Route::resource('products', ProductController::class);
-    Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
+    // Produk & bundling mengubah harga dan menu: hanya pemilik dan admin (kasir tidak).
+    Route::middleware('role:owner,admin')->group(function () {
+        // Products
+        Route::resource('products', ProductController::class);
+        Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
 
-    // Product Bundles
-    Route::resource('bundles', ProductBundleController::class)->except('show');
-    Route::patch('bundles/{bundle}/toggle', [ProductBundleController::class, 'toggle'])->name('bundles.toggle');
-    Route::post('products/{product}/variants', [ProductController::class, 'storeVariant'])->name('products.variants.store');
-    Route::delete('products/{product}/variants/{variant}', [ProductController::class, 'destroyVariant'])->name('products.variants.destroy');
-    Route::post('products/{product}/addons', [ProductController::class, 'storeAddon'])->name('products.addons.store');
-    Route::delete('products/{product}/addons/{addon}', [ProductController::class, 'destroyAddon'])->name('products.addons.destroy');
+        // Product Bundles
+        Route::resource('bundles', ProductBundleController::class)->except('show');
+        Route::patch('bundles/{bundle}/toggle', [ProductBundleController::class, 'toggle'])->name('bundles.toggle');
+        Route::post('products/{product}/variants', [ProductController::class, 'storeVariant'])->name('products.variants.store');
+        Route::delete('products/{product}/variants/{variant}', [ProductController::class, 'destroyVariant'])->name('products.variants.destroy');
+        Route::post('products/{product}/addons', [ProductController::class, 'storeAddon'])->name('products.addons.store');
+        Route::delete('products/{product}/addons/{addon}', [ProductController::class, 'destroyAddon'])->name('products.addons.destroy');
+    });
 
     // Shifts
     Route::get('shifts', [CashierShiftController::class, 'index'])->name('shifts.index');
@@ -413,25 +419,28 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
     Route::get('receipt/{order}/pdf', [ReceiptController::class, 'pdf'])->name('receipt.pdf');
     Route::get('receipt/{order}/kitchen', [ReceiptController::class, 'kitchen'])->name('receipt.kitchen');
 
-    // Inventory
-    Route::resource('inventory/ingredients', IngredientController::class)->names([
-        'index' => 'ingredients.index',
-        'create' => 'ingredients.create',
-        'store' => 'ingredients.store',
-        'show' => 'ingredients.show',
-        'edit' => 'ingredients.edit',
-        'update' => 'ingredients.update',
-        'destroy' => 'ingredients.destroy',
-    ]);
-    Route::post('inventory/ingredients/{ingredient}/stock-in', [IngredientController::class, 'stockIn'])->name('ingredients.stock-in');
-    Route::post('inventory/ingredients/{ingredient}/stock-out', [IngredientController::class, 'stockOut'])->name('ingredients.stock-out');
-    Route::post('inventory/ingredients/{ingredient}/adjustment', [IngredientController::class, 'adjustment'])->name('ingredients.adjustment');
-    Route::get('inventory/movements', [IngredientController::class, 'movements'])->name('inventory.movements');
+    // Stok & resep: pemilik, admin, dan gudang (kasir tidak).
+    Route::middleware('role:owner,admin,warehouse')->group(function () {
+        // Inventory
+        Route::resource('inventory/ingredients', IngredientController::class)->names([
+            'index' => 'ingredients.index',
+            'create' => 'ingredients.create',
+            'store' => 'ingredients.store',
+            'show' => 'ingredients.show',
+            'edit' => 'ingredients.edit',
+            'update' => 'ingredients.update',
+            'destroy' => 'ingredients.destroy',
+        ]);
+        Route::post('inventory/ingredients/{ingredient}/stock-in', [IngredientController::class, 'stockIn'])->name('ingredients.stock-in');
+        Route::post('inventory/ingredients/{ingredient}/stock-out', [IngredientController::class, 'stockOut'])->name('ingredients.stock-out');
+        Route::post('inventory/ingredients/{ingredient}/adjustment', [IngredientController::class, 'adjustment'])->name('ingredients.adjustment');
+        Route::get('inventory/movements', [IngredientController::class, 'movements'])->name('inventory.movements');
 
-    // Recipes
-    Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
-    Route::get('recipes/{product}', [RecipeController::class, 'edit'])->name('recipes.edit');
-    Route::post('recipes/{product}', [RecipeController::class, 'update'])->name('recipes.update');
+        // Recipes
+        Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
+        Route::get('recipes/{product}', [RecipeController::class, 'edit'])->name('recipes.edit');
+        Route::post('recipes/{product}', [RecipeController::class, 'update'])->name('recipes.update');
+    });
 
     // Kitchen
     Route::get('kitchen', [KitchenController::class, 'index'])->name('kitchen.index')
