@@ -196,4 +196,22 @@ class InAppModeTest extends TestCase
         $this->actingAs($owner)->post('/kasir/pin-baru', ['pin' => '7391', 'pin_confirmation' => '7391'])->assertRedirect();
         $this->assertTrue(\Illuminate\Support\Facades\Hash::check('7391', $owner->fresh()->pin));
     }
+
+    public function test_app_cashier_setup_has_top_bar_and_start_button(): void
+    {
+        $this->setUpPos();
+        $owner = User::factory()->create([
+            'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id, 'role' => 'owner',
+            'is_active' => true, 'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->get('/kasir/mulai')
+            ->assertOk()->assertSee('Tambah produk pertamamu')->assertDontSee('Dua hal sebelum mulai jualan');
+
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)
+            ->post('/kasir/mulai/produk', ['name' => 'Es Teh Manis', 'price' => 5000])->assertRedirect();
+
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->get('/kasir/mulai')
+            ->assertOk()->assertSee('Es Teh Manis')->assertSee('Mulai jualan');
+    }
 }
