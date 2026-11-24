@@ -64,7 +64,7 @@
                            placeholder="812 3456 7890" class="{{ $field }} pl-14 {{ $err('phone') ? $bad : '' }}">
                 </div>
                 <input type="hidden" name="phone" :value="phone ? '0' + phone.replace(/\D/g,'').replace(/^0+/,'') : ''">
-                @if($err('phone'))<p class="{{ $msg }}">{{ $err('phone') }}</p>@else<p class="mt-1.5 text-[13px] text-[#94A3B8]">Pastikan nomor ini aktif di WhatsApp.</p>@endif
+                @if($err('phone'))<p class="{{ $msg }}">{{ $err('phone') }}</p>@else<p class="mt-1.5 text-[13px] text-[#94A3B8]">Kode verifikasi dikirim ke WhatsApp ini.</p>@endif
             </div>
 
             <div>

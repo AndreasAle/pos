@@ -12,8 +12,16 @@ class EmailVerificationController extends Controller
     /** Halaman "cek email Anda" untuk pemilik yang belum konfirmasi. */
     public function notice(Request $request)
     {
-        if ($request->user()->hasVerifiedEmail()) {
-            return redirect()->route($this->destinationFor($request->user()));
+        $user = $request->user();
+
+        if ($user->isVerifiedOwner()) {
+            return redirect()->route($this->destinationFor($user));
+        }
+
+        // Dari aplikasi Android: verifikasi lewat kode WhatsApp, kecuali pengguna
+        // memilih email ("?via=email") atau belum punya nomor.
+        if (\App\Support\InApp::check($request) && $user->phone && $request->query('via') !== 'email') {
+            return redirect()->route('verification.whatsapp');
         }
 
         return view('auth.verify-email', ['email' => $request->user()->email]);
@@ -45,7 +53,7 @@ class EmailVerificationController extends Controller
     {
         $user = $request->user();
 
-        if ($user->hasVerifiedEmail()) {
+        if ($user->isVerifiedOwner()) {
             return redirect()->route($this->destinationFor($user));
         }
 

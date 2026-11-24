@@ -61,7 +61,7 @@ class LoginController extends Controller
         RateLimiter::clear($this->throttleKey($request));
         $request->session()->regenerate();
 
-        $destination = ! $user->hasVerifiedEmail()
+        $destination = ! $user->isVerifiedOwner()
             ? route('verification.notice')
             : ($user->requires_business_setup && ! $user->business_id
                 ? route('onboarding.business')

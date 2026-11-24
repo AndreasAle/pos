@@ -152,6 +152,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
     Route::post('/email/verification-notification', [EmailVerificationController::class, 'resend'])
         ->middleware('throttle:3,1')->name('verification.send');
+    // Verifikasi lewat kode WhatsApp (pendaftaran dari aplikasi). Di bawah /email
+    // karena aplikasi Android hanya membuka jalur tertentu.
+    Route::get('/email/whatsapp', [\App\Http\Controllers\Auth\PhoneVerificationController::class, 'show'])->name('verification.whatsapp');
+    Route::post('/email/whatsapp/kirim', [\App\Http\Controllers\Auth\PhoneVerificationController::class, 'resend'])
+        ->middleware('throttle:6,1')->name('verification.whatsapp.send');
+    Route::post('/email/whatsapp', [\App\Http\Controllers\Auth\PhoneVerificationController::class, 'verify'])
+        ->middleware('throttle:20,1')->name('verification.whatsapp.verify');
 });
 
 // Akun baru menyiapkan tenant hanya setelah alamat emailnya terbukti valid.
