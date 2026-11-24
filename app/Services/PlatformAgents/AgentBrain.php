@@ -552,8 +552,6 @@ PROMPT;
     /** Fakta fitur yang sudah dicek dari kode saat ini; perbarui bila fitur berubah. */
     public static function productFacts(): array
     {
-        $commercial = self::commercialDigest();
-
         return [
             'diperbarui' => '2026-11-24',
             // Diverifikasi dari menu samping (layouts/app.blade.php) dan routes/web.php.
@@ -574,8 +572,9 @@ PROMPT;
             // Kredit Tanya Yoka: satu sumber dengan aplikasi, panel admin, dan panduan resmi.
             'kredit_yoka_ai' => \App\Services\AiCreditsReport::facts(),
             // Halaman publik dan paket bundling (keputusan pemilik 2026-11-24: harga bundling boleh disebut persis, tanpa diskon).
-            'halaman_publik' => 'yokapos.com/harga, yokapos.com/bundling, yokapos.com/panduan',
-            'penawaran_resmi' => $commercial,
+            // Katalog lengkap TIDAK diulang di sini (fakta ini ikut di setiap prompt WhatsApp): harga paket sudah ada di daftar paket,
+            // katalog perangkat masuk saat pelanggan bertanya perangkat, dan agen dashboard/Telegram menerima commercialDigest().
+            'penawaran_resmi' => 'Harga hanya dari daftar resmi (yokapos.com/harga, /bundling), tanpa diskon atau janji stok.',
             'kerangka_belum_aktif' => ['Integrasi GoFood dan ShopeeFood: kerangka sudah ada, belum aktif sampai kredensial resmi tersedia. Jangan dipromosikan sebagai fitur jadi.'],
             'sedang_dibangun' => ['Aplikasi Android dan iOS: belum rilis, jangan dijanjikan tanggal.'],
             'belum_dipastikan' => ['Printer LAN/WiFi khusus dan daftar merek tablet yang pasti cocok: belum ada daftar resmi. Jangan menjamin; sarankan coba dengan dialog print browser saat trial.'],
