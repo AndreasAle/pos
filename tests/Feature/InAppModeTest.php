@@ -214,4 +214,22 @@ class InAppModeTest extends TestCase
         $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->get('/kasir/mulai')
             ->assertOk()->assertSee('Es Teh Manis')->assertSee('Mulai jualan');
     }
+
+    public function test_app_login_page_is_clean_and_logs_in(): void
+    {
+        $this->withHeader('User-Agent', self::APP_UA)->get('/login')
+            ->assertOk()->assertSee('Selamat datang kembali')->assertDontSee('Masuk dengan Google');
+
+        $this->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')->get('/login')
+            ->assertOk()->assertSee('Masuk ke Akun Anda');
+
+        $this->setUpPos();
+        $owner = User::factory()->create([
+            'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id, 'role' => 'owner',
+            'is_active' => true, 'email_verified_at' => now(), 'email' => 'pemilik@example.com', 'password' => 'rahasia123',
+        ]);
+        $this->withHeader('User-Agent', self::APP_UA)
+            ->post('/login', ['email' => 'pemilik@example.com', 'password' => 'rahasia123'])->assertRedirect();
+        $this->assertAuthenticatedAs($owner);
+    }
 }
