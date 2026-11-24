@@ -159,4 +159,23 @@ class InAppModeTest extends TestCase
 
         $this->assertDatabaseHas('users', ['email' => 'baru@example.com', 'role' => 'owner']);
     }
+
+    public function test_app_business_setup_is_one_column_and_creates_business(): void
+    {
+        $owner = User::factory()->create([
+            'business_id' => null, 'outlet_id' => null, 'role' => 'owner', 'is_active' => true,
+            'requires_business_setup' => true, 'phone' => '081234567890', 'phone_verified_at' => now(),
+            'email_verified_at' => null,
+        ]);
+
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->get('/mulai/bisnis')
+            ->assertOk()->assertSee('Ceritakan usahamu')->assertDontSee('Siapkan profil bisnis');
+
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->post('/mulai/bisnis', [
+            'business_type' => 'fnb', 'outlet_scale' => '1', 'city' => 'Bandung',
+            'business_name' => 'Kopi Senja', 'outlet_name' => 'Outlet Utama',
+        ])->assertRedirect();
+
+        $this->assertSame('Kopi Senja', $owner->fresh()->business?->name);
+    }
 }

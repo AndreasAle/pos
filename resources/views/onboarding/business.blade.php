@@ -15,7 +15,97 @@
         textarea.setup-field{height:5.25rem;padding-top:.75rem;resize:vertical}
     </style>
 </head>
-<body class="min-h-full bg-white font-sans text-slate-900">
+<body class="min-h-full bg-white font-sans text-slate-900 {{ \App\Support\InApp::check() ? 'in-app' : '' }}">
+@if(\App\Support\InApp::check())
+@php
+    $err   = fn ($f) => $errors->first($f);
+    $field = 'w-full h-14 rounded-2xl bg-[#F4F6F8] border border-transparent px-4 text-[16px] text-[#0B1B3F] placeholder:text-[#94A3B8] focus:outline-none focus:bg-white focus:border-[#16A34A] focus:ring-4 focus:ring-[#16A34A]/10 transition';
+    $bad   = '!border-[#F87171] !bg-[#FEF2F2]';
+    $lbl   = 'block mb-2 text-[13px] font-medium text-[#64748B]';
+    $msg   = 'mt-1.5 text-[13px] text-[#DC2626]';
+@endphp
+{{-- Versi aplikasi Android: satu kolom, tanpa kotak dan gambar. --}}
+<div class="min-h-screen bg-white text-[#0B1B3F]">
+    <header class="sticky top-0 z-10 h-14 bg-white/95 backdrop-blur border-b border-[#EEF0F3] px-5 flex items-center">
+        <span class="text-[17px] font-semibold">Data toko</span>
+    </header>
+
+    <main class="max-w-md mx-auto px-6 pt-8 pb-10">
+        <p class="text-[13px] font-semibold text-[#15803D]">Langkah 3 dari 3</p>
+        <h1 class="mt-1 text-[28px] leading-tight font-bold tracking-[-0.02em]">Ceritakan usahamu</h1>
+        <p class="mt-2 text-[15px] text-[#64748B]">Bisa diubah lagi nanti di Pengaturan.</p>
+
+        <form method="POST" action="{{ route('onboarding.business.store') }}" class="mt-8"
+              x-data="{ type: @js(old('business_type', 'fnb')), scale: @js(old('outlet_scale', '1')) }">
+            @csrf
+            <input type="hidden" name="business_type" :value="type">
+            <input type="hidden" name="outlet_scale" :value="scale">
+
+            <p class="{{ $lbl }}">Jenis usaha</p>
+            <div class="divide-y divide-[#F1F5F9] border-y border-[#F1F5F9]">
+                @foreach([['fnb', 'Makanan & minuman', 'Kafe, restoran, bakery'], ['retail', 'Toko', 'Retail dan perdagangan'], ['service', 'Jasa', 'Salon, studio, layanan']] as [$v, $t, $d])
+                    <button type="button" @click="type = '{{ $v }}'" class="w-full flex items-center gap-4 py-4 text-left">
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[16px] font-medium">{{ $t }}</span>
+                            <span class="block text-[13px] text-[#94A3B8]">{{ $d }}</span>
+                        </span>
+                        <span class="w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition-colors"
+                              :class="type === '{{ $v }}' ? 'bg-[#16A34A]' : 'ring-[1.5px] ring-inset ring-[#CBD5E1]'">
+                            <svg x-show="type === '{{ $v }}'" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </span>
+                    </button>
+                @endforeach
+            </div>
+            @if($err('business_type'))<p class="{{ $msg }}">{{ $err('business_type') }}</p>@endif
+
+            <div class="mt-7">
+                <label for="business_name" class="{{ $lbl }}">Nama usaha</label>
+                <input id="business_name" name="business_name" value="{{ old('business_name') }}" required maxlength="255"
+                       placeholder="Contoh: Kopi Senja" class="{{ $field }} {{ $err('business_name') ? $bad : '' }}">
+                @if($err('business_name'))<p class="{{ $msg }}">{{ $err('business_name') }}</p>@endif
+            </div>
+
+            <div class="mt-5">
+                <label for="city" class="{{ $lbl }}">Kota</label>
+                <input id="city" name="city" value="{{ old('city') }}" required list="city-options" autocomplete="address-level2"
+                       placeholder="Cari atau ketik kota" class="{{ $field }} {{ $err('city') ? $bad : '' }}">
+                <datalist id="city-options">@foreach(['Jakarta','Bandung','Surabaya','Medan','Semarang','Yogyakarta','Makassar','Palembang','Denpasar','Malang','Bekasi','Tangerang','Depok','Bogor','Pekanbaru','Balikpapan'] as $city)<option value="{{ $city }}">@endforeach</datalist>
+                @if($err('city'))<p class="{{ $msg }}">{{ $err('city') }}</p>@endif
+            </div>
+
+            <div class="mt-5">
+                <p class="{{ $lbl }}">Jumlah outlet</p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach(['1' => '1', '2-3' => '2–3', '4-10' => '4–10', '10+' => 'Lebih dari 10'] as $v => $l)
+                        <button type="button" @click="scale = '{{ $v }}'"
+                                class="h-11 px-5 rounded-full text-[15px] font-semibold transition-colors"
+                                :class="scale === '{{ $v }}' ? 'bg-[#0B1B3F] text-white' : 'bg-[#F4F6F8] text-[#475569]'">{{ $l }}</button>
+                    @endforeach
+                </div>
+                @if($err('outlet_scale'))<p class="{{ $msg }}">{{ $err('outlet_scale') }}</p>@endif
+            </div>
+
+            <div class="mt-5">
+                <label for="outlet_name" class="{{ $lbl }}">Nama outlet</label>
+                <input id="outlet_name" name="outlet_name" value="{{ old('outlet_name', 'Outlet Utama') }}" required maxlength="255"
+                       class="{{ $field }} {{ $err('outlet_name') ? $bad : '' }}">
+                @if($err('outlet_name'))<p class="{{ $msg }}">{{ $err('outlet_name') }}</p>@else<p class="mt-1.5 text-[13px] text-[#94A3B8]">Outlet lain bisa ditambah nanti.</p>@endif
+            </div>
+
+            <div class="mt-5">
+                <label for="address" class="{{ $lbl }}">Alamat <span class="text-[#94A3B8]">(opsional)</span></label>
+                <textarea id="address" name="address" rows="2" placeholder="Alamat outlet"
+                          class="{{ str_replace('h-14', 'min-h-[88px] py-3.5', $field) }} resize-none">{{ old('address') }}</textarea>
+            </div>
+
+            <button type="submit" class="mt-9 w-full h-14 rounded-2xl bg-[#16A34A] active:bg-[#15803D] text-white text-[16px] font-semibold shadow-[0_8px_20px_rgba(22,163,74,.22)]">
+                Simpan & mulai
+            </button>
+            <p class="mt-3 text-center text-[13px] text-[#94A3B8]">Uji coba gratis 7 hari dimulai setelah ini.</p>
+        </form>
+    </main>
+</div>
+@else
 <div class="min-h-screen lg:grid lg:grid-cols-2">
     {{-- Mengikuti bahasa visual halaman login: merek, pesan singkat, dan foto manusia nyata. --}}
     <aside class="relative hidden h-screen flex-col overflow-hidden bg-[#0c874e] px-14 pt-10 text-white lg:sticky lg:top-0 lg:flex">
@@ -136,6 +226,7 @@
         </div>
     </main>
 </div>
+@endif
 @vite('resources/js/alpine.js')
 </body>
 </html>

@@ -59,7 +59,7 @@ class OnboardingController extends Controller
                 'slug' => Str::slug($data['business_name']).'-'.Str::lower(Str::random(5)),
                 'phone' => $user->phone,
                 'email' => $user->email,
-                'address' => $data['address'] ?: null,
+                'address' => ($data['address'] ?? null) ?: null,
                 'city' => $data['city'],
                 'timezone' => 'Asia/Jakarta',
                 'currency' => 'IDR',
@@ -82,7 +82,7 @@ class OnboardingController extends Controller
                 'business_id' => $business->id,
                 'name' => $data['outlet_name'],
                 'code' => 'MAIN',
-                'address' => $data['address'] ?: null,
+                'address' => ($data['address'] ?? null) ?: null,
                 'is_active' => true,
             ]);
 
