@@ -27,7 +27,7 @@ class LoginController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return view('auth.login');
+        return view(self::fromRegisterApp(request()) ? 'auth.login-app' : 'auth.login');
     }
 
     public function login(Request $request)
