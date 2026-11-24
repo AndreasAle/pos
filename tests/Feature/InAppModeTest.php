@@ -129,4 +129,18 @@ class InAppModeTest extends TestCase
         $this->actingAs($cashier)->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')->get('/pos')
             ->assertOk()->assertSee('bg-[#cfeadb]', false);
     }
+
+    public function test_app_close_shift_is_one_calm_screen_and_still_closes(): void
+    {
+        $this->setUpPos();
+
+        $this->actingAs($this->cashier)->withHeader('User-Agent', self::APP_UA)->get('/shifts/'.$this->shift->id.'/close')
+            ->assertOk()->assertSee('Hitung uang tunai di laci sekarang')->assertDontSee('Hitung Kas Akhir');
+
+        $this->actingAs($this->cashier)->withHeader('User-Agent', self::APP_UA)
+            ->post('/shifts/'.$this->shift->id.'/close', ['closing_cash_actual' => 150000, 'notes' => 'tes'])
+            ->assertRedirect();
+
+        $this->assertSame('closed', $this->shift->fresh()->status);
+    }
 }
