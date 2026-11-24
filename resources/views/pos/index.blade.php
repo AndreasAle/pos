@@ -20,11 +20,12 @@
         input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body class="h-full bg-gray-100 font-sans" x-data="posApp()" x-init="init()">
+@php $inApp = \App\Support\InApp::check(); @endphp
+<body class="h-full bg-gray-100 font-sans {{ $inApp ? 'in-app' : '' }}" x-data="posApp()" x-init="init()">
 
 {{-- Top Bar --}}
 <header class="relative z-30 h-14 px-3 md:px-5 flex items-center gap-2.5 md:gap-4 text-white
-               bg-gradient-to-r from-[#0a7a43] via-[#0c874e] to-[#10975a] shadow-[0_2px_12px_rgba(6,78,59,.28)]">
+               {{ $inApp ? 'bg-[#0A5C3A]' : 'bg-gradient-to-r from-[#0a7a43] via-[#0c874e] to-[#10975a] shadow-[0_2px_12px_rgba(6,78,59,.28)]' }}">
     @if(auth()->user()->role !== 'cashier')
     <a href="{{ route('dashboard') }}" aria-label="Kembali ke dashboard"
        class="w-9 h-9 -ml-1 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors">
@@ -149,7 +150,7 @@
             <div class="relative min-w-0 w-full @4xl:w-auto @4xl:flex-1">
                 <div class="flex gap-2 overflow-x-auto pr-8 py-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     <button @click="activeCategory = null; showBundles = false"
-                            :class="activeCategory === null && !showBundles ? 'bg-emerald-600 text-white shadow-[0_4px_12px_rgba(5,150,105,.30)]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                            :class="activeCategory === null && !showBundles ? '{{ $inApp ? 'bg-[#0B1B3F] text-white' : 'bg-emerald-600 text-white shadow-[0_4px_12px_rgba(5,150,105,.30)]' }}' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                             class="shrink-0 h-9 inline-flex items-center gap-2 text-[13px] font-semibold pl-4 pr-3 rounded-full transition-all">
                         Semua
                         <span class="text-[12px] font-bold rounded-full px-1.5 py-0.5 min-w-[22px] text-center"
@@ -169,7 +170,7 @@
                     @endif
                     @foreach($categories as $cat)
                     <button @click="activeCategory = {{ $cat->id }}; showBundles = false"
-                            :style="activeCategory === {{ $cat->id }} && !showBundles ? 'background:{{ $cat->color ?? '#059669' }};box-shadow:0 4px 12px rgba(15,23,42,.18)' : ''"
+                            :style="activeCategory === {{ $cat->id }} && !showBundles ? 'background:{{ $inApp ? '#0B1B3F' : ($cat->color ?? '#059669') }};{{ $inApp ? '' : 'box-shadow:0 4px 12px rgba(15,23,42,.18)' }}' : ''"
                             :class="(activeCategory === {{ $cat->id }} && !showBundles) ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
                             class="shrink-0 h-9 inline-flex items-center gap-2 text-[13px] font-semibold pl-4 pr-3 rounded-full transition-all">
                         {{ $cat->name }}
@@ -185,7 +186,7 @@
         </div>
 
         {{-- Product / Bundle Grid --}}
-        <div class="flex-1 overflow-y-auto p-2 md:p-4 pb-24 md:pb-4 bg-[#cfeadb]">
+        <div class="flex-1 overflow-y-auto p-2 md:p-4 pb-24 md:pb-4 {{ $inApp ? 'bg-[#F6F7F9]' : 'bg-[#cfeadb]' }}">
 
             {{-- Bundle Grid --}}
             <div x-show="showBundles"
@@ -231,8 +232,8 @@
                 <button type="button"
                         x-show="matchesFilter(product.cat_id, product.name)"
                         @click="selectProduct(product)"
-                        class="bg-white rounded-2xl border-[1.5px] border-emerald-700/25 shadow-[0_2px_8px_rgba(6,78,59,.10)] overflow-hidden text-left hover:border-emerald-500 hover:shadow-[0_6px_16px_rgba(6,78,59,.18)] hover:-translate-y-0.5 transition-all active:scale-[.97] select-none cursor-pointer">
-                    <div class="aspect-[5/4] overflow-hidden relative" x-data="{ broken: false }"
+                        class="{{ $inApp ? 'bg-white rounded-2xl ring-1 ring-[#EDEFF2] overflow-hidden text-left transition-transform active:scale-[.97] select-none cursor-pointer' : 'bg-white rounded-2xl border-[1.5px] border-emerald-700/25 shadow-[0_2px_8px_rgba(6,78,59,.10)] overflow-hidden text-left hover:border-emerald-500 hover:shadow-[0_6px_16px_rgba(6,78,59,.18)] hover:-translate-y-0.5 transition-all active:scale-[.97] select-none cursor-pointer' }}">
+                    <div class="{{ $inApp ? 'aspect-[4/3]' : 'aspect-[5/4]' }} overflow-hidden relative" x-data="{ broken: false }"
                          :style="(!product.image || broken) ? 'background:' + tile(product.name).bg : ''"
                          :class="(product.image && !broken) ? 'bg-gray-100' : ''">
                         <template x-if="product.image && !broken">
@@ -240,14 +241,14 @@
                         </template>
                         <template x-if="!product.image || broken">
                             <div class="w-full h-full flex items-center justify-center">
-                                <span class="text-4xl md:text-5xl font-extrabold tracking-tight select-none"
+                                <span class="{{ $inApp ? 'text-3xl md:text-4xl font-semibold tracking-tight opacity-80' : 'text-4xl md:text-5xl font-extrabold tracking-tight' }} select-none"
                                       :style="'color:' + tile(product.name).fg" x-text="initials(product.name)"></span>
                             </div>
                         </template>
                     </div>
-                    <div class="p-2.5 md:p-3.5">
-                        <p class="text-xs font-semibold text-gray-900 leading-snug line-clamp-2" x-text="product.name"></p>
-                        <p class="text-xs md:text-sm font-bold text-emerald-700 mt-0.5" x-text="'Rp ' + fmt(product.price)"></p>
+                    <div class="{{ $inApp ? 'px-3 pt-2.5 pb-3' : 'p-2.5 md:p-3.5' }}">
+                        <p class="{{ $inApp ? 'text-[14px] font-medium text-[#0B1B3F]' : 'text-xs font-semibold text-gray-900' }} leading-snug line-clamp-2" x-text="product.name"></p>
+                        <p class="{{ $inApp ? 'text-[14px] font-semibold text-[#0B1B3F] tabular-nums' : 'text-xs md:text-sm font-bold text-emerald-700' }} mt-0.5" x-text="'Rp ' + fmt(product.price)"></p>
                     </div>
                 </button>
                 </template>
