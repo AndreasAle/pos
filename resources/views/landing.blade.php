@@ -663,39 +663,64 @@
     {{-- ================= HARGA (ringkas; detail di /harga dan /bundling) ================= --}}
     @php
         try {
-            $fromPrice = (int) \App\Models\SubscriptionPlan::where('is_active', true)->where('price', '>', 0)->min('price');
+            $homePlans = \App\Models\SubscriptionPlan::where('is_active', true)->whereIn('slug', ['starter', 'business', 'enterprise'])->orderBy('sort_order')->get();
         } catch (\Throwable $e) {
-            $fromPrice = 0;
+            $homePlans = collect();
         }
-        $fromPrice = $fromPrice ?: 99000;
-        $bundleFrom = (int) collect((array) config('yoka_store.bundles'))->min('price');
+        $homeDesc = ['starter' => '2 outlet, 10 pengguna', 'business' => '5 outlet, 30 pengguna', 'enterprise' => 'Outlet tanpa batas'];
+        $fromPrice = (int) ($homePlans->where('price', '>', 0)->min('price') ?: 99000);
+        $homeBundles = collect((array) config('yoka_store.bundles'));
+        $spot = $homeBundles->firstWhere('featured', true) ?? $homeBundles->first();
+        $bundleFrom = (int) $homeBundles->min('price');
+        $rpHome = fn ($v) => 'Rp'.number_format((float) $v, 0, ',', '.');
     @endphp
-    <section id="harga" class="bg-slate-50 px-6 py-24">
-        <div class="mx-auto max-w-[1100px]">
-            <div class="mx-auto mb-12 max-w-2xl text-center">
-                <span class="text-sm font-semibold uppercase tracking-wide text-emerald-600">Harga</span>
-                <h2 class="mt-2 text-3xl font-extrabold text-slate-900 md:text-4xl">Mulai Rp{{ number_format($fromPrice, 0, ',', '.') }} per bulan</h2>
-                <p class="mt-3 text-slate-600">Pakai di HP atau tablet yang sudah ada, atau ambil paket lengkap dengan perangkatnya.</p>
-            </div>
-            <div class="grid gap-5 md:grid-cols-2">
-                <a href="{{ route('pricing') }}" class="hover-card group flex flex-col rounded-3xl border border-slate-200 bg-white p-8">
-                    <p class="text-sm font-bold text-emerald-700">Paket langganan</p>
-                    <p class="mt-2 text-2xl font-extrabold text-slate-900">YokaBasic, Business, Custom</p>
-                    <p class="mt-2 flex-1 text-slate-600">Bayar bulanan atau hemat dengan paket 3, 6, dan 12 bulan. Coba gratis 7 hari.</p>
-                    <span class="mt-6 inline-flex items-center gap-2 font-bold text-emerald-700 transition-all group-hover:gap-3">Lihat harga langganan <span aria-hidden="true">&rarr;</span></span>
-                </a>
-                <a href="{{ route('pricing.bundles') }}" class="hover-card group flex flex-col overflow-hidden rounded-3xl bg-[#0B1B3F] p-8 text-white">
-                    <p class="text-sm font-bold text-emerald-300">Paket bundling</p>
-                    <p class="mt-2 text-2xl font-extrabold">Aplikasi + perangkat kasir</p>
-                    <p class="mt-2 text-slate-300">Printer, tablet, scanner, sampai mesin kasir. Dites dan dipasang tim Yoka. Mulai Rp{{ number_format($bundleFrom, 0, ',', '.') }}.</p>
-                    <div class="mt-4 flex h-24 items-end gap-1">
-                        <div class="min-w-0 shrink h-20 w-24"><x-device-art kind="tablet"/></div>
-                        <div class="min-w-0 shrink h-16 w-20"><x-device-art kind="printer"/></div>
-                        <div class="min-w-0 shrink h-20 w-12"><x-device-art kind="mpos"/></div>
+    <section id="harga" class="bg-white px-5 py-24 sm:px-6 md:py-28">
+        <div class="mx-auto grid max-w-[1200px] items-center gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16 [&>*]:min-w-0">
+            <div>
+                <p class="text-sm font-bold uppercase tracking-[.14em] text-[#16A34A]">Harga</p>
+                <h2 class="mt-3 text-[34px] font-extrabold leading-[1.06] tracking-[-.03em] text-[#0B1B3F] sm:text-[46px]">Mulai {{ $rpHome($fromPrice) }} per bulan. Tanpa biaya pasang.</h2>
+                <p class="mt-4 max-w-[480px] text-[17px] leading-relaxed text-slate-600">Pakai di HP atau tablet yang sudah ada. Bayar 12 bulan sekaligus kalau mau lebih hemat.</p>
+
+                @if($homePlans->isNotEmpty())
+                    <div class="mt-8 divide-y divide-slate-200 border-y border-slate-200">
+                        @foreach($homePlans as $hp)
+                            <a href="{{ route('pricing') }}" class="group flex items-center justify-between gap-4 py-4">
+                                <div>
+                                    <p class="text-[17px] font-bold text-[#0B1B3F] group-hover:text-[#15803D]">{{ $hp->name }}</p>
+                                    <p class="text-sm text-slate-500">{{ $homeDesc[$hp->slug] ?? '' }}</p>
+                                </div>
+                                <p class="text-right">
+                                    @if($hp->slug === 'enterprise')<span class="block text-xs text-slate-500">mulai</span>@endif
+                                    <span class="text-[20px] font-extrabold tabular-nums text-[#0B1B3F]">{{ $rpHome($hp->price) }}</span><span class="text-sm text-slate-500">/bln</span>
+                                </p>
+                            </a>
+                        @endforeach
                     </div>
-                    <span class="mt-4 inline-flex items-center gap-2 font-bold text-emerald-300 transition-all group-hover:gap-3">Lihat paket bundling <span aria-hidden="true">&rarr;</span></span>
-                </a>
+                @endif
+
+                <div class="mt-8 flex flex-wrap gap-3">
+                    <a href="{{ route('pricing') }}" class="rounded-full bg-[#16A34A] px-6 py-3 font-bold text-white transition hover:bg-[#15803D]">Lihat semua harga</a>
+                    <a href="{{ route('register') }}" class="rounded-full border border-slate-300 px-6 py-3 font-bold text-[#0B1B3F] transition hover:border-[#0B1B3F]">Coba gratis 7 hari</a>
+                </div>
             </div>
+
+            {{-- Etalase bundling --}}
+            <a href="{{ route('pricing.bundles') }}" class="group relative block aspect-[6/5] w-full overflow-hidden rounded-[32px] bg-[#F3F6F4]">
+                <div class="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[#16A34A]/10"></div>
+                <p class="absolute bottom-7 left-7 z-10 text-sm font-bold text-[#0B1B3F]">Butuh perangkat juga?<br><span class="text-slate-500">Paket bundling mulai {{ $rpHome($bundleFrom) }}</span></p>
+                <div class="absolute left-[6%] top-[28%] w-[56%] drop-shadow-[0_30px_40px_rgba(11,27,63,.22)] transition duration-500 group-hover:-translate-y-1"><x-device-art kind="tablet"/></div>
+                <div class="absolute bottom-[22%] left-[36%] w-[28%] drop-shadow-[0_24px_30px_rgba(11,27,63,.25)] transition duration-500 group-hover:-translate-y-1"><x-device-art kind="printer"/></div>
+                <div class="absolute bottom-[22%] right-[8%] w-[20%] drop-shadow-[0_30px_40px_rgba(11,27,63,.25)] transition duration-500 group-hover:-translate-y-1"><x-device-art kind="mpos"/></div>
+                @if($spot)
+                    <div class="absolute left-5 right-5 top-5 flex items-center justify-between gap-3 rounded-2xl bg-white/95 px-5 py-4 shadow-[0_18px_40px_-20px_rgba(11,27,63,.45)] backdrop-blur sm:left-auto sm:w-[330px]">
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-[#0B1B3F]">{{ $spot['name'] }}</p>
+                            <p class="text-[13px] text-slate-500">Aplikasi 12 bulan + perangkat</p>
+                        </div>
+                        <p class="shrink-0 text-right text-[17px] font-extrabold text-[#0B1B3F]">{{ $rpHome($spot['price']) }}</p>
+                    </div>
+                @endif
+            </a>
         </div>
     </section>
 
