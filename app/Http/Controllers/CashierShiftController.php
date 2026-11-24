@@ -22,7 +22,7 @@ class CashierShiftController extends Controller
 
         $activeShift = $user->activeShift()->first();
 
-        return view('shifts.index', compact('shifts', 'activeShift'));
+        return view(\App\Support\InApp::check() ? 'shifts.app' : 'shifts.index', compact('shifts', 'activeShift'));
     }
 
     public function open()

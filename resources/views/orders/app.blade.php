@@ -85,7 +85,7 @@
                             <span class="block text-[17px] font-semibold tabular-nums {{ in_array($o->status, ['cancelled', 'refunded']) ? 'text-[#94A3B8] line-through decoration-1' : '' }}">{{ $rp($o->grand_total) }}</span>
                             <span class="block truncate text-[13px] text-[#94A3B8]">
                                 {{ $payLabel[$o->payment_method] ?? ucfirst((string) $o->payment_method) }}
-                                · {{ \Illuminate\Support\Str::of($o->user?->name ?? 'Self order')->before(' ')->title() }}
+                                · {{ $o->user ? \Illuminate\Support\Str::of($o->user->name)->before(' ')->title() : 'Self order' }}
                                 · {{ $o->order_number }}
                             </span>
                         </span>
@@ -106,24 +106,7 @@
         </div>
     @endforelse
 
-    {{-- Halaman: cukup sebelumnya / berikutnya --}}
-    @if($orders->lastPage() > 1)
-        <div class="px-5 sm:px-0 pt-8 pb-4 flex items-center justify-between">
-            @if($orders->onFirstPage())
-                <span class="h-11 px-4 inline-flex items-center text-[15px] font-semibold text-[#CBD5E1]">Sebelumnya</span>
-            @else
-                <a href="{{ $orders->previousPageUrl() }}" class="h-11 px-4 -ml-4 inline-flex items-center gap-1 text-[15px] font-semibold text-[#0B1B3F] active:bg-[#F1F5F9] rounded-full">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>Sebelumnya</a>
-            @endif
-            <span class="text-[13px] text-[#94A3B8] tabular-nums">{{ $orders->currentPage() }} / {{ $orders->lastPage() }}</span>
-            @if($orders->hasMorePages())
-                <a href="{{ $orders->nextPageUrl() }}" class="h-11 px-4 -mr-4 inline-flex items-center gap-1 text-[15px] font-semibold text-[#0B1B3F] active:bg-[#F1F5F9] rounded-full">
-                    Berikutnya<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></a>
-            @else
-                <span class="h-11 px-4 inline-flex items-center text-[15px] font-semibold text-[#CBD5E1]">Berikutnya</span>
-            @endif
-        </div>
-    @endif
+    @include('partials.app-pager', ['paginator' => $orders])
 
     {{-- Lembar unduh --}}
     @if($canExport)
