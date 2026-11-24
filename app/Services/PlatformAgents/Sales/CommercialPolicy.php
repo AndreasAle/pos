@@ -83,13 +83,15 @@ final class CommercialPolicy
                 'analysis' => ['reason' => 'Permintaan paket gratis permanen tidak ada di kebijakan.'],
                 'customer_guidance' => 'Paket gratis permanen tidak ada. Satu-satunya yang gratis adalah trial 7 hari. Tawarkan trial tanpa menjanjikan apa pun lagi.'];
         }
-        // Paket aplikasi + perangkat: belum ada katalog/bundel resmi, jadi selalu diputuskan manusia.
+        // Paket aplikasi + perangkat: harga resmi dari katalog bundling publik; tanpa katalog, diputuskan manusia.
         if (preg_match(ConversationStrategy::BUNDLE, $text)) {
             $first = $plans->first();
             if ($bundle = app(HardwareCatalog::class)->approvedBundle()) {
                 return array_merge($base, ['official_plan' => $bundle['name'], 'official_price' => (float) $bundle['initial_price']])
                     + ['state' => self::STANDARD_OFFER, 'needs_approval' => false, 'analysis' => ['reason' => 'Bundel resmi tersedia.'],
-                        'customer_guidance' => 'Sebut bundel resmi '.$bundle['name'].' dengan harganya persis; pembayaran tetap lewat checkout resmi.'];
+                        'customer_guidance' => ($bundle['source'] ?? null) === 'store'
+                            ? 'Sebut paket bundling resmi yang paling cocok dari daftar perangkat di atas dengan harganya persis, tanpa diskon, dan arahkan ke yokapos.com/bundling. Stok dan jadwal pasang dikonfirmasi tim; tawarkan meneruskan pesanannya ke tim.'
+                            : 'Sebut bundel resmi '.$bundle['name'].' dengan harganya persis; pembayaran tetap lewat checkout resmi.'];
             }
             $candidate = collect((array) config('yoka_hardware.items'))->first();
 
@@ -169,15 +171,17 @@ final class CommercialPolicy
         $allowed = array_merge($this->officialPlans()->flatMap(fn ($p) => array_values($p->periods()))->all(), app(HardwareCatalog::class)->officialPrices(),
             // Harga paket kredit Yoka AI dan harga per kreditnya juga harga resmi.
             collect((array) config('yoka_ai_credits.packs', []))->flatMap(fn ($p) => [(int) $p['price'], (int) round($p['price'] / $p['credits'])])->all());
+        $storePrices = app(HardwareCatalog::class)->storePrices();
         $removed = [];
         $sentences = preg_split('/(?<=[.!?])\s+|\n/u', $reply) ?: [];
         $kept = [];
         foreach ($sentences as $s) {
+            $hwOk = (bool) preg_match('/printer|scanner|tablet|laci|kertas|mesin kasir|perangkat|stand|bundl|paket (printer|scanner|tablet|lengkap|mesin)/iu', $s);
             $bad = (bool) preg_match(self::FREE_DEMAND, $s) || (bool) preg_match('/\b(sudah|udah) (aku |saya )?(aktifkan|setujui|approve)\b|\bharga khusus (disetujui|bisa)\b/iu', $s);
             if (! $bad && preg_match_all('/rp\.?\s*(\d{1,3}(?:[.,]\d{3})+|\d+)\s*(rb|ribu|k)?/iu', $s, $mm, PREG_SET_ORDER)) {
                 foreach ($mm as $m) {
                     $v = (int) str_replace(['.', ','], '', $m[1]) * (in_array(mb_strtolower($m[2] ?? ''), ['rb', 'ribu', 'k'], true) ? 1000 : 1);
-                    if (! in_array($v, $allowed, true)) {
+                    if (! in_array($v, $allowed, true) && ! ($hwOk && in_array($v, $storePrices, true))) {
                         $bad = true;
                     }
                 }

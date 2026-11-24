@@ -143,8 +143,27 @@ class AditReadinessTest extends TestCase
 
     // ---- Perangkat ----
 
+    public function test_bundling_prices_from_the_public_page_are_official_for_adit(): void
+    {
+        $facts = app(HardwareCatalog::class)->promptFacts();
+        $this->assertStringContainsString('Paket Printer Rp1.199.000', $facts);
+        $this->assertStringContainsString('yokapos.com/bundling', $facts);
+        $this->assertStringContainsString('tanpa diskon', $facts);
+
+        $e = app(CommercialPolicy::class)->evaluate('aplikasi sama printer sekalian berapa?');
+        $this->assertSame(CommercialPolicy::STANDARD_OFFER, $e['state']);
+        $this->assertFalse($e['needs_approval']);
+
+        [$clean, $removed] = app(CommercialPolicy::class)->scrubReply('Paket Tablet + Printer Rp2.399.000. Printer satuan Rp349.000. Paket murah Rp999.999.');
+        $this->assertStringContainsString('Rp2.399.000', $clean);
+        $this->assertStringContainsString('Rp349.000', $clean);
+        $this->assertCount(1, $removed, 'Harga di luar daftar resmi tetap dibuang.');
+        $this->assertStringNotContainsString('166', $facts, 'Modal tidak pernah masuk prompt.');
+    }
+
     public function test_candidate_printer_is_never_quoted_and_bundle_becomes_quotation_request(): void
     {
+        config(['yoka_store.adit_can_quote' => false]);
         $this->assertNull(app(HardwareCatalog::class)->approvedBundle());
         $this->assertStringContainsString('Belum ada perangkat atau bundel resmi', app(HardwareCatalog::class)->promptFacts());
         $r = $this->turn('kalau aplikasi sama printer sekalian berapa kak?', 2);
