@@ -161,6 +161,7 @@ class AditConversationQualityTest extends TestCase
 
     public function test_s17_bundle_request_goes_to_approval(): void
     {
+        config(['yoka_store.adit_can_quote' => false]); // perilaku lama: tanpa katalog bundling publik
         $r = $this->turn('kalau aplikasi sama printer sekalian berapa kak?', 6);
         $this->assertTrue($r['strategy']['bundle']);
         $this->assertNotNull($r['escalation']);

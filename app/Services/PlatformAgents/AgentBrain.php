@@ -525,7 +525,7 @@ PROMPT;
     public static function productFacts(): array
     {
         return [
-            'diperbarui' => '2026-11-19',
+            'diperbarui' => '2026-11-24',
             // Diverifikasi dari menu samping (layouts/app.blade.php) dan routes/web.php.
             'fitur_aktif' => [
                 'Kasir/POS, riwayat order, shift kasir, login kasir di tablet pakai PIN, void dan refund order lunas dengan alasan wajib (hanya pemilik dan admin)',
@@ -543,6 +543,8 @@ PROMPT;
             ],
             // Kredit Tanya Yoka: satu sumber dengan aplikasi, panel admin, dan panduan resmi.
             'kredit_yoka_ai' => \App\Services\AiCreditsReport::facts(),
+            // Halaman publik dan paket bundling (keputusan pemilik 2026-11-24: harga bundling boleh disebut persis, tanpa diskon).
+            'halaman_publik' => 'yokapos.com/harga, yokapos.com/bundling, yokapos.com/panduan',
             'kerangka_belum_aktif' => ['Integrasi GoFood dan ShopeeFood: kerangka sudah ada, belum aktif sampai kredensial resmi tersedia. Jangan dipromosikan sebagai fitur jadi.'],
             'sedang_dibangun' => ['Aplikasi Android dan iOS: belum rilis, jangan dijanjikan tanggal.'],
             'belum_dipastikan' => ['Printer LAN/WiFi khusus dan daftar merek tablet yang pasti cocok: belum ada daftar resmi. Jangan menjamin; sarankan coba dengan dialog print browser saat trial.'],

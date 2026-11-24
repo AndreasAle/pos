@@ -10,6 +10,10 @@
  * 'status': 'preorder' = dipesan lewat tim (unit dibeli setelah pesanan, dites dengan Yoka sebelum dikirim).
  */
 return [
+    // Keputusan pemilik 2026-11-24: Adit (CS/BD) boleh menyebut harga paket dan perangkat di halaman ini persis,
+    // tanpa diskon, dan meneruskan pesanan ke tim. Matikan dengan ADIT_QUOTE_BUNDLES=false.
+    'adit_can_quote' => (bool) env('ADIT_QUOTE_BUNDLES', true),
+
     'plan_months' => 12,
     'warranty_days' => 30,
 
