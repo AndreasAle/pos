@@ -319,7 +319,7 @@
     @endif
 
     {{-- Main content --}}
-    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $focus ? '' : ($inApp ? 'pt-14 pb-[calc(64px+env(safe-area-inset-bottom))]' : ($hasTopSubscriptionBar ? 'pt-28' : 'pt-16')) }}" @if(!$focus && !$inApp) :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'" @endif>
+    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $focus ? '' : ($inApp ? 'pt-14 pb-[calc(96px+env(safe-area-inset-bottom))]' : ($hasTopSubscriptionBar ? 'pt-28' : 'pt-16')) }}" @if(!$focus && !$inApp) :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'" @endif>
 
         {{-- Flash messages --}}
         <div class="px-4 sm:px-6 @if(session('success') || session('error') || session('info') || $errors->any()) pt-4 @endif">
