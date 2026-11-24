@@ -18,6 +18,10 @@
     }
 @endphp
 
+@if(\App\Support\InApp::check())
+    @include('shifts._app-show')
+@else
+
 <div class="page text-[#0B1B3F] pt-2">
 
     {{-- Header --}}
@@ -181,4 +185,5 @@
         @endif
     </section>
 </div>
+@endif
 @endsection

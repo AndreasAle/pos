@@ -114,4 +114,19 @@ class InAppModeTest extends TestCase
         $this->actingAs($user)->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')
             ->get('/receipt/'.$order->id)->assertOk()->assertSee('Kembali ke POS');
     }
+
+    public function test_app_shift_detail_and_register_use_calm_layout(): void
+    {
+        $this->setUpPos();
+        $cashier = $this->cashier;
+
+        $this->actingAs($cashier)->withHeader('User-Agent', self::APP_UA)->get('/shifts/'.$this->shift->id)
+            ->assertOk()->assertSee('Uang tunai di laci')->assertDontSee('Rekap Penutupan');
+
+        $this->actingAs($cashier)->withHeader('User-Agent', self::APP_UA)->get('/pos')
+            ->assertOk()->assertSee('in-app', false)->assertDontSee('bg-[#cfeadb]', false);
+
+        $this->actingAs($cashier)->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')->get('/pos')
+            ->assertOk()->assertSee('bg-[#cfeadb]', false);
+    }
 }
