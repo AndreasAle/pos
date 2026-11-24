@@ -178,4 +178,22 @@ class InAppModeTest extends TestCase
 
         $this->assertSame('Kopi Senja', $owner->fresh()->business?->name);
     }
+
+    public function test_app_pin_screen_and_saving_pin(): void
+    {
+        $this->setUpPos();
+        $owner = User::factory()->create([
+            'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id, 'role' => 'owner',
+            'is_active' => true, 'email_verified_at' => now(), 'pin' => null,
+        ]);
+
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->get('/kasir/pin-baru')
+            ->assertOk()->assertSee('Buat PIN kasir')->assertDontSee('Buat PIN kasir Anda');
+
+        $this->actingAs($owner)->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')->get('/kasir/pin-baru')
+            ->assertOk()->assertSee('Buat PIN kasir Anda');
+
+        $this->actingAs($owner)->post('/kasir/pin-baru', ['pin' => '7391', 'pin_confirmation' => '7391'])->assertRedirect();
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('7391', $owner->fresh()->pin));
+    }
 }
