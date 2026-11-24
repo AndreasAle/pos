@@ -101,6 +101,19 @@ class ProspectDeskTest extends TestCase
         $this->assertSame('prospect_opening', $task->payload['kind']);
     }
 
+    public function test_drafts_to_internal_test_numbers_do_not_use_the_daily_quota(): void
+    {
+        config(['yoka_sales.test_numbers' => ['6281234567801']]);
+        foreach (range(1, 5) as $i) {
+            $this->prospect(['phone' => '08123456780'.$i, 'business_name' => "Kopi {$i}"]);
+        }
+
+        // Prospek 1 adalah nomor uji milik tim: drafnya tidak memakan jatah, jadi 3 prospek sungguhan tetap terdraf.
+        $this->assertCount(4, $this->desk()->draftToday($this->adit));
+        $this->assertCount(0, $this->desk()->draftToday($this->adit), 'Batas 3 untuk prospek sungguhan tetap terkunci.');
+        $this->assertSame(3, PlatformAiTask::where('type', 'whatsapp_draft')->where('payload->phone', '!=', '6281234567801')->count());
+    }
+
     public function test_approve_and_send_marks_contacted_then_one_followup_only(): void
     {
         config(['services.whatsapp_gateway.url' => null]);

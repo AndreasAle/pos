@@ -109,8 +109,7 @@ class ProspectDesk
     public function draftToday(PlatformAiAgent $adit): array
     {
         return DB::transaction(function () use ($adit) {
-            $used = PlatformAiTask::where('type', 'whatsapp_draft')->whereDate('created_at', today())
-                ->whereIn('payload->kind', ['prospect_opening', 'prospect_followup'])->lockForUpdate()->count();
+            $used = $this->countedDraftsToday()->lockForUpdate()->count();
             $slots = self::DAILY_LIMIT - $used;
             $made = [];
             if ($slots <= 0) {
@@ -120,10 +119,11 @@ class ProspectDesk
             $followups = PlatformAiProspect::where('status', 'dihubungi')->where('contact_count', '<', self::MAX_CONTACTS)
                 ->whereNull('opted_out_at')->where('last_contacted_at', '<=', now()->subDays(self::FOLLOWUP_AFTER_DAYS))
                 ->orderBy('last_contacted_at')->limit($slots)->get();
+            $tests = (array) config('yoka_sales.test_numbers', []);
             foreach ($followups as $p) {
                 $made[] = $this->createDraft($adit, $p, 'prospect_followup');
+                $slots -= in_array($p->phone_normalized, $tests, true) ? 0 : 1;
             }
-            $slots -= count($made);
 
             if ($slots > 0) {
                 foreach (PlatformAiProspect::where('status', 'siap')->whereNull('opted_out_at')->orderBy('id')->limit($slots * 3)->get() as $p) {
@@ -134,12 +134,25 @@ class ProspectDesk
                         continue; // data berubah sejak dicek: jangan dihubungi
                     }
                     $made[] = $this->createDraft($adit, $p, 'prospect_opening');
-                    $slots--;
+                    $slots -= in_array($p->phone_normalized, $tests, true) ? 0 : 1; // nomor uji tidak memakai jatah
                 }
             }
 
             return $made;
         });
+    }
+
+    /**
+     * Draf prospek hari ini yang dihitung ke batas harian. Draf ke nomor uji internal (ADIT_TEST_NUMBERS,
+     * nomor milik tim Yoka sendiri) tidak dihitung, supaya tes tidak menghabiskan jatah prospek sungguhan.
+     */
+    private function countedDraftsToday()
+    {
+        $q = PlatformAiTask::where('type', 'whatsapp_draft')->whereDate('created_at', today())
+            ->whereIn('payload->kind', ['prospect_opening', 'prospect_followup']);
+        $tests = (array) config('yoka_sales.test_numbers', []);
+
+        return $tests ? $q->where(fn ($w) => $w->whereNull('payload->phone')->orWhereNotIn('payload->phone', $tests)) : $q;
     }
 
     private function createDraft(PlatformAiAgent $adit, PlatformAiProspect $p, string $kind): array
@@ -255,7 +268,7 @@ class ProspectDesk
         return [
             'total' => array_sum($by), 'by_status' => $by, 'contacted' => $contacted, 'replied' => $replied,
             'trial' => ($by['trial'] ?? 0) + ($by['bayar'] ?? 0), 'paid' => $by['bayar'] ?? 0,
-            'drafts_today' => PlatformAiTask::where('type', 'whatsapp_draft')->whereDate('created_at', today())->whereIn('payload->kind', ['prospect_opening', 'prospect_followup'])->count(),
+            'drafts_today' => $this->countedDraftsToday()->count(),
             'daily_limit' => self::DAILY_LIMIT,
         ];
     }
