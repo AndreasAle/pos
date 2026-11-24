@@ -29,7 +29,28 @@ class OrderController extends Controller
             ->paginate(30)
             ->withQueryString();
 
+        if (\App\Support\InApp::check($request)) {
+            return view('orders.app', compact('orders'));
+        }
+
         return view('orders.index', compact('orders'));
+    }
+
+    /** Excel/PDF laporan penjualan untuk rentang tanggal yang sedang dilihat. Sama persis dengan Laporan. */
+    public function export(Request $request, string $format)
+    {
+        $request->validate([
+            'date_from' => 'nullable|date',
+            'date_to'   => 'nullable|date|after_or_equal:date_from',
+        ]);
+
+        $query = $request->filled('date_from')
+            ? ['date_from' => $request->date_from, 'date_to' => $request->date_to ?: $request->date_from]
+            : ['preset' => 'this_month'];
+
+        $request->query->replace($query + ['format' => $format]);
+
+        return app(SalesReportController::class)->export($request);
     }
 
     public function show(Order $order)

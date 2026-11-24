@@ -62,4 +62,33 @@ class InAppModeTest extends TestCase
 
         $this->assertSame(250000.0, (float) $user->activeShift()->first()->opening_cash);
     }
+
+    public function test_app_orders_list_is_grouped_without_numbered_pagination(): void
+    {
+        $this->actingAs($this->cashier())->withHeader('User-Agent', self::APP_UA)
+            ->get('/orders')
+            ->assertOk()
+            ->assertSee('pesanan')
+            ->assertSee('Hari ini')
+            ->assertDontSee('Semua transaksi toko, lengkap dengan status')
+            ->assertDontSee('Unduh');
+    }
+
+    public function test_only_owner_and_admin_can_export_from_orders(): void
+    {
+        $cashier = $this->cashier();
+        $this->actingAs($cashier)->get('/orders/export/xlsx')->assertForbidden();
+
+        $owner = User::factory()->create([
+            'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id,
+            'role' => 'owner', 'is_active' => true, 'email_verified_at' => now(),
+        ]);
+        $this->actingAs($owner)->withHeader('User-Agent', self::APP_UA)->get('/orders')->assertSee('Unduh');
+
+        $res = $this->actingAs($owner)->get('/orders/export/xlsx?date_from='.now()->toDateString());
+        $res->assertOk();
+        $this->assertStringContainsString('.xlsx', (string) $res->headers->get('content-disposition'));
+
+        $this->actingAs($owner)->get('/orders/export/csv')->assertNotFound();
+    }
 }
