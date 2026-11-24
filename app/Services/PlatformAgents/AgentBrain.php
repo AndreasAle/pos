@@ -8,6 +8,8 @@ use App\Models\PlatformAiAgent;
 use App\Models\PlatformAiRecord;
 use App\Models\PlatformAiTask;
 use App\Models\PlatformAiWhatsAppMessage;
+use App\Services\PlatformAgents\Sales\CommercialPolicy;
+use App\Services\PlatformAgents\Sales\HardwareCatalog;
 use App\Services\PlatformAiOperations;
 use App\Services\PlatformAiTelemetry;
 use App\Services\PlatformWhatsApp;
@@ -103,11 +105,14 @@ class AgentBrain
     {
         $this->operation = $operation;
         $system = [['role' => 'system', 'content' => $this->systemPrompt($agent)]];
-        // Adit harus sinkron dengan WhatsApp. Fakta ini ditaruh SETELAH riwayat (paling dekat dengan
-        // pertanyaan) karena riwayat bisa berisi jawaban lama yang keliru dan model cenderung mengulangnya.
-        $late = $agent->key === 'cs'
-            ? [['role' => 'system', 'content' => self::whatsappDigest()."\nKOREKSI: balasan WA untuk pesan masuk kamu kirim sendiri otomatis, TIDAK menunggu \"setuju\" Bos. Kalau jawabanmu sebelumnya di riwayat bilang balasan WA menunggu persetujuan, itu keliru dan sudah tidak berlaku; jangan diulang. Jawab dari ringkasan ini."]]
-            : [];
+        // Fakta komersial bersama ditaruh SETELAH riwayat (paling dekat dengan pertanyaan), supaya
+        // jawaban lama yang keliru tidak mengalahkan katalog resmi terbaru. Jalur ini dipakai dashboard,
+        // Telegram Office, konsultasi ant agen, dan meeting. Adit mendapat tambahan status WA miliknya.
+        $lateFacts = [self::commercialDigest()];
+        if ($agent->key === 'cs') {
+            $lateFacts[] = self::whatsappDigest()."\nKOREKSI: balasan WA untuk pesan masuk kamu kirim sendiri otomatis, TIDAK menunggu \"setuju\" Bos. Kalau jawabanmu sebelumnya di riwayat bilang balasan WA menunggu persetujuan, itu keliru dan sudah tidak berlaku; jangan diulang. Jawab dari ringkasan ini.";
+        }
+        $late = [['role' => 'system', 'content' => implode("\n\n", $lateFacts)]];
         if ($facts) {
             $system[] = ['role' => 'system', 'content' => "FAKTA SISTEM TERBARU (pasti benar, sampaikan dengan gayamu bila relevan):\n- ".implode("\n- ", $facts)];
         }
@@ -392,7 +397,7 @@ PROMPT;
                 'toko' => app(\App\Services\AiCreditsReport::class)->businesses(30, in_array($args['filter'] ?? null, ['empty', 'low'], true) ? $args['filter'] : null),
                 'aturan' => \App\Services\AiCreditsReport::facts(),
             ],
-            'finance_knowledge' =>['konsep' => \App\Services\PlatformFinance\Knowledge::lookup((string) ($args['question'] ?? ''), in_array($agent->key, ['finance', 'accounting'], true) ? ($agent->key === 'finance' ? 'luna' : 'nanda') : null)],
+            'finance_knowledge' => ['konsep' => \App\Services\PlatformFinance\Knowledge::lookup((string) ($args['question'] ?? ''), in_array($agent->key, ['finance', 'accounting'], true) ? ($agent->key === 'finance' ? 'luna' : 'nanda') : null)],
             'create_task' => $this->tasksBlocked()
                 ? tap(['ok' => false, 'error' => 'create_task tidak diizinkan untuk permintaan ini. Kerjakan permintaannya langsung di balasanmu sekarang (hasil jadi), jangan mengusulkan tugas.'], fn () => app(PlatformAiTelemetry::class)->quality('task_blocked_by_policy', $agent, ['operation' => $this->operation]))
                 : $this->createTask($agent, $args),
@@ -413,6 +418,29 @@ PROMPT;
         return "RINGKASAN WHATSAPP HARI INI (catatan nyata, kamu yang membalas otomatis): {$in} pesan masuk dari {$people} orang, {$out} bubble balasan sudah kamu kirim. "
             .($followUp ? 'Perlu tindak lanjut manusia: '.implode('; ', array_slice($followUp, 0, 5)).'.' : 'Tidak ada percakapan yang butuh tindak lanjut manusia.')
             .' Lihat isi chat lewat tool whatsapp_inbox.';
+    }
+
+    /**
+     * Satu sumber pengetahuan komersial untuk SEMUA agen dan semua kanal internal.
+     * Harga paket dibaca dari subscription_plans; perangkat dari katalog publik. Modal, floor price,
+     * dan data negosiasi tidak pernah dimasukkan ke prompt.
+     */
+    public static function commercialDigest(): string
+    {
+        try {
+            $plans = app(CommercialPolicy::class)->officialPlans()
+                ->map(fn ($plan) => CommercialPolicy::planLine($plan))->implode('; ');
+        } catch (\Throwable) {
+            $plans = '';
+        }
+
+        $hardware = app(HardwareCatalog::class)->promptFacts();
+
+        return "FAKTA KOMERSIAL RESMI YOKA (berlaku untuk semua agen di dashboard dan Telegram; pakai bila topiknya produk, harga, printer, perangkat, atau bundling):\n"
+            .'- Harga langganan resmi: '.($plans !== '' ? $plans : 'belum tersedia dari database; jangan menebak angka.')."\n"
+            .'- '.$hardware."\n"
+            .'- Halaman resmi: yokapos.com/harga, yokapos.com/bundling, yokapos.com/panduan.'."\n"
+            .'- Aturan bersama: bedakan langganan aplikasi dari pembelian perangkat. Sebut hanya harga publik di atas secara persis. Tanpa diskon atau bonus. Jangan menjanjikan stok, tanggal kirim, tanggal pemasangan, atau persetujuan harga khusus. Pesanan perangkat diteruskan ke tim. Jangan pernah menyebut modal, margin internal, floor price, atau data negosiasi.';
     }
 
     /** Kotak WA resmi Yoka: pesan masuk terbaru + status draf balasannya. Nomor disamarkan sebagian. */
@@ -524,6 +552,8 @@ PROMPT;
     /** Fakta fitur yang sudah dicek dari kode saat ini; perbarui bila fitur berubah. */
     public static function productFacts(): array
     {
+        $commercial = self::commercialDigest();
+
         return [
             'diperbarui' => '2026-11-24',
             // Diverifikasi dari menu samping (layouts/app.blade.php) dan routes/web.php.
@@ -545,6 +575,7 @@ PROMPT;
             'kredit_yoka_ai' => \App\Services\AiCreditsReport::facts(),
             // Halaman publik dan paket bundling (keputusan pemilik 2026-11-24: harga bundling boleh disebut persis, tanpa diskon).
             'halaman_publik' => 'yokapos.com/harga, yokapos.com/bundling, yokapos.com/panduan',
+            'penawaran_resmi' => $commercial,
             'kerangka_belum_aktif' => ['Integrasi GoFood dan ShopeeFood: kerangka sudah ada, belum aktif sampai kredensial resmi tersedia. Jangan dipromosikan sebagai fitur jadi.'],
             'sedang_dibangun' => ['Aplikasi Android dan iOS: belum rilis, jangan dijanjikan tanggal.'],
             'belum_dipastikan' => ['Printer LAN/WiFi khusus dan daftar merek tablet yang pasti cocok: belum ada daftar resmi. Jangan menjamin; sarankan coba dengan dialog print browser saat trial.'],

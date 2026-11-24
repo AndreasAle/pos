@@ -334,6 +334,41 @@ class PlatformAiTeamTest extends TestCase
             && str_contains((string) data_get($request->data(), 'messages.0.content'), 'KEAHLIAN'));
     }
 
+    public function test_every_agent_receives_the_same_official_commercial_facts_on_dashboard_and_telegram(): void
+    {
+        config(['services.yoka_ai.key' => 'test-key', 'services.yoka_ai.url' => 'https://ai.test/v1']);
+        Http::fake(['https://ai.test/v1/chat/completions' => Http::response([
+            'choices' => [['message' => ['content' => 'Siap, faktanya sudah sinkron.']]],
+        ])]);
+        $admin = $this->admin();
+        SubscriptionPlan::create([
+            'name' => 'YokaBasic', 'slug' => 'yokabasic', 'price' => 99000,
+            'period_prices' => ['3' => 279000, '6' => 519000, '12' => 899000],
+            'max_outlets' => 2, 'max_users' => 10, 'features' => [], 'is_active' => true, 'sort_order' => 1,
+        ]);
+        app(PlatformAiOperations::class)->ensureAgents();
+
+        foreach (PlatformAiAgent::orderBy('id')->get() as $index => $agent) {
+            app(PlatformAiOperations::class)->reply(
+                $agent,
+                'Apa penawaran printer dan paket resmi Yoka?',
+                [], [], $admin, $index % 2 === 0 ? 'chat' : 'telegram_chat'
+            );
+        }
+
+        $requests = collect(Http::recorded())->filter(fn ($call) => str_contains($call[0]->url(), '/chat/completions'));
+        $this->assertCount(7, $requests);
+        foreach ($requests as [$request]) {
+            $prompt = json_encode($request->data()['messages'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            $this->assertStringContainsString('FAKTA KOMERSIAL RESMI YOKA', $prompt);
+            $this->assertStringContainsString('YokaBasic Rp 99.000/bulan', $prompt);
+            $this->assertStringContainsString('Paket Printer Rp1.199.000', $prompt);
+            $this->assertStringContainsString('yokapos.com/bundling', $prompt);
+            $this->assertStringContainsString('Tanpa diskon atau bonus', $prompt);
+            $this->assertStringNotContainsString('harga beli referensi', $prompt);
+        }
+    }
+
     public function test_admin_can_attach_a_file_and_agent_can_read_its_contents(): void
     {
         Storage::fake('local');
