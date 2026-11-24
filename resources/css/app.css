@@ -140,3 +140,8 @@ body { font-weight: 500; color: #1E293B; }
 .text-gray-600, .text-slate-600 { color: #334155; }
 @layer base { input, select, textarea, button { font-weight: 600; } }
 input::placeholder, textarea::placeholder { color: #64748B; opacity: 1; font-weight: 500; }
+
+/* APP MODE: halaman dibuka dari aplikasi Android Yoka (lihat App\Support\InApp).
+   Terasa seperti aplikasi: tanpa kilat biru saat disentuh, teks tidak terblok tak sengaja. */
+.in-app { -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
+.in-app :where(a, button, label, nav, header) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
