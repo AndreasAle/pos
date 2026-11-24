@@ -50,7 +50,7 @@ class LandingPricingTest extends TestCase
             $res->assertSee($b['name'])->assertSee('Rp'.number_format($b['price'], 0, ',', '.'));
         }
         // Paket Printer: 950.000 (YokaBasic 12 bulan) + 349.000 printer = 1.299.000, hemat 100.000.
-        $res->assertSee('Rp1.299.000')->assertSee('hemat Rp100.000')
+        $res->assertSee('Rp1.299.000')->assertSee('Hemat Rp100.000')->assertSee('images/hardware/printer58.webp', false)->assertSee('Bandingkan isi paket')
             ->assertSee('Printer struk 58mm')->assertSee('wa.me', false)
             ->assertDontSee('modal')->assertDontSee('impas');
     }
