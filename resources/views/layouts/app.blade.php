@@ -12,7 +12,7 @@
     <link rel="shortcut icon" href="{{ asset('favicon.ico') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/brand/apple-touch-icon.png') }}">
 </head>
-<body class="h-full bg-gray-50 font-sans" x-data="{
+<body class="h-full font-sans {{ \App\Support\InApp::check() ? 'in-app bg-white' : 'bg-gray-50' }}" x-data="{
         sidebarOpen: false,
         collapsed: (() => { try { return localStorage.getItem('yoka.sidebar') === '1' } catch (e) { return false } })(),
         tip: { show: false, text: '', y: 0 },
@@ -20,7 +20,11 @@
         tipShow(e, text) { if (!this.collapsed || window.innerWidth < 1024) return; const r = e.currentTarget.getBoundingClientRect(); this.tip = { show: true, text, y: r.top + r.height / 2 } },
         tipHide() { this.tip.show = false }
     }">
-    @php $focus = $__env->hasSection('focus'); @endphp
+    @php
+        $focus = $__env->hasSection('focus');
+        // Dibuka dari aplikasi Android: tanpa sidebar/topbar web, pakai bar aplikasi + navigasi bawah.
+        $inApp = \App\Support\InApp::check();
+    @endphp
     <x-page-loader/>
     @php
         // Animasi masuk hanya saat datang dari luar Yoka AI, bukan saat pindah antar halaman Yoka AI.
@@ -45,7 +49,7 @@
         </div>
     @endif
 
-    @unless($focus)
+    @if(!$focus && !$inApp)
     {{-- Mobile sidebar backdrop --}}
     <div x-show="sidebarOpen" x-cloak
          @click="sidebarOpen = false"
@@ -187,7 +191,7 @@
         </div>
 
     </aside>
-    @endunless
+    @endif
 
     {{-- Topbar --}}
     @php
@@ -196,7 +200,7 @@
         $canSettings = in_array($me->role, ['owner','admin']);
     @endphp
 
-    @unless($focus)
+    @if(!$focus && !$inApp)
     {{-- Status langganan berada paling atas, di atas header utama. --}}
     @if($hasTopSubscriptionBar)
         <x-subscription-status-bar :current-business="$currentBusiness" />
@@ -308,10 +312,14 @@
             </div>
         </div>
     </header>
-    @endunless
+    @endif
+
+    @if($inApp && !$focus)
+        @include('layouts._app-chrome')
+    @endif
 
     {{-- Main content --}}
-    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $focus ? '' : ($hasTopSubscriptionBar ? 'pt-28' : 'pt-16') }}" @if(!$focus) :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'" @endif>
+    <div class="flex min-h-screen min-w-0 flex-col overflow-x-clip transition-all duration-200 {{ $focus ? '' : ($inApp ? 'pt-14 pb-[calc(64px+env(safe-area-inset-bottom))]' : ($hasTopSubscriptionBar ? 'pt-28' : 'pt-16')) }}" @if(!$focus && !$inApp) :class="collapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]'" @endif>
 
         {{-- Flash messages --}}
         <div class="px-4 sm:px-6 @if(session('success') || session('error') || session('info') || $errors->any()) pt-4 @endif">
@@ -364,8 +372,8 @@
         </div>
 
         {{-- Page content --}}
-        <main class="flex-1 min-w-0 {{ $focus ? 'p-0' : 'px-4 sm:px-6 pb-8' }}">
-            @unless(request()->routeIs('dashboard', 'intelligence.index', 'ai-credits.index'))
+        <main class="flex-1 min-w-0 {{ $focus ? 'p-0' : ($inApp ? 'px-5 sm:px-8 pb-8' : 'px-4 sm:px-6 pb-8') }}">
+            @unless($inApp || request()->routeIs('dashboard', 'intelligence.index', 'ai-credits.index'))
             <h1 class="pt-5 pb-0.5 text-xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
             @hasSection('page-subtitle')<p class="mb-3 text-sm text-[#64748B]">@yield('page-subtitle')</p>@endif
             @endunless

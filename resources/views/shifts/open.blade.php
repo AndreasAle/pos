@@ -3,6 +3,61 @@
 @section('page-title','Buka Shift Baru')
 
 @section('content')
+@if(\App\Support\InApp::check())
+{{-- Versi aplikasi: satu layar, tanpa kartu. Angka modal jadi fokus utama. --}}
+<div class="max-w-md mx-auto pt-8 text-[#0B1B3F]"
+     x-data="{
+        cash: {{ (int) old('opening_cash', 0) }},
+        get shown() { return this.cash ? Number(this.cash).toLocaleString('id-ID') : '' },
+        type(e) { this.cash = parseInt(e.target.value.replace(/\D/g, '') || '0', 10); e.target.value = this.shown }
+     }">
+    <form method="POST" action="{{ route('shifts.store') }}">
+        @csrf
+        <input type="hidden" name="opening_cash" :value="cash">
+
+        <p class="text-[13px] font-medium text-[#64748B]">Outlet</p>
+        @if($outlets->count() > 1)
+            <div class="relative mt-1 inline-flex items-center">
+                <select name="outlet_id" required class="appearance-none bg-transparent pr-7 text-lg font-semibold focus:outline-none">
+                    @foreach($outlets as $outlet)
+                    <option value="{{ $outlet->id }}" @selected(old('outlet_id', auth()->user()->outlet_id) == $outlet->id)>{{ $outlet->name }}</option>
+                    @endforeach
+                </select>
+                <svg class="pointer-events-none absolute right-0 w-5 h-5 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+        @else
+            <input type="hidden" name="outlet_id" value="{{ $outlets->first()?->id }}">
+            <p class="mt-1 text-lg font-semibold">{{ $outlets->first()?->name }}</p>
+        @endif
+
+        <label for="cash_display" class="block mt-10 text-[13px] font-medium text-[#64748B]">Uang tunai di laci saat ini</label>
+        <div class="mt-2 flex items-baseline gap-2 border-b-2 border-[#E2E8F0] focus-within:border-[#16A34A] transition-colors pb-2">
+            <span class="text-2xl font-semibold text-[#94A3B8]">Rp</span>
+            <input id="cash_display" type="text" inputmode="numeric" autocomplete="off" placeholder="0"
+                   :value="shown" @input="type($event)"
+                   class="w-full min-w-0 bg-transparent border-0 p-0 text-[44px] leading-none font-semibold tracking-[-0.02em] tabular-nums placeholder:text-[#CBD5E1] focus:outline-none focus:ring-0">
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-x-5 gap-y-3">
+            @foreach([100000 => '100 rb', 200000 => '200 rb', 500000 => '500 rb', 1000000 => '1 jt'] as $v => $l)
+            <button type="button" @click="cash = {{ $v }}"
+                    class="text-[15px] font-semibold transition-colors"
+                    :class="cash === {{ $v }} ? 'text-[#15803D]' : 'text-[#64748B]'">{{ $l }}</button>
+            @endforeach
+            <button type="button" @click="cash = 0" class="text-[15px] font-semibold text-[#94A3B8]" x-show="cash > 0" x-cloak>Kosongkan</button>
+        </div>
+
+        <p class="mt-12 text-[14px] leading-relaxed text-[#64748B]">
+            Hitung dulu uang di laci, lalu isi jumlahnya. Semua penjualan setelah ini masuk ke shift kamu, dan saat tutup shift kas akhirnya dicocokkan otomatis.
+        </p>
+
+        <button type="submit"
+                class="mt-6 w-full h-14 rounded-2xl bg-[#16A34A] active:bg-[#15803D] text-white text-[16px] font-semibold shadow-[0_8px_20px_rgba(22,163,74,.25)] transition-colors">
+            Buka shift
+        </button>
+    </form>
+</div>
+@else
 <div class="page text-[#0B1B3F] pt-2 max-w-4xl mx-auto">
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] gap-5">
 
@@ -89,4 +144,5 @@
         </aside>
     </div>
 </div>
+@endif
 @endsection

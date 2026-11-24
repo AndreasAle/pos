@@ -1,0 +1,65 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\BuildsPosScenario;
+use Tests\TestCase;
+
+/**
+ * Dari aplikasi Android Yoka (user agent "YokaPOSApp/"), halaman memakai bingkai aplikasi:
+ * bar atas + navigasi bawah, tanpa sidebar web. Browser biasa dan aplikasi klien lama tidak berubah.
+ */
+class InAppModeTest extends TestCase
+{
+    use BuildsPosScenario, RefreshDatabase;
+
+    private const APP_UA = 'Mozilla/5.0 (Linux; Android 14) Chrome/130 Mobile YokaPOSApp/1.0.1';
+
+    private function cashier(): User
+    {
+        $this->setUpPos();
+
+        return User::factory()->create([
+            'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id,
+            'role' => 'cashier', 'is_active' => true, 'email_verified_at' => now(),
+        ]);
+    }
+
+    public function test_app_gets_app_chrome_and_focused_shift_screen(): void
+    {
+        $res = $this->actingAs($this->cashier())
+            ->withHeader('User-Agent', self::APP_UA)
+            ->get('/shifts/open');
+
+        $res->assertOk()
+            ->assertSee('app-tabs', false)
+            ->assertSee('Uang tunai di laci saat ini')
+            ->assertDontSee('Butuh bantuan?')
+            ->assertDontSee('Cari menu, produk, atau laporan');
+    }
+
+    public function test_browser_and_client_app_keep_web_layout(): void
+    {
+        $user = $this->cashier();
+
+        foreach (['Mozilla/5.0 Chrome/130', 'Mozilla/5.0 Chrome/130 POSKasirApp/2.7'] as $ua) {
+            $this->actingAs($user)->withHeader('User-Agent', $ua)->get('/shifts/open')
+                ->assertOk()
+                ->assertDontSee('app-tabs', false)
+                ->assertSee('Buka Shift Kasir');
+        }
+    }
+
+    public function test_app_shift_form_still_opens_a_shift(): void
+    {
+        $user = $this->cashier();
+
+        $this->actingAs($user)->withHeader('User-Agent', self::APP_UA)
+            ->post('/shifts/open', ['outlet_id' => $this->outlet->id, 'opening_cash' => 250000])
+            ->assertRedirect();
+
+        $this->assertSame(250000.0, (float) $user->activeShift()->first()->opening_cash);
+    }
+}
