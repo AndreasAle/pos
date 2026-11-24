@@ -12,6 +12,7 @@
 
 <div class="page text-[#0B1B3F] pt-2 max-w-5xl mx-auto">
 
+    @unless(\App\Support\InApp::check())
     {{-- Header --}}
     <div class="fade-up mb-5" style="--i:0">
         <a href="{{ route('shifts.show', $shift) }}" class="inline-flex items-center gap-1.5 text-sm font-semibold text-[#64748B] hover:text-[#16A34A] transition-colors">
@@ -24,6 +25,8 @@
         </div>
         <p class="mt-1 text-sm text-[#64748B]">Hitung uang tunai di laci, lalu cocokkan dengan catatan penjualan sebelum menutup shift.</p>
     </div>
+
+    @endunless
 
     @if(config('pos.features.pos_offline'))
     {{-- Sales rung up offline on THIS device that the server has not seen yet:
@@ -60,6 +63,9 @@
     </script>
     @endif
 
+    @if(\App\Support\InApp::check())
+        @include('shifts._app-close')
+    @else
     <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] gap-4 items-start">
 
         {{-- Kiri: ringkasan --}}
@@ -159,5 +165,6 @@
             </form>
         </section>
     </div>
+    @endif
 </div>
 @endsection
