@@ -23,7 +23,7 @@ class EnsureBusinessIsSet
         // is nullOnDelete, so the row survives without a tenant.
         if ($user && $user->isOwner() && $user->requires_business_setup && ! $user->business_id) {
             return redirect()->route(
-                $user->hasVerifiedEmail() ? 'onboarding.business' : 'verification.notice'
+                $user->isVerifiedOwner() ? 'onboarding.business' : 'verification.notice'
             );
         }
 

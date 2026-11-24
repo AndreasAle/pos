@@ -17,7 +17,7 @@ class EnsureOwnerEmailVerified
     {
         $user = $request->user();
 
-        if ($user && $user->isOwner() && ! $user->hasVerifiedEmail()) {
+        if ($user && $user->isOwner() && ! $user->isVerifiedOwner()) {
             return $request->expectsJson()
                 ? abort(403, 'Email belum dikonfirmasi.')
                 : redirect()->route('verification.notice');

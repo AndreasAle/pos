@@ -13,7 +13,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     protected $fillable = [
         'business_id', 'outlet_id', 'name', 'email', 'google_id', 'password', 'pin',
-        'role', 'is_active', 'requires_business_setup', 'phone', 'avatar', 'google_avatar',
+        'role', 'is_active', 'requires_business_setup', 'phone', 'phone_verified_at', 'avatar', 'google_avatar',
     ];
 
     protected $hidden = ['password', 'pin', 'remember_token', 'google_id'];
@@ -22,10 +22,20 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'requires_business_setup' => 'boolean',
         ];
+    }
+
+    /**
+     * Pemilik sudah membuktikan kontaknya: lewat tautan email, atau lewat kode
+     * WhatsApp saat mendaftar dari aplikasi.
+     */
+    public function isVerifiedOwner(): bool
+    {
+        return $this->hasVerifiedEmail() || $this->phone_verified_at !== null;
     }
 
     public function business()

@@ -54,7 +54,7 @@ class RegisterController extends Controller
 
     private function destinationFor(User $user): string
     {
-        if (! $user->hasVerifiedEmail()) {
+        if (! $user->isVerifiedOwner()) {
             return 'verification.notice';
         }
 
