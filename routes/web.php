@@ -408,6 +408,9 @@ Route::middleware(['auth', 'business', 'owner.verified', 'subscription'])->group
 
     // Orders
     Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
+    // Unduh laporan penjualan dari halaman Pesanan (dipakai aplikasi Android: /reports diblokir di sana).
+    Route::get('orders/export/{format}', [OrderController::class, 'export'])->whereIn('format', ['xlsx', 'pdf'])
+        ->middleware(['role:owner,admin', 'throttle:20,1'])->name('orders.export');
     Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     // Membatalkan/refund order lunas mengubah uang dan stok: hanya pemilik dan admin (cegah kecurangan kasir).
     Route::post('orders/{order}/void', [OrderController::class, 'void'])->middleware('role:owner,admin')->name('orders.void');
