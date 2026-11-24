@@ -39,6 +39,13 @@ class PricingController extends Controller
                 'separate' => $separate,
                 'saving' => max(0, $separate - $b['price']),
                 'wa' => self::WA.rawurlencode("Halo, saya mau pesan {$b['name']} (Rp".number_format($b['price'], 0, ',', '.').') dari yokapos.com/bundling'),
+                // Kelompok untuk filter di halaman: dihitung dari isi paket, bukan diketik manual.
+                'groups' => array_values(array_filter([
+                    count($b['items']) === 1 && ! in_array('mpos', $b['items'], true) ? 'hemat' : null,
+                    in_array('tablet', $b['items'], true) ? 'tablet' : null,
+                    in_array('mpos', $b['items'], true) ? 'mesin' : null,
+                    count($b['items']) >= 3 ? 'lengkap' : null,
+                ])),
             ];
         })->values()->all();
 

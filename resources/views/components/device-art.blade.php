@@ -1,5 +1,13 @@
 {{-- Ilustrasi perangkat kasir (SVG buatan sendiri, bukan foto produk). kind: printer, printer80, scanner, tablet, stand, mpos, drawer, paper --}}
 @props(['kind', 'class' => 'h-full w-full'])
+@php
+    // Foto produk asli (latar dihapus) di public/images/hardware. Bila belum ada fotonya, pakai ilustrasi.
+    $photo = ['printer' => 'printer58', 'scanner' => 'scanner', 'tablet' => 'tablet', 'stand' => 'stand', 'mpos' => 'mpos', 'drawer' => 'drawer', 'paper' => 'paper'][$kind] ?? null;
+    $labels = ['printer' => 'Printer struk 58mm', 'printer80' => 'Printer struk 80mm', 'scanner' => 'Barcode scanner', 'tablet' => 'Tablet kasir', 'stand' => 'Stand tablet', 'mpos' => 'Mesin kasir Android', 'drawer' => 'Laci kas', 'paper' => 'Kertas struk 58mm'];
+@endphp
+@if($photo && is_file(public_path("images/hardware/{$photo}.webp")))
+<img src="{{ asset("images/hardware/{$photo}.webp") }}" alt="{{ $labels[$kind] ?? $kind }}" loading="lazy" decoding="async" class="{{ $class }} object-contain">
+@else
 <svg viewBox="0 0 200 160" class="{{ $class }}" role="img" aria-label="Ilustrasi {{ $kind }}" xmlns="http://www.w3.org/2000/svg">
 @switch($kind)
 @case('printer')
@@ -82,3 +90,4 @@
     @break
 @endswitch
 </svg>
+@endif
