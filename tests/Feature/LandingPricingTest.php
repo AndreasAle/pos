@@ -16,7 +16,7 @@ class LandingPricingTest extends TestCase
         $this->seed(SubscriptionPlanSeeder::class);
 
         $this->get('/')->assertOk()
-            ->assertSee('Mulai Rp99.000 per bulan')
+            ->assertSee('Mulai Rp99.000 per bulan')->assertSee('Rp199.000')->assertSee('Paket Tablet + Printer')
             ->assertSee('href="'.route('pricing').'"', false)
             ->assertSee('href="'.route('pricing.bundles').'"', false);
     }
