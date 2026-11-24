@@ -69,7 +69,7 @@
         <div class="item-meta">+ {{ $addon->addon_name }}: Rp {{ number_format($addon->price,0,',','.') }}</div>
         @endforeach
         @if($item->notes)
-        <div class="item-meta" style="color:#d97706; font-style:italic;">📝 {{ $item->notes }}</div>
+        <div class="item-meta" style="color:#d97706; font-style:italic;">Catatan: {{ $item->notes }}</div>
         @endif
     </div>
     @endforeach
@@ -118,7 +118,7 @@
 </div>
 
 @if($order->notes)
-<div style="font-size:10px; color:#6b7280; margin-bottom:8px;">📝 {{ $order->notes }}</div>
+<div style="font-size:10px; color:#6b7280; margin-bottom:8px;">Catatan: {{ $order->notes }}</div>
 @endif
 
 <div class="dashed"></div>

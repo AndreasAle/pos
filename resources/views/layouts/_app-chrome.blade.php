@@ -5,9 +5,9 @@
 @php
     $me = auth()->user();
     $tabs = [
-        ['route' => 'pos.index',    'match' => 'pos.*',    'label' => 'Kasir',   'icon' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z'],
-        ['route' => 'orders.index', 'match' => 'orders.*', 'label' => 'Pesanan', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01'],
-        ['route' => 'shifts.index', 'match' => 'shifts.*', 'label' => 'Shift',   'icon' => 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'],
+        ['route' => 'pos.index',    'match' => 'pos.*',    'label' => 'Kasir',   'icon' => 'M4 10.5h16V19a1.5 1.5 0 01-1.5 1.5h-13A1.5 1.5 0 014 19v-8.5zM5.5 10.5L7 4.5h10l1.5 6M9 15h6'],
+        ['route' => 'orders.index', 'match' => 'orders.*', 'label' => 'Pesanan', 'icon' => 'M6 3.5h12v17l-2-1.25-2 1.25-2-1.25-2 1.25-2-1.25-2 1.25v-17zM9 8.5h6M9 12.5h6'],
+        ['route' => 'shifts.index', 'match' => 'shifts.*', 'label' => 'Shift',   'icon' => 'M12 20.5a8.5 8.5 0 100-17 8.5 8.5 0 000 17zM12 7.5V12l3 2'],
     ];
     $onTab = collect($tabs)->contains(fn ($t) => request()->routeIs($t['match']) && ! request()->routeIs('shifts.open', 'shifts.close', 'shifts.show', 'orders.show'));
     $firstName = \Illuminate\Support\Str::before($me->name, ' ') ?: $me->name;
@@ -16,7 +16,7 @@
 <header class="app-bar fixed inset-x-0 top-0 z-40 h-14 bg-white/95 backdrop-blur border-b border-[#EEF0F3]">
     <div class="h-full px-3 sm:px-6 flex items-center gap-1">
         @if($onTab)
-            <img src="{{ asset('images/brand/yoka-icon.png') }}" alt="" class="w-7 h-7 ml-1 mr-2 rounded-lg">
+            <span class="w-2"></span>
         @else
             <button type="button" onclick="history.length > 1 ? history.back() : (location.href='{{ route('pos.index') }}')"
                     aria-label="Kembali" class="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-[#0B1B3F] active:bg-[#F1F5F9]">
@@ -24,7 +24,7 @@
             </button>
         @endif
 
-        <h1 class="min-w-0 truncate text-[17px] font-semibold tracking-[-0.01em] text-[#0B1B3F]">@yield('page-title', 'Yoka POS')</h1>
+        <h1 class="min-w-0 truncate {{ $onTab ? 'text-[20px] font-bold tracking-[-0.02em]' : 'text-[17px] font-semibold' }} tracking-[-0.01em] text-[#0B1B3F]">@yield('page-title', 'Yoka POS')</h1>
 
         <div class="ml-auto relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape="open = false">
             <button type="button" @click="open = !open" class="h-10 pl-1 pr-2 rounded-full flex items-center gap-2 active:bg-[#F1F5F9]" aria-label="Akun">
@@ -60,9 +60,8 @@
     <div class="h-16 max-w-xl mx-auto grid grid-cols-3">
         @foreach($tabs as $t)
             @php $active = request()->routeIs($t['match']); @endphp
-            <a href="{{ route($t['route']) }}" class="relative flex flex-col items-center justify-center gap-1 {{ $active ? 'text-[#15803D]' : 'text-[#94A3B8]' }}">
-                @if($active)<span class="absolute top-0 h-[3px] w-8 rounded-b-full bg-[#16A34A]"></span>@endif
-                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="{{ $active ? 2 : 1.7 }}"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $t['icon'] }}"/></svg>
+            <a href="{{ route($t['route']) }}" class="relative flex flex-col items-center justify-center gap-1 {{ $active ? 'text-[#15803D]' : 'text-[#94A3B8] active:text-[#64748B]' }}">
+                <svg class="w-[26px] h-[26px]" viewBox="0 0 24 24" fill="{{ $active ? 'currentColor' : 'none' }}" fill-opacity=".14" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="{{ $t['icon'] }}"/></svg>
                 <span class="text-[11px] {{ $active ? 'font-semibold' : 'font-medium' }}">{{ $t['label'] }}</span>
             </a>
         @endforeach

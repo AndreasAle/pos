@@ -91,4 +91,27 @@ class InAppModeTest extends TestCase
 
         $this->actingAs($owner)->get('/orders/export/csv')->assertNotFound();
     }
+
+    public function test_app_shift_order_and_receipt_pages_are_calm_and_emoji_free(): void
+    {
+        $user = $this->cashier();
+        $order = \App\Models\Order::create([
+            'business_id' => $this->business->id, 'outlet_id' => $this->outlet->id, 'user_id' => $user->id,
+            'order_number' => 'ORD-T-1', 'subtotal' => 30000, 'grand_total' => 30000, 'paid_amount' => 30000,
+            'payment_method' => 'cash', 'payment_status' => 'paid', 'status' => 'paid', 'ordered_at' => now(),
+        ]);
+
+        $this->actingAs($user)->withHeader('User-Agent', self::APP_UA)->get('/shifts')
+            ->assertOk()->assertSee('Buka shift dulu sebelum mulai jualan.')->assertDontSee('Riwayat Shift');
+
+        $this->actingAs($user)->withHeader('User-Agent', self::APP_UA)->get('/orders/'.$order->id)
+            ->assertOk()->assertSee('Cetak struk')->assertDontSee('Informasi Order');
+
+        $receipt = $this->actingAs($user)->withHeader('User-Agent', self::APP_UA)->get('/receipt/'.$order->id)
+            ->assertOk()->assertDontSee('Kembali ke POS');
+        $this->assertDoesNotMatchRegularExpression('/[\x{1F300}-\x{1FAFF}]/u', $receipt->getContent());
+
+        $this->actingAs($user)->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')
+            ->get('/receipt/'.$order->id)->assertOk()->assertSee('Kembali ke POS');
+    }
 }

@@ -12,6 +12,9 @@
     $btn        = 'h-10 inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-sm font-semibold transition-colors';
 @endphp
 
+@if(\App\Support\InApp::check())
+    @include('orders._app-show')
+@else
 <div class="page text-[#0B1B3F] pt-2">
 
     {{-- Header --}}
@@ -268,6 +271,8 @@
         </div>
     </div>
 </div>
+
+@endif
 
 {{-- Void Modal --}}
 <div id="void-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B1B3F]/50 backdrop-blur-[2px]" onclick="if(event.target===this)closeModal('void-modal')">
