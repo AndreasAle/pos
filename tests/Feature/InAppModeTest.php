@@ -143,4 +143,20 @@ class InAppModeTest extends TestCase
 
         $this->assertSame('closed', $this->shift->fresh()->status);
     }
+
+    public function test_register_page_has_app_version_and_still_registers(): void
+    {
+        $this->withHeader('User-Agent', self::APP_UA)->get('/register')
+            ->assertOk()->assertSee('Buat akun pemilik')->assertDontSee('Mulai Jualan dengan Kasir yang Rapi');
+
+        $this->withHeader('User-Agent', 'Mozilla/5.0 Chrome/130')->get('/register')
+            ->assertOk()->assertSee('Mulai Jualan dengan Kasir yang Rapi');
+
+        $this->withHeader('User-Agent', self::APP_UA)->post('/register', [
+            'name' => 'Pemilik Baru', 'phone' => '081234567890', 'email' => 'baru@example.com',
+            'password' => 'rahasia123', 'password_confirmation' => 'rahasia123',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('users', ['email' => 'baru@example.com', 'role' => 'owner']);
+    }
 }

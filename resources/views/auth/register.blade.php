@@ -18,11 +18,99 @@
         .reg label{display:block;font-size:.8125rem;font-weight:600;color:#334155;margin-bottom:.375rem}
     </style>
 </head>
-<body class="min-h-full font-sans text-slate-800 bg-[#f2f9f5]">
+<body class="min-h-full font-sans text-slate-800 {{ \App\Support\InApp::check() ? 'in-app bg-white' : 'bg-[#f2f9f5]' }}">
 @php
     $err = fn ($f) => $errors->first($f);
     $oldPhone = preg_replace('/^0+/', '', preg_replace('/\D/', '', old('phone', '')));
 @endphp
+@if(\App\Support\InApp::check())
+{{-- Versi aplikasi Android: satu layar bersih, tanpa kartu dan gambar. --}}
+<div class="min-h-screen bg-white text-[#0B1B3F]">
+    <header class="sticky top-0 z-10 h-14 bg-white/95 backdrop-blur border-b border-[#EEF0F3] px-3 flex items-center gap-1">
+        <button type="button" onclick="history.length > 1 ? history.back() : (location.href='{{ route('login') }}')" aria-label="Kembali"
+                class="w-10 h-10 -ml-1 rounded-full flex items-center justify-center active:bg-[#F1F5F9]">
+            <svg class="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <span class="text-[17px] font-semibold">Daftar</span>
+    </header>
+
+    <main class="max-w-md mx-auto px-6 pt-8 pb-10">
+        <p class="text-[13px] font-semibold text-[#15803D]">Langkah 1 dari 3</p>
+        <h1 class="mt-1 text-[28px] leading-tight font-bold tracking-[-0.02em]">Buat akun pemilik</h1>
+        <p class="mt-2 text-[15px] text-[#64748B]">Coba gratis 7 hari, semua fitur terbuka.</p>
+
+        <form method="POST" action="{{ route('register.post') }}" class="mt-8 space-y-5"
+              x-data="{ show: false, pw: '', phone: '{{ $oldPhone }}' }">
+            @csrf
+            @php
+                $field = 'w-full h-14 rounded-2xl bg-[#F4F6F8] border border-transparent px-4 text-[16px] placeholder:text-[#94A3B8] focus:outline-none focus:bg-white focus:border-[#16A34A] focus:ring-4 focus:ring-[#16A34A]/10 transition';
+                $bad   = '!border-[#F87171] !bg-[#FEF2F2]';
+                $lbl   = 'block mb-2 text-[13px] font-medium text-[#64748B]';
+                $msg   = 'mt-1.5 text-[13px] text-[#DC2626]';
+            @endphp
+
+            <div>
+                <label for="name" class="{{ $lbl }}">Nama lengkap</label>
+                <input id="name" type="text" name="name" value="{{ old('name') }}" required autocomplete="name"
+                       placeholder="Nama pemilik usaha" class="{{ $field }} {{ $err('name') ? $bad : '' }}">
+                @if($err('name'))<p class="{{ $msg }}">{{ $err('name') }}</p>@endif
+            </div>
+
+            <div>
+                <label for="phone_local" class="{{ $lbl }}">Nomor WhatsApp</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[16px] font-medium text-[#64748B]">+62</span>
+                    <input id="phone_local" type="tel" inputmode="numeric" x-model="phone" required autocomplete="tel-national"
+                           placeholder="812 3456 7890" class="{{ $field }} pl-14 {{ $err('phone') ? $bad : '' }}">
+                </div>
+                <input type="hidden" name="phone" :value="phone ? '0' + phone.replace(/\D/g,'').replace(/^0+/,'') : ''">
+                @if($err('phone'))<p class="{{ $msg }}">{{ $err('phone') }}</p>@else<p class="mt-1.5 text-[13px] text-[#94A3B8]">Pastikan nomor ini aktif di WhatsApp.</p>@endif
+            </div>
+
+            <div>
+                <label for="email" class="{{ $lbl }}">Email</label>
+                <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" inputmode="email"
+                       placeholder="nama@usaha.com" class="{{ $field }} {{ $err('email') ? $bad : '' }}">
+                @if($err('email'))<p class="{{ $msg }}">{{ $err('email') }}</p>@endif
+            </div>
+
+            <div>
+                <label for="password" class="{{ $lbl }}">Password</label>
+                <div class="relative">
+                    <input id="password" :type="show ? 'text' : 'password'" name="password" x-model="pw" required autocomplete="new-password"
+                           class="{{ $field }} pr-14 {{ $err('password') ? $bad : '' }}">
+                    <button type="button" @click="show = !show" class="absolute inset-y-0 right-0 w-14 flex items-center justify-center text-[#94A3B8]" :aria-label="show ? 'Sembunyikan password' : 'Tampilkan password'">
+                        <svg x-show="!show" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <svg x-show="show" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M10.584 10.587a2 2 0 002.828 2.83M9.363 5.365A9.466 9.466 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411M6.423 6.423C4.726 7.654 3.405 9.64 2.458 12c.55 1.392 1.345 2.625 2.32 3.665"/></svg>
+                    </button>
+                </div>
+                <input type="hidden" name="password_confirmation" :value="pw">
+                @if($err('password'))
+                    <p class="{{ $msg }}">{{ $err('password') }}</p>
+                @else
+                    <p class="mt-1.5 text-[13px]" :class="pw.length >= 8 ? 'text-[#15803D]' : 'text-[#94A3B8]'"
+                       x-text="pw.length >= 8 ? 'Password sudah cukup panjang' : 'Minimal 8 karakter'"></p>
+                @endif
+            </div>
+
+            <button type="submit" class="!mt-8 w-full h-14 rounded-2xl bg-[#16A34A] active:bg-[#15803D] text-white text-[16px] font-semibold shadow-[0_8px_20px_rgba(22,163,74,.22)]">
+                Lanjut
+            </button>
+
+            <p class="text-center text-[13px] leading-relaxed text-[#94A3B8]">
+                Dengan mendaftar, kamu setuju dengan
+                <a href="{{ url('/syarat') }}" class="text-[#15803D] font-medium">Syarat</a> dan
+                <a href="{{ url('/privasi') }}" class="text-[#15803D] font-medium">Kebijakan Privasi</a> Yoka.
+            </p>
+        </form>
+
+        <p class="mt-10 text-center text-[15px] text-[#64748B]">
+            Sudah punya akun?
+            <a href="{{ route('login') }}" class="font-semibold text-[#15803D]">Masuk</a>
+        </p>
+    </main>
+</div>
+@else
 <div class="min-h-screen">
     <div class="max-w-[1200px] mx-auto px-6 pt-8 pb-12 lg:pt-10">
         <a href="{{ route('landing') }}" class="inline-flex items-center gap-2" aria-label="Yoka POS">
@@ -126,6 +214,7 @@
         </div>
     </div>
 </div>
+@endif
 @vite('resources/js/alpine.js')
 </body>
 </html>
