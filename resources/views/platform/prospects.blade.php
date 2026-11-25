@@ -10,7 +10,7 @@
     ];
     $tone = ['siap' => 'bg-emerald-100 text-emerald-800', 'perlu_dicek' => 'bg-amber-100 text-amber-800', 'dijadwalkan' => 'bg-sky-100 text-sky-800',
         'dihubungi' => 'bg-slate-200 text-slate-700', 'membalas' => 'bg-violet-100 text-violet-800', 'tertarik' => 'bg-fuchsia-100 text-fuchsia-800',
-        'trial' => 'bg-teal-100 text-teal-800', 'bayar' => 'bg-[#16A34A] text-white', 'tidak_minat' => 'bg-slate-100 text-slate-500', 'berhenti' => 'bg-red-100 text-red-700', 'baru' => 'bg-slate-100 text-slate-600'];
+        'trial' => 'bg-teal-100 text-teal-800', 'bayar' => 'bg-[#16A34A] text-white', 'tidak_minat' => 'bg-slate-100 text-slate-500', 'berhenti' => 'bg-red-100 text-red-700', 'nomor_salah' => 'bg-amber-100 text-amber-800', 'baru' => 'bg-slate-100 text-slate-600'];
 @endphp
 <div x-data="prospectSheet(@js($rows), @js($tone))" class="space-y-5">
     <div class="flex flex-wrap items-end justify-between gap-4">
@@ -102,8 +102,9 @@
                             </td>
                             <td class="border border-slate-300 px-2 py-1 text-center text-xs">
                                 <select @change="setStatus(r, $event.target.value); $event.target.value = ''" class="w-full rounded border border-slate-200 px-1 py-0.5" x-show="r.contact_count > 0">
-                                    <option value="">Tandai...</option><option value="tertarik">Tertarik</option><option value="tidak_minat">Tidak minat</option><option value="berhenti">Minta berhenti</option>
+                                    <option value="">Tandai...</option><option value="tertarik">Tertarik</option><option value="tidak_minat">Tidak minat</option><option value="berhenti">Minta berhenti</option><option value="nomor_salah">Nomor tak ada di WA</option>
                                 </select>
+                                <button type="button" x-show="r.status === 'dijadwalkan'" @click="wrongNumber(r)" class="block w-full text-amber-700 hover:underline">Nomor tak ada di WA</button>
                                 <button type="button" x-show="!r.locked" @click="remove(r)" class="text-red-600 hover:underline">Hapus</button>
                             </td>
                         </tr>
@@ -158,8 +159,17 @@ function prospectSheet(rows, tone) {
             if ((r[field] ?? '') == value) return;
             try { this.error = ''; this.replace(await call('PATCH', @js(url('platform/prospects')) + '/' + r.id, { [field]: value === '' ? null : value })); } catch (e) { this.error = e.message; }
         },
+        async wrongNumber(r) {
+            if (!confirm('Tandai nomor ' + (r.business_name || '#' + r.id) + ' tidak ada di WhatsApp? Drafnya dibatalkan, prospek tidak dihubungi lagi, dan Adit menyusun draf pengganti.')) return;
+            try {
+                const res = await call('POST', @js(url('platform/prospects')) + '/' + r.id + '/status', { status: 'nomor_salah' });
+                if (res.replacements > 0) { location.reload(); return; }
+                this.replace(res);
+            } catch (e) { this.error = e.message; }
+        },
         async setStatus(r, status) {
             if (!status) return;
+            if (status === 'nomor_salah') return this.wrongNumber(r);
             try { this.replace(await call('POST', @js(url('platform/prospects')) + '/' + r.id + '/status', { status })); } catch (e) { this.error = e.message; }
         },
         async remove(r) {

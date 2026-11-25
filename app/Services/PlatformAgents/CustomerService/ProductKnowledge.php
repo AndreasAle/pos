@@ -62,18 +62,53 @@ final class ProductKnowledge
         return array_slice($scored, 0, $limit);
     }
 
+    /**
+     * Batas panjang satu panduan di prompt. Panduan di web boleh terus bertambah;
+     * prompt Adit tidak ikut membengkak (batas total prompt dijaga tes).
+     */
+    public const GUIDE_BLOCK_MAX = 1000;
+
     /** Ringkasan panduan yang cocok untuk prompt. Kosong bila tidak ada yang relevan. */
     public static function render(string $text): string
     {
         $guides = GuideController::guides();
         $blocks = [];
         foreach (self::match($text) as $hit) {
-            $g = $guides[$hit['slug']];
-            $steps = implode(' ', array_map(fn ($i, $s) => ($i + 1).'. '.$s[0].': '.$s[1], array_keys($g['steps']), $g['steps']));
-            $faq = implode(' ', array_map(fn ($f) => 'T: '.$f[0].' J: '.$f[1], $g['faq'] ?? []));
-            $blocks[] = "[{$g['title']}] tautan: yokapos.com/panduan/{$hit['slug']} | {$g['summary']} | Langkah: {$steps}".($faq !== '' ? " | FAQ: {$faq}" : '');
+            $blocks[] = self::block($hit['slug'], $guides[$hit['slug']]);
         }
 
         return $blocks === [] ? '' : "PANDUAN RESMI (sumber langkah yang boleh kamu berikan; jangan menambah langkah lain):\n".implode("\n", $blocks);
+    }
+
+    /**
+     * Satu panduan, paling panjang GUIDE_BLOCK_MAX: FAQ dibuang dulu, lalu hanya
+     * langkah utuh yang muat (tidak ada langkah terpotong). Tautan selalu ada
+     * supaya pelanggan bisa membaca panduan lengkapnya.
+     */
+    private static function block(string $slug, array $g): string
+    {
+        $head  = "[{$g['title']}] tautan: yokapos.com/panduan/{$slug} | {$g['summary']} | Langkah: ";
+        $steps = array_map(fn ($i, $s) => ($i + 1).'. '.$s[0].': '.$s[1], array_keys($g['steps']), $g['steps']);
+        $faq   = implode(' ', array_map(fn ($f) => 'T: '.$f[0].' J: '.$f[1], $g['faq'] ?? []));
+
+        $full = $head.implode(' ', $steps).($faq !== '' ? " | FAQ: {$faq}" : '');
+        if (mb_strlen($full) <= self::GUIDE_BLOCK_MAX) {
+            return $full;
+        }
+
+        $more = ' (langkah lain ada di tautan)';
+        $kept = [];
+        foreach ($steps as $step) {
+            if (mb_strlen($head.implode(' ', [...$kept, $step]).$more) > self::GUIDE_BLOCK_MAX) {
+                break;
+            }
+            $kept[] = $step;
+        }
+
+        if ($kept === []) {
+            return $head.'baca di tautan';
+        }
+
+        return $head.implode(' ', $kept).(count($kept) < count($steps) ? $more : '');
     }
 }

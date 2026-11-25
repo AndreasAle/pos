@@ -11,6 +11,7 @@ class PlatformAiProspect extends Model
         'baru' => 'Baru', 'perlu_dicek' => 'Perlu dicek', 'siap' => 'Siap dihubungi', 'dijadwalkan' => 'Draf menunggu persetujuan',
         'dihubungi' => 'Sudah dihubungi', 'membalas' => 'Membalas', 'tertarik' => 'Tertarik', 'trial' => 'Sudah daftar trial',
         'bayar' => 'Sudah bayar', 'tidak_minat' => 'Tidak minat', 'berhenti' => 'Minta berhenti dihubungi',
+        'nomor_salah' => 'Nomor tidak ada di WhatsApp',
     ];
 
     /** Kolom yang boleh diisi dari spreadsheet. Status, hasil cek, dan riwayat kontak hanya diubah sistem. */

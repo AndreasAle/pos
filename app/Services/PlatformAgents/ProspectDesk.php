@@ -149,7 +149,9 @@ class ProspectDesk
     private function countedDraftsToday()
     {
         $q = PlatformAiTask::where('type', 'whatsapp_draft')->whereDate('created_at', today())
-            ->whereIn('payload->kind', ['prospect_opening', 'prospect_followup']);
+            ->whereIn('payload->kind', ['prospect_opening', 'prospect_followup'])
+            // Draf ke nomor yang ternyata tidak ada di WhatsApp tidak pernah bisa terkirim: jatahnya dikembalikan.
+            ->where(fn ($w) => $w->whereNull('payload->slot_released')->orWhere('payload->slot_released', false));
         $tests = (array) config('yoka_sales.test_numbers', []);
 
         return $tests ? $q->where(fn ($w) => $w->whereNull('payload->phone')->orWhereNotIn('payload->phone', $tests)) : $q;
@@ -194,6 +196,40 @@ class ProspectDesk
             $p->update(['status' => $p->contact_count > 0 ? 'dihubungi' : 'siap']);
             $this->stage($p, $p->contact_count > 0 ? 'outreach_sent' : 'new_lead', 'admin', 'Draf ditolak.');
         }
+    }
+
+    /**
+     * Nomor prospek ternyata tidak terdaftar di WhatsApp (keputusan pemilik, 2026-11-25).
+     * Draf yang belum dikirim dibatalkan dan jatah hariannya dikembalikan, prospek tidak
+     * akan dihubungi lagi, lalu Adit menyusun draf pengganti (tetap lewat "Setujui & kirim").
+     * Batas DAILY_LIMIT untuk pesan yang bisa terkirim tidak berubah.
+     *
+     * @return array<int,array{prospect:string,kind:string}> draf pengganti yang dibuat
+     */
+    public function markWrongNumber(PlatformAiProspect $p, PlatformAiAgent $adit, string $by): array
+    {
+        return DB::transaction(function () use ($p, $adit, $by) {
+            $drafts = PlatformAiTask::where('type', 'whatsapp_draft')->where('status', 'proposed')
+                ->where('payload->prospect_id', $p->id)->lockForUpdate()->get();
+            foreach ($drafts as $task) {
+                $task->update([
+                    'status' => 'rejected',
+                    'error' => 'Nomor tidak terdaftar di WhatsApp.',
+                    'payload' => array_merge($task->payload ?? [], ['slot_released' => true]),
+                ]);
+            }
+            $p->update(['status' => 'nomor_salah']);
+            // Tahap penjualan hanya lewat transisi yang sah: draf yang batal kembali ke new_lead,
+            // yang sudah pernah dihubungi ditutup sebagai lost. Status nomor_salah mencegah kontak ulang.
+            $stage = $p->sales_stage ?: 'new_lead';
+            if ($stage === 'outreach_pending_approval') {
+                $this->stage($p, 'new_lead', $by, 'Draf batal: nomor tidak terdaftar di WhatsApp.');
+            } elseif ($stage !== 'new_lead' && $stage !== 'lost') {
+                $this->stage($p, 'lost', $by, 'Nomor tidak terdaftar di WhatsApp.');
+            }
+
+            return $drafts->isEmpty() ? [] : $this->draftToday($adit);
+        });
     }
 
     /** Pesan masuk dari nomor prospek: catat balasan, hormati permintaan berhenti. Mengembalikan prospek bila ada. */
