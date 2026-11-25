@@ -217,7 +217,8 @@ class AditBusinessDevelopmentTest extends TestCase
         $task = PlatformAiTask::where('type', 'commercial_proposal')->sole();
         $as = fn () => $this->actingAs($this->owner, 'platform')->withSession(['platform_2fa_passed_at' => now()->timestamp]);
 
-        $as()->patch(route('platform.ai-team.tasks.move', $task), ['status' => 'completed'])->assertStatus(422);
+        $as()->patch(route('platform.ai-team.tasks.move', $task), ['status' => 'completed'])->assertRedirect()->assertSessionHasErrors(['status']);
+        $this->assertNotSame('completed', $task->fresh()->status);
         $as()->patch(route('platform.ai-team.decision', $task), ['decision' => 'reject', 'message' => 'terlalu rendah'])->assertRedirect();
         $this->assertSame('rejected', PlatformAiCommercialProposal::sole()->status);
         $this->assertSame('objection_handling', $p->fresh()->sales_stage);

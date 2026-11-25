@@ -475,9 +475,20 @@ class AiTeamController extends Controller
         abort_unless(auth('platform')->user()->isSuperAdmin(), 403);
         $status = $request->validate(['status' => 'required|in:proposed,approved,completed,rejected'])['status'];
         // Pesan keluar hanya boleh lewat tombol Setujui & kirim, supaya tidak ada jalan pintas tanpa pengiriman tercatat.
-        abort_if($task->type === 'whatsapp_draft' && in_array($status, ['approved', 'completed'], true), 422, 'Gunakan Setujui & kirim.');
         // Harga khusus hanya diputuskan lewat tombol keputusan (cek hash & versi), tidak lewat geser kartu.
-        abort_if($task->type === 'commercial_proposal', 422, 'Putuskan harga khusus lewat tombol Setujui/Tolak.');
+        // Ditolak dengan pesan yang terbaca di papan, bukan halaman error; kartu tetap di tempatnya.
+        $blocked = match (true) {
+            $task->type === 'whatsapp_draft' && in_array($status, ['approved', 'completed'], true)
+                => 'Draf WhatsApp hanya bisa dikirim lewat tombol "Setujui & kirim" di detail tugas, tidak dengan menggeser kartu.',
+            $task->type === 'commercial_proposal'
+                => 'Harga khusus diputuskan lewat tombol Setujui/Tolak di detail tugas, tidak dengan menggeser kartu.',
+            default => null,
+        };
+        if ($blocked) {
+            return $request->expectsJson()
+                ? response()->json(['message' => $blocked], 422)
+                : back()->withErrors(['status' => $blocked]);
+        }
         $changes = ['status' => $status];
         if ($status === 'approved') {
             $changes += ['approved_by' => auth('platform')->id(), 'approved_at' => now(), 'idempotency_key' => (string) Str::uuid()];

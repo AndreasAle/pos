@@ -480,7 +480,12 @@ class PlatformAiTeamTest extends TestCase
         $this->runCs();
         $task = PlatformAiTask::where('type', 'whatsapp_draft')->firstOrFail();
 
-        $this->platformSession($admin)->patch(route('platform.ai-team.tasks.move', $task), ['status' => 'completed'])->assertStatus(422);
+        $before = $task->status;
+        $this->platformSession($admin)->patch(route('platform.ai-team.tasks.move', $task), ['status' => 'completed'])
+            ->assertRedirect()->assertSessionHasErrors(['status']);
+        $this->assertSame($before, $task->fresh()->status);
+        $this->platformSession($admin)->patchJson(route('platform.ai-team.tasks.move', $task), ['status' => 'approved'])->assertStatus(422);
+        $this->assertSame($before, $task->fresh()->status);
         Http::assertNothingSent();
 
         $this->platformSession($admin)->patch(route('platform.ai-team.decision', $task), ['decision' => 'approve', 'message' => 'Halo, pesan sunting.'])->assertRedirect();
