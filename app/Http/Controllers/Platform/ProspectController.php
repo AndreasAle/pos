@@ -125,7 +125,14 @@ class ProspectController extends Controller
     public function status(Request $request, PlatformAiProspect $prospect)
     {
         $this->guard();
-        $status = $request->validate(['status' => 'required|in:tertarik,tidak_minat,berhenti,dihubungi'])['status'];
+        $status = $request->validate(['status' => 'required|in:tertarik,tidak_minat,berhenti,dihubungi,nomor_salah'])['status'];
+        if ($status === 'nomor_salah') {
+            $adit = PlatformAiAgent::where('key', 'cs')->firstOrFail();
+            $made = app(ProspectDesk::class)->markWrongNumber($prospect, $adit, 'admin:'.auth('platform')->id());
+            PlatformActivityLog::record('prospects.status', "Nomor {$prospect->business_name} ditandai tidak ada di WhatsApp; ".count($made).' draf pengganti.', $prospect);
+
+            return response()->json($this->row($prospect->fresh()) + ['replacements' => count($made)]);
+        }
         $prospect->update(['status' => $status] + ($status === 'berhenti' ? ['opted_out_at' => now()] : []));
         $to = ['berhenti' => 'opted_out', 'tidak_minat' => 'lost'][$status] ?? null;
         if ($to) {

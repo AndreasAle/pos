@@ -185,4 +185,29 @@ class ProspectDeskTest extends TestCase
         $support = PlatformAdmin::create(['name' => 'S', 'email' => 's@yoka.test', 'password' => 'password-kuat', 'role' => 'support', 'is_active' => true]);
         $this->actingAs($support, 'platform')->withSession(['platform_2fa_passed_at' => now()->timestamp])->get(route('platform.prospects.index'))->assertForbidden();
     }
+
+    public function test_wrong_whatsapp_number_releases_the_slot_and_drafts_a_replacement(): void
+    {
+        foreach (range(1, 5) as $i) {
+            $this->prospect(['business_name' => "Pecel {$i}", 'phone' => '0812345678'.str_pad((string) $i, 2, '0', STR_PAD_LEFT)]);
+        }
+        $this->assertCount(ProspectDesk::DAILY_LIMIT, $this->desk()->draftToday($this->adit));
+        $this->assertCount(0, $this->desk()->draftToday($this->adit), 'Jatah harian penuh.');
+
+        $wrong = PlatformAiProspect::where('status', 'dijadwalkan')->orderBy('id')->first();
+        $res = $this->as()->postJson(route('platform.prospects.status', $wrong), ['status' => 'nomor_salah'])->assertOk();
+        $this->assertSame(1, $res->json('replacements'));
+
+        $wrong->refresh();
+        $this->assertSame('nomor_salah', $wrong->status);
+        $this->assertSame('rejected', PlatformAiTask::find($wrong->last_task_id)->status);
+
+        // Masih tepat DAILY_LIMIT draf yang bisa dikirim hari ini; yang batal tidak dihitung.
+        $sendable = PlatformAiTask::where('type', 'whatsapp_draft')->where('status', 'proposed')->count();
+        $this->assertSame(ProspectDesk::DAILY_LIMIT, $sendable);
+        $this->assertCount(0, $this->desk()->draftToday($this->adit), 'Tidak ada jatah tambahan selain yang dikembalikan.');
+
+        // Nomor yang salah tidak pernah disusun ulang.
+        $this->assertSame(0, PlatformAiTask::where('payload->prospect_id', $wrong->id)->where('status', 'proposed')->count());
+    }
 }
