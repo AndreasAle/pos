@@ -302,6 +302,7 @@ Route::middleware(['auth', 'business', 'owner.verified'])->group(function () {
         Route::get('plans', [SubscriptionController::class, 'plans'])->name('plans');
         Route::get('subscription', [SubscriptionController::class, 'current'])->name('current');
         Route::post('subscription/{plan}', [SubscriptionController::class, 'subscribe'])->name('subscribe');
+        Route::get('invoice/{subscription}', [SubscriptionController::class, 'invoice'])->name('invoice');
         Route::post('checkout', [MidtransController::class, 'createSubscriptionPayment'])
             ->middleware('throttle:10,1')
             ->name('checkout');
