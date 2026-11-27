@@ -57,6 +57,25 @@ class SubscriptionController extends Controller
         return view('saas.current', compact('subs', 'current', 'business'));
     }
 
+    public function invoice(BusinessSubscription $subscription)
+    {
+        $business = auth()->user()->business;
+        abort_unless($subscription->business_id === $business->id, 404);
+        $subscription->load('plan');
+
+        return view('saas.invoice', [
+            'sub' => $subscription,
+            'business' => $business,
+            'owner' => auth()->user(),
+            'number' => self::invoiceNumber($subscription),
+        ]);
+    }
+
+    public static function invoiceNumber(BusinessSubscription $sub): string
+    {
+        return 'INV/YK/'.$sub->created_at->format('Y/m').'/'.str_pad((string) $sub->id, 5, '0', STR_PAD_LEFT);
+    }
+
     public function subscribe(SubscriptionPlan $plan)
     {
         $business = auth()->user()->business;
